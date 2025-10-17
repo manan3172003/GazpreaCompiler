@@ -1,0 +1,28 @@
+{
+  "testDir": "testfiles",
+  "testedExecutablePaths": {
+    "<team id>": "<path_to_gazc_exe>"
+  },
+  "runtimes": {
+    "<team id>": "<path_to_libgazrt.so>"
+  },
+  "toolchains": {
+    "gazprea": [
+      {
+        "stepName": "gazc",
+        "executablePath": "$EXE",
+        "arguments": ["$INPUT","$OUTPUT"],
+        "output": "gazc.ll",
+        "allowError": true
+      },
+      {
+        "stepName": "lli",
+        "executablePath": "<path-to-lli>",
+        "arguments": ["$INPUT"],
+        "usesRuntime": true,
+        "usesInStr": true,
+        "allowError": true
+      }
+    ]
+  }
+}

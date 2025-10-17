@@ -1,0 +1,34 @@
+name: CI/CD Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: gazprea
+    container: ghcr.io/cmput415/gaz-utils:latest
+
+    steps:
+    # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+    # Step 2: Create build directory and run CMake
+      - name: Configure and build with CMake
+        run: |
+          mkdir -p build
+          cd build
+          cmake ..
+          make
+
+    # Step 3: Run tests
+      - name: Run command using gazprea binary
+        working-directory: tests
+        run: |
+          dragon-runner CIConfig.json
+

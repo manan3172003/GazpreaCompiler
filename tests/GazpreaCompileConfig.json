@@ -1,0 +1,40 @@
+{
+  "testDir": "testfiles",
+  "testedExecutablePaths": {
+    "<team-name>": "<path-to-gazprea>"
+  },
+  "runtimes": {
+    "<team-name>": "<path-to-runtime>"
+  }, 
+  "toolchains": {
+    "gazprea-llc": [
+      {
+        "stepName": "gazprea",
+        "executablePath": "$EXE",
+        "arguments": ["$INPUT", "$OUTPUT"],
+        "output": "gaz.ll",
+        "allowError": true 
+      }, 
+      {
+        "stepName": "llc",
+        "executablePath": "<path-to-llc>",
+        "arguments": ["-filetype=obj", "$INPUT", "-o", "$OUTPUT"],
+        "output": "gaz.o"
+      },
+      {
+        "stepName": "clang",
+        "executablePath": "/usr/bin/clang",
+        "arguments": ["$INPUT", "-o", "$OUTPUT", "-L$RT_PATH", "-l$RT_LIB"],
+        "output": "gaz"
+      },
+      {
+        "stepName": "run",
+        "executablePath": "$INPUT",
+        "arguments": [],
+        "usesInStr": true,
+        "usesRuntime": true,
+        "allowError": true
+      }
+    ] 
+  }
+}
