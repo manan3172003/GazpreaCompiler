@@ -1,10 +1,10 @@
 {
   "testDir": "testfiles",
   "testedExecutablePaths": {
-    "<team-name>": "../bin/gazc"
+    "dragon-deez-nuts": "../bin/gazc"
   },
   "runtimes": {
-    "<team-name>": "../bin/libgazrt.so"
+    "dragon-deez-nuts": "../bin/libgazrt.so"
   },
   "toolchains": {
     "gazprea-llc": [

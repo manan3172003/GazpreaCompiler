@@ -1,28 +1,50 @@
 name: CI/CD Workflow
 
-on: push
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    types: [opened, synchronize, reopened, labeled]
 
 jobs:
   build:
     runs-on: self-hosted
     container: ghcr.io/cmput415/gaz-utils:latest
+    # Only run if it's a push to master, manual dispatch, or PR has the specific label
+    if: |
+      github.event_name == 'push' || 
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-ci'))
 
     steps:
-    # Step 1: Checkout the repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-    # Step 2: Create build directory and run CMake
-      - name: Configure and build with CMake
-        run: |
-          mkdir -p build
-          cd build
-          cmake ..
-          make
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y cmake ninja-build valgrind python3-venv
 
-    # Step 3: Run tests
-      - name: Run command using gazprea binary
-        working-directory: tests
-        run: |
-          dragon-runner CIConfig.json
+      - name: Install dragon-runner
+        run: pip install --no-cache-dir --upgrade pip && pip install . && dragon-runner --help
+        working-directory: /opt/Dragon-Runner
 
+      - name: Add dragon-runner to PATH
+        run: echo "/opt/Dragon-Runner" >> $GITHUB_PATH
+
+      - name: Configure
+        run: cmake -B bin -G Ninja .
+
+      - name: Build
+        run: cmake --build bin --parallel $(nproc)
+
+      - name: Make Executable
+        run: chmod +x ./bin/gazc
+
+      - name: Run valgrind tests
+        run: dragon-runner memcheck tests/CIConfigValgrind.json --timeout 30
+
+      - name: Run llc tests
+        run: dragon-runner tests/CIConfig.json --timeout 30

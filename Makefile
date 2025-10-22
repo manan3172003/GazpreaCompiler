@@ -1,0 +1,20 @@
+.PHONY: build format emit-llvm compile run-llvm test run
+build: format
+	cd build/ && cmake .. && make && cd -
+
+format:
+	find src include -type f \( -name "*.cpp" -o -name "*.h" \) -exec clang-format -i {} +
+
+emit-llvm:
+	clang++ -O0 -S -emit-llvm runtime-tests/$(filename) -o runtime-tests/$(filename).ll
+
+compile:
+	 ./bin/vcalc runtime-tests/$(file).in runtime-tests/$(file).ll
+
+run-llvm:
+	lli runtime-tests/$(file).ll
+
+test: build
+	cd tests/ && dragon-runner GazpreaCompileConfig.json -v && cd -
+
+run: build compile run-llvm

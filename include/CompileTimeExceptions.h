@@ -3,23 +3,21 @@
 
 class CompileTimeException : public std::exception {
 protected:
-    std::string msg;
+  std::string msg;
 
 public:
-    const char *what() const noexcept override {
-        return msg.c_str();
-    }
+  const char *what() const noexcept override { return msg.c_str(); }
 };
 
-#define DEF_COMPILE_TIME_EXCEPTION(NAME)                                         \
-class NAME : public CompileTimeException {                                       \
-public:                                                                          \
-    NAME(unsigned line, const std::string &description) {                        \
-        std::stringstream buf;                                                   \
-        buf << #NAME << " on Line " << line << ": " << description << std::endl; \
-        msg = buf.str();                                                         \
-    }                                                                            \
-}
+#define DEF_COMPILE_TIME_EXCEPTION(NAME)                                       \
+  class NAME : public CompileTimeException {                                   \
+  public:                                                                      \
+    NAME(unsigned line, const std::string &description) {                      \
+      std::stringstream buf;                                                   \
+      buf << #NAME << " on Line " << line << ": " << description << std::endl; \
+      msg = buf.str();                                                         \
+    }                                                                          \
+  }
 
 DEF_COMPILE_TIME_EXCEPTION(AliasingError);
 

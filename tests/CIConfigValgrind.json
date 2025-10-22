@@ -1,11 +1,11 @@
 {
   "testDir": "testfiles",
   "testedExecutablePaths": {
-    "dragon-deez-nuts": "<path-to-gazprea>"
+    "dragon-deez-nuts": "../bin/gazc"
   },
   "runtimes": {
-    "dragon-deez-nuts": "<path-to-runtime>"
-  }, 
+    "dragon-deez-nuts": "../bin/libgazrt.so"
+  },
   "toolchains": {
     "gazprea-llc": [
       {
@@ -13,28 +13,32 @@
         "executablePath": "$EXE",
         "arguments": ["$INPUT", "$OUTPUT"],
         "output": "gaz.ll",
-        "allowError": true 
-      }, 
+        "allowError": true
+      },
       {
         "stepName": "llc",
-        "executablePath": "<path-to-llc>",
+        "executablePath": "/usr/local/llvm/bin/llc",
         "arguments": ["-filetype=obj", "$INPUT", "-o", "$OUTPUT"],
         "output": "gaz.o"
       },
       {
         "stepName": "clang",
-        "executablePath": "/usr/bin/clang",
+        "executablePath": "/usr/local/llvm/bin/clang",
         "arguments": ["$INPUT", "-o", "$OUTPUT", "-L$RT_PATH", "-l$RT_LIB"],
         "output": "gaz"
       },
       {
-        "stepName": "run",
-        "executablePath": "$INPUT",
-        "arguments": [],
+        "stepName": "valgrind",
+        "executablePath": "/usr/bin/valgrind",
+        "arguments": [
+          "--leak-check=full",
+          "--error-exitcode=111",
+          "--log-file=/dev/null",
+          "$INPUT"
+        ],
         "usesInStr": true,
-        "usesRuntime": true,
         "allowError": true
       }
-    ] 
+    ]
   }
 }

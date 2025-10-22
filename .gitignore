@@ -13,3 +13,6 @@ build/
 
 # Ignore macOS files
 .DS_STORE
+
+# Custom entries
+runtime-tests/

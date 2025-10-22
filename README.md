@@ -1,5 +1,4 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/aA3Yncmw)
-# GazpreaBase
+# Gazprea
 The base cmake setup for Gazprea assignment.
 
 Author: Braedy Kuzma (braedy@ualberta.ca)  
@@ -7,6 +6,12 @@ Author: Braedy Kuzma (braedy@ualberta.ca)
 Updated by: Deric Cheung (dacheung@ualberta.ca)
 
 Updated by: Quinn Pham (qpham@ualberta.ca)
+
+### Modified by:
+- Armaan Katyal (katyal1@ualberta.ca)
+- Manan Jain (mjain2@ualberta.ca)
+- Mansoor anis (manis@ualberta.ca)
+- Kunal Rao (ksrao@ualberta.ca)
 
 # Usage
 ## Installing MLIR
