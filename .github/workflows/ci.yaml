@@ -1,16 +1,10 @@
 name: CI/CD Workflow
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+on: push
 
 jobs:
   build:
-    runs-on: gazprea
+    runs-on: self-hosted
     container: ghcr.io/cmput415/gaz-utils:latest
 
     steps:
