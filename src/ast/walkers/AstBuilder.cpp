@@ -8,14 +8,14 @@ namespace gazprea::ast::walkers {
 
 std::any AstBuilder::visitFile(GazpreaParser::FileContext *ctx) {
   auto root = std::make_shared<RootAst>(ctx->getStart());
-  std::cout << ctx->children.size() << std::endl;
-  for (const auto child : ctx->children) {
+  std::cout << ctx->global_stat().size() << std::endl;
+  for (const auto child : ctx->global_stat()) {
     root->addChild(std::any_cast<std::shared_ptr<Ast>>(visit(child)));
   }
   return root;
 }
 std::any AstBuilder::visitGlobal_stat(GazpreaParser::Global_statContext *ctx) {
-  return visitChildren(ctx);
+  return visit(ctx->dec_stat());
 }
 
 std::any
@@ -73,8 +73,7 @@ std::any AstBuilder::visitAssign_stat(GazpreaParser::Assign_statContext *ctx) {
   return GazpreaBaseVisitor::visitAssign_stat(ctx);
 }
 std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
-  auto declAst = std::any_cast<std::shared_ptr<statements::DeclarationAst>>(
-      ctx->getStart());
+  auto declAst = std::make_shared<statements::DeclarationAst>(ctx->getStart());
   if (ctx->qualifier()) {
     if (ctx->qualifier()->CONST())
       declAst->qualifier = Qualifier::Const;
