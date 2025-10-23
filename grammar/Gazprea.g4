@@ -1,14 +1,109 @@
 grammar Gazprea;
 
-file: expr* EOF;
+file: global_stat* EOF;
+
+
+global_stat
+    : dec_stat // TODO: Do global decs require const keyword or we can infer?
+    | typealias_stat
+    | function_stat
+    | procedure_stat
+    ;
+
+typealias_stat: TYPEALIAS type ID SC;
+
+stat
+    : dec_stat
+    | assign_stat
+    | block_stat
+    | if_stat
+    | loop_stat
+    | BREAK SC
+    | CONTINUE SC
+    | return_stat
+    | output_stat
+    | input_stat
+    | procedure_call_stat
+    ;
+
+// TODO: Can procedure only be defined in a global scope?
+procedure_stat
+    : PROCEDURE ID LPAREN procedure_params? RPAREN (RETURNS type)? block_stat
+    ;
+
+procedure_params: qualifier type ID (COMMA qualifier type ID)*;
+
+procedure_call_stat: CALL ID LPAREN args RPAREN SC;
+
+function_stat
+    : FUNCTION ID LPAREN function_params? RPAREN RETURNS type EQUAL expr SC
+    | FUNCTION ID LPAREN function_params? RPAREN RETURNS type block_stat
+    ;
+
+function_params: type ID (COMMA type ID)*;
+
+args: expr (COMMA expr)*;
+
+output_stat: expr '->' STD_OUTPUT SC;
+
+input_stat: ID '<-' STD_INPUT SC;
+
+return_stat: RETURN expr? SC;
+
+// TODO: Calrify if this is analogous
+// if (i == 1) loop {i -> std_output;}
+// if (i == 1) while (i < 10){print (10);}
+if_stat: IF LPAREN expr RPAREN stat else_stat?;
+else_stat: ELSE stat;
+
+loop_stat
+    : LOOP WHILE LPAREN expr RPAREN stat
+    | LOOP ID IN expr stat
+    | LOOP stat WHILE LPAREN expr RPAREN SC
+    | LOOP stat
+    ;
+
+block_stat: LBRACE stat+ RBRACE;
+
+// TODO: tuple assignment
+assign_stat
+    : qualifier? ID EQUAL expr SC
+    | TUPLE_ACCESS EQUAL expr SC
+    ;
+
+dec_stat
+    : qualifier? type ID (EQUAL expr)? SC
+    ;
+
+tuple_dec_stat
+    : tuple_type ID (EQUAL expr)? SC
+    ;
+
+tuple_type: TUPLE LPAREN type_list RPAREN;
+
+type_list: type (COMMA type)*;
+
+type
+    : BOOLEAN
+    | CHARACTER
+    | INTEGER
+    | REAL
+    | tuple_type
+    | ID
+    ;
+
+qualifier
+    : CONST
+    | VAR
+    ;
 
 expr
     : LPAREN expr RPAREN #parenExpr
     | TUPLE_ACCESS #tupleAccessExpr
     | expr DDOT expr #rangeExpr
-    | op=(PLUS | MINUS | NOT) expr #unaryExpr
+    | <assoc=right> op=(PLUS | MINUS | NOT) expr #unaryExpr
     | <assoc=right> expr POWER expr #powerExpr
-    | expr op=(MULT | DIV | REM | DSTAR) expr #mulDivRemExpr
+    | expr op=(MULT | DIV | REM | DSTAR) expr #mulDivRemDstarExpr
     | expr op=(PLUS | MINUS) expr #addSubExpr
     | expr BY expr #byExpr
     | expr op=(LT | LTE | GT | GTE) expr #relationalExpr
@@ -16,6 +111,8 @@ expr
     | expr AND expr #andExpr
     | expr op=(OR | XOR) expr #logicalExpr
     | expr APPEND expr #appendExpr
+    | AS '<' type '>' LPAREN expr RPAREN #castExpr
+    | tuple_lit #tupleLiteral
     | INT_LIT #intLiteral
     | SCIENTIFIC_FLOAT #scientificFloatLiteral
     | DOT_FLOAT #dotFloatLiteral
@@ -25,7 +122,10 @@ expr
     | CHAR_LIT #charLiteral
     | (TRUE | FALSE) #boolLiteral
     | ID #identifier
+    | ID LPAREN args? RPAREN #funcProcExpr // TODO: Type check on procedure assign & decl & unary
     ;
+
+tuple_lit: LPAREN expr (COMMA expr)* RPAREN;
 
 // Keywords
 AND: 'and';
