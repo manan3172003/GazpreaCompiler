@@ -8,7 +8,6 @@ namespace gazprea::ast::walkers {
 
 std::any AstBuilder::visitFile(GazpreaParser::FileContext *ctx) {
   auto root = std::make_shared<RootAst>(ctx->getStart());
-  std::cout << ctx->global_stat().size() << std::endl;
   for (const auto child : ctx->global_stat()) {
     root->addChild(std::any_cast<std::shared_ptr<Ast>>(visit(child)));
   }
@@ -139,7 +138,6 @@ std::any AstBuilder::visitAddSubExpr(GazpreaParser::AddSubExprContext *ctx) {
   return GazpreaBaseVisitor::visitAddSubExpr(ctx);
 }
 std::any AstBuilder::visitIntLiteral(GazpreaParser::IntLiteralContext *ctx) {
-  std::cout << ctx->INT_LIT()->getText() << std::endl;
   auto intAst = std::make_shared<expressions::IntegerAst>(
       ctx->getStart(), std::stoi(ctx->INT_LIT()->getText()));
   return std::static_pointer_cast<expressions::ExpressionAst>(intAst);
