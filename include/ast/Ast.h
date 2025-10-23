@@ -1,26 +1,26 @@
 #pragma once
-#include "types/Type.h"
 
 #include <Token.h>
 #include <memory>
 #include <string>
 
 namespace gazprea::ast {
-enum class NodeType {};
+enum class NodeType { Assignment, Integer, Declaration, Root };
+
+enum class Qualifier {
+  Var,
+  Const,
+};
 
 class Ast {
+protected:
+  antlr4::Token *token;
+
 public:
-  Ast();
-  explicit Ast(antlr4::Token *token);
-  explicit Ast(size_t tokenType);
-  bool isNil() const;
-  static std::string typeToString(types::Type t);
-  virtual NodeType getNodeType() const;
-  void addChild(std::any t);
-  template <class T> void addChild(std::any t);
-  void addChild(std::shared_ptr<Ast> t);
-  virtual std::string toString() const;
-  std::string toStringTree() const;
-  virtual ~Ast();
+  Ast(antlr4::Token *token) : token(token) {};
+  virtual NodeType getNodeType() const = 0;
+  virtual std::string toStringTree() const = 0;
+  static std::string qualifierToString(Qualifier qualifier);
+  virtual ~Ast() = default;
 };
 } // namespace gazprea::ast

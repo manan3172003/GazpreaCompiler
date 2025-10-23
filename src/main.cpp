@@ -7,6 +7,9 @@
 #include "tree/ParseTreeWalker.h"
 
 #include "BackEnd.h"
+#include "ast/RootAst.h"
+#include "ast/statements/DeclarationAst.h"
+#include "ast/walkers/AstBuilder.h"
 
 #include <fstream>
 #include <iostream>
@@ -25,20 +28,19 @@ int main(int argc, char **argv) {
   antlr4::CommonTokenStream tokens(&lexer);
   gazprea::GazpreaParser parser(&tokens);
 
-  // Get the root of the parse tree. Use your base rule name.
   antlr4::tree::ParseTree *tree = parser.file();
 
-  // HOW TO USE A VISITOR
-  // Make the visitor
-  // MyVisitor visitor;
-  // Visit the tree
-  // visitor.visit(tree);
+  gazprea::ast::walkers::AstBuilder astBuilder;
+  auto rootAst = std::any_cast<std::shared_ptr<gazprea::ast::RootAst>>(
+      astBuilder.visit(tree));
+
+  std::cout << rootAst->toStringTree() << std::endl;
 
   std::ofstream os(argv[2]);
-  BackEnd backend;
-  backend.emitModule();
-  backend.lowerDialects();
-  backend.dumpLLVM(os);
+  // BackEnd backend;
+  // backend.emitModule();
+  // backend.lowerDialects();
+  // backend.dumpLLVM(os);
 
   return 0;
 }

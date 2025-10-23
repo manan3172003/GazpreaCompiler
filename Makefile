@@ -9,7 +9,7 @@ emit-llvm:
 	clang++ -O0 -S -emit-llvm runtime-tests/$(filename) -o runtime-tests/$(filename).ll
 
 compile:
-	 ./bin/vcalc runtime-tests/$(file).in runtime-tests/$(file).ll
+	 ./bin/gazc runtime-tests/$(file).in runtime-tests/$(file).ll
 
 run-llvm:
 	lli runtime-tests/$(file).ll
