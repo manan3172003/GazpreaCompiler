@@ -6,6 +6,7 @@ std::string DeclarationAst::toStringTree() const {
   std::stringstream ss;
   ss << "Declaration " << name << " " << qualifierToString(qualifier) << " "
      << type << " " << token->toString() << '\n';
+  ss << "    └──" << expr->toStringTree();
   return ss.str();
 }
 } // namespace gazprea::ast::statements

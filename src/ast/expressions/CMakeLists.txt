@@ -1,6 +1,7 @@
 set(
         gazprea_expressions_src
         "${CMAKE_CURRENT_SOURCE_DIR}/IntegerAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/RealAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_expressions_src})

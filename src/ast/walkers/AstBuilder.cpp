@@ -1,5 +1,6 @@
 #include "ast/RootAst.h"
 #include "ast/expressions/IntegerAst.h"
+#include "ast/expressions/RealAst.h"
 #include "ast/statements/DeclarationAst.h"
 
 #include <ast/walkers/AstBuilder.h>
@@ -122,7 +123,9 @@ std::any AstBuilder::visitUnaryExpr(GazpreaParser::UnaryExprContext *ctx) {
 }
 std::any
 AstBuilder::visitFloatLiteral(GazpreaParser::FloatLiteralContext *ctx) {
-  return GazpreaBaseVisitor::visitFloatLiteral(ctx);
+  auto realAst = std::make_shared<expressions::RealAst>(
+      ctx->getStart(), std::stof(ctx->FLOAT_LIT()->getText()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any AstBuilder::visitAppendExpr(GazpreaParser::AppendExprContext *ctx) {
   return GazpreaBaseVisitor::visitAppendExpr(ctx);
@@ -144,11 +147,15 @@ std::any AstBuilder::visitIntLiteral(GazpreaParser::IntLiteralContext *ctx) {
 }
 std::any AstBuilder::visitScientificFloatLiteral(
     GazpreaParser::ScientificFloatLiteralContext *ctx) {
-  return GazpreaBaseVisitor::visitScientificFloatLiteral(ctx);
+  auto realAst = std::make_shared<expressions::RealAst>(
+      ctx->getStart(), std::stof(ctx->SCIENTIFIC_FLOAT()->getText()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any
 AstBuilder::visitDotFloatLiteral(GazpreaParser::DotFloatLiteralContext *ctx) {
-  return GazpreaBaseVisitor::visitDotFloatLiteral(ctx);
+  auto realAst = std::make_shared<expressions::RealAst>(
+      ctx->getStart(), std::stof(ctx->DOT_FLOAT()->getText()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any AstBuilder::visitByExpr(GazpreaParser::ByExprContext *ctx) {
   return GazpreaBaseVisitor::visitByExpr(ctx);
@@ -162,7 +169,9 @@ AstBuilder::visitRelationalExpr(GazpreaParser::RelationalExprContext *ctx) {
 }
 std::any
 AstBuilder::visitFloatDotLiteral(GazpreaParser::FloatDotLiteralContext *ctx) {
-  return GazpreaBaseVisitor::visitFloatDotLiteral(ctx);
+  auto realAst = std::make_shared<expressions::RealAst>(
+      ctx->getStart(), std::stof(ctx->FLOAT_DOT()->getText().substr(0, -1)));
+  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any
 AstBuilder::visitTupleLiteral(GazpreaParser::TupleLiteralContext *ctx) {

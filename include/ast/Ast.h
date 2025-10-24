@@ -5,7 +5,7 @@
 #include <string>
 
 namespace gazprea::ast {
-enum class NodeType { Assignment, Integer, Declaration, Root };
+enum class NodeType { Assignment, Integer, Declaration, Real, Root };
 
 enum class Qualifier {
   Var,
