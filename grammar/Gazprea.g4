@@ -26,7 +26,7 @@ stat
     | procedure_call_stat
     ;
 
-// TODO: Can procedure only be defined in a global scope? Yes
+// TODO: Can procedure only be defined in a global scope?
 procedure_stat
     : PROCEDURE ID LPAREN procedure_params? RPAREN (RETURNS type)? block_stat
     ;
@@ -54,7 +54,6 @@ input_stat: ID '<-' STD_INPUT SC;
 return_stat: RETURN expr? SC;
 
 // TODO: Calrify if this is analogous
-// if (i == 1) loop {i -> std_output;}
 // if (i == 1) loop {i -> std_output;}
 // if (i == 1) while (i < 10){print (10);}
 if_stat: IF LPAREN expr RPAREN stat else_stat?;
