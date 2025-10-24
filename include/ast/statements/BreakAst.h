@@ -1,3 +1,4 @@
+#pragma once
 #include <ast/statements/StatementAst.h>
 
 namespace gazprea::ast::statements {

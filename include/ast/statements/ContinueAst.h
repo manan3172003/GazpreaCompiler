@@ -1,4 +1,6 @@
+#pragma once
 #include "StatementAst.h"
+
 namespace gazprea::ast::statements {
 class ContinueAst : public StatementAst {
 public:
