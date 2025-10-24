@@ -9,8 +9,8 @@
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
 #include "ast/statements/DeclarationAst.h"
-#include "ast/statements/OutputAst.h"
 #include "ast/statements/InputAst.h"
+#include "ast/statements/OutputAst.h"
 #include "ast/statements/ReturnAst.h"
 
 #include <ast/walkers/AstBuilder.h>
