@@ -6,6 +6,8 @@
 #include "ast/expressions/UnaryAst.h"
 #include "ast/prototypes/FunctionAst.h"
 #include "ast/prototypes/FunctionParamAst.h"
+#include "ast/prototypes/ProcedureAst.h"
+#include "ast/prototypes/ProcedureParamAst.h"
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
 #include "ast/statements/BreakAst.h"
@@ -65,11 +67,54 @@ std::any AstBuilder::visitStat(GazpreaParser::StatContext *ctx) {
 }
 std::any
 AstBuilder::visitProcedure_stat(GazpreaParser::Procedure_statContext *ctx) {
-  return GazpreaBaseVisitor::visitProcedure_stat(ctx);
+  const auto protoAst =
+      std::make_shared<prototypes::PrototypeAst>(ctx->getStart());
+  protoAst->setName(ctx->ID()->getText());
+  if (ctx->procedure_params()) {
+    // Handle Procedure parameters
+    protoAst->setArgs(std::any_cast<std::vector<std::shared_ptr<Ast>>>(
+        visit(ctx->procedure_params())));
+  }
+  if (ctx->type())
+    protoAst->setType(ctx->type()->getText());
+
+  const auto procAst =
+      std::make_shared<prototypes::ProcedureAst>(ctx->getStart());
+  procAst->setProto(protoAst);
+
+  if (ctx->block_stat()) {
+    // Handle block Procedure body
+    const auto bodyAst =
+        std::any_cast<std::shared_ptr<statements::StatementAst>>(
+            visit(ctx->block_stat()));
+    procAst->setBody(bodyAst);
+  }
+  return std::static_pointer_cast<Ast>(procAst);
 }
 std::any
 AstBuilder::visitProcedure_params(GazpreaParser::Procedure_paramsContext *ctx) {
-  return GazpreaBaseVisitor::visitProcedure_params(ctx);
+  auto params = std::vector<std::shared_ptr<Ast>>{};
+  for (const auto &param : ctx->procedure_param()) {
+    params.push_back(std::any_cast<std::shared_ptr<Ast>>(visit(param)));
+  }
+  return params;
+}
+std::any
+AstBuilder::visitProcedure_param(GazpreaParser::Procedure_paramContext *ctx) {
+  const auto paramAst =
+      std::make_shared<prototypes::ProcedureParamAst>(ctx->getStart());
+  if (ctx->qualifier()->VAR()) {
+    paramAst->setQualifier(Qualifier::Var);
+  } else {
+    paramAst->setQualifier(Qualifier::Const); // Default qualifier
+  }
+  paramAst->setType(ctx->type()->getText());
+  if (ctx->ID()) {
+    paramAst->setName(ctx->ID()->getText());
+  }
+  // Otherwise, parameter has no name (forward declaration)
+
+  return std::static_pointer_cast<Ast>(paramAst);
 }
 std::any AstBuilder::visitProcedure_call_stat(
     GazpreaParser::Procedure_call_statContext *ctx) {
@@ -128,6 +173,7 @@ std::any
 AstBuilder::visitFunction_param(GazpreaParser::Function_paramContext *ctx) {
   const auto paramAst =
       std::make_shared<prototypes::FunctionParamAst>(ctx->getStart());
+  paramAst->setQualifier(Qualifier::Const);
   paramAst->setType(ctx->type()->getText());
   if (ctx->ID()) {
     paramAst->setName(ctx->ID()->getText());

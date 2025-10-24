@@ -28,10 +28,13 @@ stat
 
 // TODO: Can procedure only be defined in a global scope?
 procedure_stat
-    : PROCEDURE ID LPAREN procedure_params? RPAREN (RETURNS type)? block_stat
+    : PROCEDURE ID LPAREN procedure_params? RPAREN (RETURNS type)? SC
+    | PROCEDURE ID LPAREN procedure_params? RPAREN (RETURNS type)? block_stat
     ;
 
-procedure_params: qualifier type ID (COMMA qualifier type ID)*;
+procedure_params: procedure_param (COMMA procedure_param)*;
+
+procedure_param: qualifier type ID?;
 
 procedure_call_stat: CALL ID LPAREN args RPAREN SC;
 

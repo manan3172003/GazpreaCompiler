@@ -1,0 +1,24 @@
+#pragma once
+#include "PrototypeAst.h"
+#include "ast/Ast.h"
+#include "ast/statements/StatementAst.h"
+
+namespace gazprea::ast::prototypes {
+class ProcedureAst final : public Ast {
+  std::shared_ptr<PrototypeAst> proto;
+  std::shared_ptr<statements::StatementAst> body;
+
+public:
+  explicit ProcedureAst(antlr4::Token *token) : Ast(token) {};
+  void setProto(std::shared_ptr<PrototypeAst> proto_) {
+    proto = std::move(proto_);
+  }
+  std::shared_ptr<PrototypeAst> getProto() const { return proto; }
+  void setBody(std::shared_ptr<statements::StatementAst> body_) {
+    body = std::move(body_);
+  }
+  std::shared_ptr<statements::StatementAst> getBody() const { return body; }
+  NodeType getNodeType() const override;
+  std::string toStringTree(std::string prefix) const override;
+};
+} // namespace gazprea::ast::prototypes

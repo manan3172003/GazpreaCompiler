@@ -2,14 +2,13 @@
 #include "ast/Ast.h"
 
 namespace gazprea::ast::prototypes {
-class FunctionParamAst final : public Ast {
+class ProcedureParamAst final : public Ast {
   Qualifier qualifier;
   std::string type;
   std::string name;
 
 public:
-  explicit FunctionParamAst(antlr4::Token *token) : Ast(token), qualifier() {}
-
+  explicit ProcedureParamAst(antlr4::Token *token) : Ast(token), qualifier() {}
   std::string &getName() { return name; }
   void setName(const std::string &name_) { name = name_; }
   std::string &getType() { return type; }
@@ -20,4 +19,4 @@ public:
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
 };
-} // namespace gazprea::ast::prototypes
+}; // namespace gazprea::ast::prototypes

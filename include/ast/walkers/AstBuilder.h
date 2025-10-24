@@ -14,6 +14,8 @@ public:
   visitProcedure_stat(GazpreaParser::Procedure_statContext *ctx) override;
   std::any
   visitProcedure_params(GazpreaParser::Procedure_paramsContext *ctx) override;
+  std::any
+  visitProcedure_param(GazpreaParser::Procedure_paramContext *ctx) override;
   std::any visitProcedure_call_stat(
       GazpreaParser::Procedure_call_statContext *ctx) override;
   std::any
