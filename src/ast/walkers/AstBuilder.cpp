@@ -144,7 +144,7 @@ std::any AstBuilder::visitAssign_stat(GazpreaParser::Assign_statContext *ctx) {
   }
   assignAst->expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
       visit(ctx->expr()));
-  return std::static_pointer_cast<Ast>(assignAst);
+  return std::static_pointer_cast<StatementAst>(assignAst);
 }
 std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
   auto declAst = std::make_shared<statements::DeclarationAst>(ctx->getStart());
