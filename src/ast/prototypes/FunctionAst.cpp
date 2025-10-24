@@ -7,13 +7,12 @@ std::string FunctionAst::toStringTree(std::string prefix) const {
 
   ss << prefix << "Function " << proto->getName() << "(";
 
-  bool first = true;
-  for (const auto &arg : proto->getArgs()) {
-    if (!first) {
+  const auto &args = proto->getArgs();
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i > 0) {
       ss << ", ";
     }
-    ss << arg->toStringTree("");
-    first = false;
+    ss << args[i]->toStringTree("");
   }
 
   ss << ")";

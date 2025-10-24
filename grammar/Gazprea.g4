@@ -36,9 +36,9 @@ procedure_params: qualifier type ID (COMMA qualifier type ID)*;
 procedure_call_stat: CALL ID LPAREN args RPAREN SC;
 
 function_stat
-    : FUNCTION ID LPAREN function_params? RPAREN RETURNS type EQUAL expr SC
+    : FUNCTION ID LPAREN function_params? RPAREN RETURNS type SC // Forward declaration
+    | FUNCTION ID LPAREN function_params? RPAREN RETURNS type EQUAL expr SC
     | FUNCTION ID LPAREN function_params? RPAREN RETURNS type block_stat
-    | FUNCTION ID LPAREN function_params? RPAREN RETURNS type SC // Forward declaration
     ;
 
 function_params: function_param (COMMA function_param)*;
