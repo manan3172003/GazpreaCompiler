@@ -6,7 +6,10 @@ NodeType FunctionParamAst::getNodeType() const {
 }
 std::string FunctionParamAst::toStringTree() const {
   std::stringstream ss;
-  ss << "FunctionParam " << type << " " << name;
+  ss << type;
+  if (!name.empty()) {
+    ss << " " << name;
+  }
   return ss.str();
 }
 } // namespace gazprea::ast::prototypes

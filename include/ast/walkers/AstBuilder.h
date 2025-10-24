@@ -20,6 +20,8 @@ public:
   visitFunction_stat(GazpreaParser::Function_statContext *ctx) override;
   std::any
   visitFunction_params(GazpreaParser::Function_paramsContext *ctx) override;
+  std::any
+  visitFunction_param(GazpreaParser::Function_paramContext *ctx) override;
   std::any visitArgs(GazpreaParser::ArgsContext *ctx) override;
   std::any visitOutput_stat(GazpreaParser::Output_statContext *ctx) override;
   std::any visitInput_stat(GazpreaParser::Input_statContext *ctx) override;

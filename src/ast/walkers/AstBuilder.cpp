@@ -73,25 +73,37 @@ AstBuilder::visitFunction_stat(GazpreaParser::Function_statContext *ctx) {
     const auto bodyAst =
         std::any_cast<std::shared_ptr<Ast>>(visit(ctx->expr()));
     functionAst->setBody(bodyAst);
-  } else {
+  } else if (ctx->block_stat()) {
     // Handle block function body
     const auto bodyAst =
         std::any_cast<std::shared_ptr<Ast>>(visit(ctx->block_stat()));
     functionAst->setBody(bodyAst);
+  } else {
+    // Forward declaration without body
+    functionAst->setBody(nullptr);
   }
   return std::static_pointer_cast<Ast>(functionAst);
 }
 std::any
 AstBuilder::visitFunction_params(GazpreaParser::Function_paramsContext *ctx) {
   auto params = std::vector<std::shared_ptr<Ast>>{};
-  for (size_t i = 0; i < ctx->ID().size(); ++i) {
-    auto paramAst =
-        std::make_shared<prototypes::FunctionParamAst>(ctx->getStart());
-    paramAst->setName(ctx->ID()[i]->getText());
-    paramAst->setType(ctx->type()[i]->getText());
-    params.push_back(paramAst);
+  for (const auto &param : ctx->function_param()) {
+    params.push_back(std::any_cast<std::shared_ptr<Ast>>(visit(param)));
   }
   return params;
+}
+
+std::any
+AstBuilder::visitFunction_param(GazpreaParser::Function_paramContext *ctx) {
+  const auto paramAst =
+      std::make_shared<prototypes::FunctionParamAst>(ctx->getStart());
+  paramAst->setType(ctx->type()->getText());
+  if (ctx->ID()) {
+    paramAst->setName(ctx->ID()->getText());
+  }
+  // Otherwise, parameter has no name (forward declaration)
+
+  return std::static_pointer_cast<Ast>(paramAst);
 }
 std::any AstBuilder::visitArgs(GazpreaParser::ArgsContext *ctx) {
   return GazpreaBaseVisitor::visitArgs(ctx);

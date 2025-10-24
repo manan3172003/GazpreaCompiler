@@ -14,7 +14,11 @@ std::string FunctionAst::toStringTree() const {
   }
   ss << ")";
   ss << " Returns: " << proto->getType() << " " << token->toString() << "\n";
-  ss << "└──" << body->toStringTree();
+
+  if (body) {
+    ss << "└──" << body->toStringTree();
+  }
+
   return ss.str();
 }
 } // namespace gazprea::ast::prototypes
