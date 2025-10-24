@@ -4,6 +4,7 @@
 #include "ast/prototypes/FunctionAst.h"
 #include "ast/prototypes/FunctionParamAst.h"
 #include "ast/statements/BlockAst.h"
+#include "ast/expressions/UnaryAst.h"
 #include "ast/statements/DeclarationAst.h"
 
 #include <ast/walkers/AstBuilder.h>
@@ -185,7 +186,24 @@ std::any AstBuilder::visitParenExpr(GazpreaParser::ParenExprContext *ctx) {
   return GazpreaBaseVisitor::visitParenExpr(ctx);
 }
 std::any AstBuilder::visitUnaryExpr(GazpreaParser::UnaryExprContext *ctx) {
-  return GazpreaBaseVisitor::visitUnaryExpr(ctx);
+  auto unaryExpression =
+      std::make_shared<expressions::UnaryAst>(ctx->getStart());
+  auto childExpression =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+          visit(ctx->expr()));
+
+  expressions::UnaryOpType opType;
+  if (ctx->op->getText() == "+")
+    opType = expressions::UnaryOpType::PLUS;
+  else if (ctx->op->getText() == "-")
+    opType = expressions::UnaryOpType::MINUS;
+  else
+    opType = expressions::UnaryOpType::NOT;
+
+  unaryExpression->setUnaryOpType(opType);
+  unaryExpression->setExpression(childExpression);
+
+  return std::static_pointer_cast<expressions::ExpressionAst>(unaryExpression);
 }
 std::any
 AstBuilder::visitFloatLiteral(GazpreaParser::FloatLiteralContext *ctx) {

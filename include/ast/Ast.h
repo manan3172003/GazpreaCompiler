@@ -13,7 +13,8 @@ enum class NodeType {
   Block,
   Function,
   Prototype,
-  FunctionParam
+  FunctionParam,
+  UnaryExpression
 };
 
 enum class Qualifier {
