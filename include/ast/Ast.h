@@ -20,7 +20,7 @@ enum class NodeType {
   Return,
   Root,
   TupleAccess,
-  ConditionalStatement
+  Conditional
 };
 
 enum class Qualifier {

@@ -1,26 +1,47 @@
 #include <ast/statements/ConditionalAst.h>
 
 namespace gazprea::ast::statements {
-NodeType ConditionalStatementAst::getNodeType() const {
-  return NodeType::ConditionalStatement;
+
+void ConditionalAst::setCondition(
+    std::shared_ptr<expressions::ExpressionAst> condition) {
+  this->condition = condition;
 }
-std::string ConditionalStatementAst::toStringTree(std::string prefix) const {
+void ConditionalAst::setThenBody(std::shared_ptr<BlockAst> thenBody) {
+  this->thenBody = thenBody;
+}
+void ConditionalAst::setElseBody(std::shared_ptr<BlockAst> elseBody) {
+  this->elseBody = elseBody;
+}
+
+std::shared_ptr<BlockAst> ConditionalAst::getThenBody() const {
+  return this->thenBody;
+}
+std::shared_ptr<BlockAst> ConditionalAst::getElseBody() const {
+  return this->elseBody;
+}
+std::shared_ptr<expressions::ExpressionAst>
+ConditionalAst::getCondition() const {
+  return this->condition;
+}
+
+NodeType ConditionalAst::getNodeType() const { return NodeType::Conditional; }
+std::string ConditionalAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << "IfStatement: \n";
 
   ss << prefix + indent << "Condition: \n";
-  if (condition) {
-    ss << condition->toStringTree(indent + prefix + indent);
+  if (getCondition()) {
+    ss << getCondition()->toStringTree(indent + prefix + indent);
   }
 
   ss << prefix + indent << "Then: \n";
-  if (thenBody) {
-    ss << thenBody->toStringTree(indent + prefix + indent);
+  if (getThenBody()) {
+    ss << getThenBody()->toStringTree(indent + prefix + indent);
   }
 
-  if (elseBody) {
+  if (getElseBody()) {
     ss << prefix + indent << "Else: \n";
-    ss << elseBody->toStringTree(indent + prefix + indent);
+    ss << getElseBody()->toStringTree(indent + prefix + indent);
   }
   return ss.str();
 }

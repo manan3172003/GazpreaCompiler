@@ -153,27 +153,30 @@ std::any AstBuilder::visitReturn_stat(GazpreaParser::Return_statContext *ctx) {
 }
 std::any AstBuilder::visitIf_stat(GazpreaParser::If_statContext *ctx) {
   const auto ifAst =
-      std::make_shared<statements::ConditionalStatementAst>(ctx->getStart());
-  ifAst->condition = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr()));
+      std::make_shared<statements::ConditionalAst>(ctx->getStart());
+  ifAst->setCondition(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+          visit(ctx->expr())));
   auto thenStmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
       visit(ctx->stat()));
   if (thenStmt->getNodeType() == NodeType::Block) {
-    ifAst->thenBody = thenStmt;
+    ifAst->setThenBody(
+        std::static_pointer_cast<statements::BlockAst>(thenStmt));
   } else {
     auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
     blockAst->addChildren(thenStmt);
-    ifAst->thenBody = blockAst;
+    ifAst->setThenBody(blockAst);
   }
   if (ctx->else_stat()) {
     auto elseStmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
         visit(ctx->else_stat()));
     if (elseStmt->getNodeType() == NodeType::Block) {
-      ifAst->elseBody = elseStmt;
+      ifAst->setElseBody(
+          std::static_pointer_cast<statements::BlockAst>(elseStmt));
     } else {
       auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
       blockAst->addChildren(elseStmt);
-      ifAst->elseBody = blockAst;
+      ifAst->setElseBody(blockAst);
     }
   }
   return std::static_pointer_cast<statements::StatementAst>(ifAst);
