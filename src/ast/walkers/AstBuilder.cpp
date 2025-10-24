@@ -23,10 +23,15 @@ std::any AstBuilder::visitFile(GazpreaParser::FileContext *ctx) {
 }
 std::any AstBuilder::visitGlobal_stat(GazpreaParser::Global_statContext *ctx) {
   if (ctx->dec_stat()) {
-    return visit(ctx->dec_stat());
+    // Cast StatementAst to Ast for global context
+    const auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+        visit(ctx->dec_stat()));
+    return std::static_pointer_cast<Ast>(stmt);
   }
   if (ctx->typealias_stat()) {
-    return visit(ctx->typealias_stat());
+    const auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+        visit(ctx->typealias_stat()));
+    return std::static_pointer_cast<Ast>(stmt);
   }
   if (ctx->procedure_stat()) {
     return visit(ctx->procedure_stat());
