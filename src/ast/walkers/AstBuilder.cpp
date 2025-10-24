@@ -2,6 +2,7 @@
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerAst.h"
 #include "ast/expressions/RealAst.h"
+#include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/UnaryAst.h"
 #include "ast/prototypes/FunctionAst.h"
 #include "ast/prototypes/FunctionParamAst.h"
@@ -257,7 +258,13 @@ std::any AstBuilder::visitAppendExpr(GazpreaParser::AppendExprContext *ctx) {
 }
 std::any
 AstBuilder::visitTupleAccessExpr(GazpreaParser::TupleAccessExprContext *ctx) {
-  return GazpreaBaseVisitor::visitTupleAccessExpr(ctx);
+  const auto tupleExpression =
+      std::make_shared<expressions::TupleAccessAst>(ctx->getStart());
+  std::string accessToken = ctx->TUPLE_ACCESS()->getText();
+  size_t pos = accessToken.find('.');
+  tupleExpression->setTupleName(accessToken.substr(0, pos));
+  tupleExpression->setFieldIndex(std::stoi(accessToken.substr(pos + 1)));
+  return std::static_pointer_cast<expressions::ExpressionAst>(tupleExpression);
 }
 std::any AstBuilder::visitIdentifier(GazpreaParser::IdentifierContext *ctx) {
   const auto idAst =

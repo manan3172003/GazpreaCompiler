@@ -4,6 +4,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/RealAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/UnaryAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/IdentifierAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/TupleAccessAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_expressions_src})
