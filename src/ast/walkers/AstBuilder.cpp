@@ -19,6 +19,7 @@
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/ReturnAst.h"
 #include "ast/statements/TupleAssignAst.h"
+#include "ast/statements/TypealiasAst.h"
 
 #include <ast/walkers/AstBuilder.h>
 
@@ -39,9 +40,7 @@ std::any AstBuilder::visitGlobal_stat(GazpreaParser::Global_statContext *ctx) {
     return std::static_pointer_cast<Ast>(stmt);
   }
   if (ctx->typealias_stat()) {
-    const auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
-        visit(ctx->typealias_stat()));
-    return std::static_pointer_cast<Ast>(stmt);
+    return visit(ctx->typealias_stat());
   }
   if (ctx->procedure_stat()) {
     return visit(ctx->procedure_stat());
@@ -54,7 +53,11 @@ std::any AstBuilder::visitGlobal_stat(GazpreaParser::Global_statContext *ctx) {
 
 std::any
 AstBuilder::visitTypealias_stat(GazpreaParser::Typealias_statContext *ctx) {
-  return GazpreaBaseVisitor::visitTypealias_stat(ctx);
+  auto typealiasAst =
+      std::make_shared<statements::TypealiasAst>(ctx->getStart());
+  typealiasAst->setAlias(ctx->ID()->getText());
+  typealiasAst->setType(ctx->type()->getText());
+  return std::static_pointer_cast<Ast>(typealiasAst);
 }
 std::any AstBuilder::visitStat(GazpreaParser::StatContext *ctx) {
   if (ctx->BREAK()) {

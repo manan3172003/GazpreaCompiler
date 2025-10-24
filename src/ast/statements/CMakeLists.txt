@@ -6,6 +6,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/ReturnAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/OutputAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/InputAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/TypealiasAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/BreakAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ContinueAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ConditionalAst.cpp"
