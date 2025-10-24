@@ -7,6 +7,8 @@ namespace gazprea::ast {
 enum class NodeType {
   Assignment,
   Block,
+  Break,
+  Continue,
   Declaration,
   Function,
   FunctionParam,

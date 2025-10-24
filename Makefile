@@ -17,4 +17,8 @@ run-llvm:
 test: build
 	cd tests/ && dragon-runner GazpreaCompileConfig.json -v && cd -
 
+file:
+	touch include/$(path).h
+	touch src/$(path).cpp
+
 run: build compile run-llvm

@@ -8,6 +8,8 @@
 #include "ast/prototypes/FunctionParamAst.h"
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
+#include "ast/statements/BreakAst.h"
+#include "ast/statements/ContinueAst.h"
 #include "ast/statements/ConditionalAst.h"
 #include "ast/statements/DeclarationAst.h"
 #include "ast/statements/InputAst.h"
@@ -51,6 +53,14 @@ AstBuilder::visitTypealias_stat(GazpreaParser::Typealias_statContext *ctx) {
   return GazpreaBaseVisitor::visitTypealias_stat(ctx);
 }
 std::any AstBuilder::visitStat(GazpreaParser::StatContext *ctx) {
+  if (ctx->BREAK()) {
+    auto breakAst = std::make_shared<statements::BreakAst>(ctx->getStart());
+    return std::static_pointer_cast<statements::StatementAst>(breakAst);
+  } else if (ctx->CONTINUE()) {
+    auto continueAst =
+        std::make_shared<statements::ContinueAst>(ctx->getStart());
+    return std::static_pointer_cast<statements::StatementAst>(continueAst);
+  }
   return GazpreaBaseVisitor::visitStat(ctx);
 }
 std::any
