@@ -16,7 +16,7 @@ std::string FunctionAst::toStringTree(std::string prefix) const {
   }
 
   ss << ")";
-  ss << " Returns: " << proto->getType() << " " << token->toString() << "\n";
+  ss << " Returns: " << proto->getType() << "\n";
 
   if (body) {
     ss << body->toStringTree(prefix + indent);
