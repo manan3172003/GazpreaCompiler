@@ -15,6 +15,7 @@ enum class NodeType {
   Prototype,
   FunctionParam,
   UnaryExpression,
+  Output,
   Return,
   Identifier
 };

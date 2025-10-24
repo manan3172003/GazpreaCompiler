@@ -4,6 +4,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/BlockAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/AssignmentAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ReturnAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/OutputAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_statements_src})
