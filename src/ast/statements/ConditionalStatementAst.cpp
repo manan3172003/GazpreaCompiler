@@ -6,21 +6,21 @@ NodeType ConditionalStatementAst::getNodeType() const {
 }
 std::string ConditionalStatementAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << prefix << "IfStatement\n";
+  ss << prefix << "IfStatement: \n";
 
-  ss << prefix << ". . Condition\n";
+  ss << prefix + indent << "Condition: \n";
   if (condition) {
-    ss << condition->toStringTree(prefix + indent);
+    ss << condition->toStringTree(indent + prefix + indent);
   }
 
-  ss << prefix << ". . Then\n";
+  ss << prefix + indent << "Then: \n";
   if (thenBody) {
-    ss << thenBody->toStringTree(prefix + indent);
+    ss << thenBody->toStringTree(indent + prefix + indent);
   }
 
   if (elseBody) {
-    ss << prefix << ". . Else\n";
-    ss << elseBody->toStringTree(prefix + indent);
+    ss << prefix + indent << "Else: \n";
+    ss << elseBody->toStringTree(indent + prefix + indent);
   }
   return ss.str();
 }
