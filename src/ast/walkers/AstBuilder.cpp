@@ -9,6 +9,7 @@
 #include "ast/statements/BlockAst.h"
 #include "ast/statements/DeclarationAst.h"
 #include "ast/statements/OutputAst.h"
+#include "ast/statements/InputAst.h"
 #include "ast/statements/ReturnAst.h"
 
 #include <ast/walkers/AstBuilder.h>
@@ -134,7 +135,11 @@ std::any AstBuilder::visitOutput_stat(GazpreaParser::Output_statContext *ctx) {
   return std::static_pointer_cast<statements::StatementAst>(outputAst);
 }
 std::any AstBuilder::visitInput_stat(GazpreaParser::Input_statContext *ctx) {
-  return GazpreaBaseVisitor::visitInput_stat(ctx);
+  std::cout << "Input stat: " << ctx->ID()->getText() << std::endl;
+  auto inputAst = std::make_shared<statements::InputAst>(ctx->getStart());
+  inputAst->setIdentifier(ctx->ID()->getText());
+  std::cout << inputAst->getIdentifier() << std::endl;
+  return std::static_pointer_cast<statements::StatementAst>(inputAst);
 }
 std::any AstBuilder::visitReturn_stat(GazpreaParser::Return_statContext *ctx) {
   const auto returnAst =
@@ -158,10 +163,12 @@ std::any AstBuilder::visitLoop_stat(GazpreaParser::Loop_statContext *ctx) {
 std::any AstBuilder::visitBlock_stat(GazpreaParser::Block_statContext *ctx) {
   const auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
   for (const auto child : ctx->stat()) {
+    std::cout << child->getText() << std::endl;
     auto statementAst =
         std::any_cast<std::shared_ptr<statements::StatementAst>>(visit(child));
     blockAst->addChildren(statementAst);
   }
+  std::cout << "exiting" << std::endl;
   return std::static_pointer_cast<statements::StatementAst>(blockAst);
 }
 std::any AstBuilder::visitAssign_stat(GazpreaParser::Assign_statContext *ctx) {

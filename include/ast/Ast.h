@@ -5,19 +5,20 @@
 
 namespace gazprea::ast {
 enum class NodeType {
-  Real,
   Assignment,
-  Integer,
-  Declaration,
-  Root,
   Block,
+  Declaration,
   Function,
-  Prototype,
   FunctionParam,
   UnaryExpression,
   Output,
+  Identifier,
+  Integer,
+  Input,
+  Prototype,
+  Real,
   Return,
-  Identifier
+  Root,
 };
 
 enum class Qualifier {
