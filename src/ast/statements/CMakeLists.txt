@@ -9,7 +9,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/BreakAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ContinueAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ConditionalAst.cpp"
-
+        "${CMAKE_CURRENT_SOURCE_DIR}/IdentifierLeftAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_statements_src})

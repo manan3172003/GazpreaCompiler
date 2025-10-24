@@ -16,6 +16,7 @@
 #include "ast/statements/DeclarationAst.h"
 #include "ast/statements/InputAst.h"
 #include "ast/statements/OutputAst.h"
+#include "ast/statements/IdentifierLeftAst.h"
 #include "ast/statements/ReturnAst.h"
 
 #include <ast/walkers/AstBuilder.h>
@@ -255,10 +256,13 @@ std::any AstBuilder::visitBlock_stat(GazpreaParser::Block_statContext *ctx) {
 std::any AstBuilder::visitAssign_stat(GazpreaParser::Assign_statContext *ctx) {
   auto assignAst = std::make_shared<statements::AssignmentAst>(ctx->getStart());
   if (ctx->ID()) {
-    assignAst->name = ctx->ID()->getText();
+    auto leftId =
+        std::make_shared<statements::IdentifierLeftAst>(ctx->getStart());
+    leftId->setName(ctx->ID()->getText());
+    assignAst->setLhs(leftId);
   }
-  assignAst->expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr()));
+  assignAst->setExpr(std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+      visit(ctx->expr())));
   return std::static_pointer_cast<statements::StatementAst>(assignAst);
 }
 std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {

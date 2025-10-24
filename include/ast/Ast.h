@@ -18,6 +18,7 @@ enum class NodeType {
   UnaryExpression,
   Output,
   Identifier,
+  IdentifierLeft,
   Integer,
   Input,
   Real,
