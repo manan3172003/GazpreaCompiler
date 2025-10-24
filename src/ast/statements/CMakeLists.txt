@@ -10,6 +10,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/ContinueAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ConditionalAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/IdentifierLeftAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/TupleAssignAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_statements_src})

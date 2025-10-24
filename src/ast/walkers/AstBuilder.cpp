@@ -18,6 +18,7 @@
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/IdentifierLeftAst.h"
 #include "ast/statements/ReturnAst.h"
+#include "ast/statements/TupleAssignAst.h"
 
 #include <ast/walkers/AstBuilder.h>
 
@@ -260,6 +261,16 @@ std::any AstBuilder::visitAssign_stat(GazpreaParser::Assign_statContext *ctx) {
         std::make_shared<statements::IdentifierLeftAst>(ctx->getStart());
     leftId->setName(ctx->ID()->getText());
     assignAst->setLhs(leftId);
+  }
+  if (ctx->TUPLE_ACCESS()) {
+    auto leftNode =
+        std::make_shared<statements::TupleAssignAst>(ctx->getStart());
+    std::string accessToken = ctx->TUPLE_ACCESS()->getText();
+    size_t pos = accessToken.find('.');
+    leftNode->setTupleName(accessToken.substr(0, pos));
+    leftNode->setFieldIndex(std::stoi(accessToken.substr(pos + 1)));
+
+    assignAst->setLhs(leftNode);
   }
   assignAst->setExpr(std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
       visit(ctx->expr())));

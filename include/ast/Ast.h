@@ -9,13 +9,13 @@ enum class NodeType {
   Block,
   Break,
   Continue,
+  Conditional,
   Declaration,
   Function,
-  Procedure,
-  Prototype,
   FunctionParam,
+  Procedure,
   ProcedureParam,
-  UnaryExpression,
+  Prototype,
   Output,
   Identifier,
   IdentifierLeft,
@@ -25,7 +25,8 @@ enum class NodeType {
   Return,
   Root,
   TupleAccess,
-  Conditional
+  TupleAssign,
+  UnaryExpression
 };
 
 enum class Qualifier {

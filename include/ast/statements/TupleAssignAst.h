@@ -1,16 +1,16 @@
 #pragma once
-#include "ExpressionAst.h"
+#include "AssignmentAst.h"
 
-namespace gazprea::ast::expressions {
+namespace gazprea::ast::statements {
 
-class TupleAccessAst final : public ExpressionAst {
+class TupleAssignAst : public AssignLeftAst {
 private:
   std::string tupleName;
   int32_t fieldIndex;
 
 public:
-  explicit TupleAccessAst(antlr4::Token *token)
-      : ExpressionAst(token), tupleName(), fieldIndex() {}
+  explicit TupleAssignAst(antlr4::Token *token)
+      : AssignLeftAst(token), tupleName(), fieldIndex() {}
 
   void setTupleName(std::string name) { tupleName = std::move(name); }
   const std::string &getTupleName() const { return tupleName; }
@@ -22,4 +22,4 @@ public:
   std::string toStringTree(std::string prefix) const override;
 };
 
-} // namespace gazprea::ast::expressions
+} // namespace gazprea::ast::statements

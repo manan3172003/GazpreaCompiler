@@ -10,7 +10,7 @@ NodeType IdentifierLeftAst::getNodeType() const {
 }
 std::string IdentifierLeftAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << prefix << name << "\n";
+  ss << prefix << "Id: " << name << "\n";
   return ss.str();
 }
 } // namespace gazprea::ast::statements
