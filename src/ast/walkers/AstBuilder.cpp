@@ -14,9 +14,9 @@
 #include "ast/statements/ContinueAst.h"
 #include "ast/statements/ConditionalAst.h"
 #include "ast/statements/DeclarationAst.h"
+#include "ast/statements/IdentifierLeftAst.h"
 #include "ast/statements/InputAst.h"
 #include "ast/statements/OutputAst.h"
-#include "ast/statements/IdentifierLeftAst.h"
 #include "ast/statements/ReturnAst.h"
 #include "ast/statements/TupleAssignAst.h"
 
