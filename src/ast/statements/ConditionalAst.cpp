@@ -1,4 +1,4 @@
-#include <ast/statements/ConditionalStatementAst.h>
+#include <ast/statements/ConditionalAst.h>
 
 namespace gazprea::ast::statements {
 NodeType ConditionalStatementAst::getNodeType() const {

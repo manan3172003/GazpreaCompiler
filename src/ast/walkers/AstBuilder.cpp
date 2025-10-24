@@ -8,7 +8,7 @@
 #include "ast/prototypes/FunctionParamAst.h"
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
-#include "ast/statements/ConditionalStatementAst.h"
+#include "ast/statements/ConditionalAst.h"
 #include "ast/statements/DeclarationAst.h"
 #include "ast/statements/InputAst.h"
 #include "ast/statements/OutputAst.h"
@@ -156,13 +156,25 @@ std::any AstBuilder::visitIf_stat(GazpreaParser::If_statContext *ctx) {
       std::make_shared<statements::ConditionalStatementAst>(ctx->getStart());
   ifAst->condition = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
       visit(ctx->expr()));
-
-  ifAst->thenBody = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+  auto thenStmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
       visit(ctx->stat()));
-
+  if (thenStmt->getNodeType() == NodeType::Block) {
+    ifAst->thenBody = thenStmt;
+  } else {
+    auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
+    blockAst->addChildren(thenStmt);
+    ifAst->thenBody = blockAst;
+  }
   if (ctx->else_stat()) {
-    ifAst->elseBody = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+    auto elseStmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
         visit(ctx->else_stat()));
+    if (elseStmt->getNodeType() == NodeType::Block) {
+      ifAst->elseBody = elseStmt;
+    } else {
+      auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
+      blockAst->addChildren(elseStmt);
+      ifAst->elseBody = blockAst;
+    }
   }
   return std::static_pointer_cast<statements::StatementAst>(ifAst);
 }
