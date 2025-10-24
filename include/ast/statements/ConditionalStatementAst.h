@@ -1,10 +1,6 @@
 #pragma once
 #include "StatementAst.h"
 #include "ast/expressions/ExpressionAst.h"
-#include "ast/prototypes/FunctionAst.h"
-#include "ast/prototypes/FunctionParamAst.h"
-#include "ast/statements/AssignmentAst.h"
-#include "ast/statements/BlockAst.h"
 #include <memory>
 
 namespace gazprea::ast::statements {
