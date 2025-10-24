@@ -6,6 +6,8 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/ReturnAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/OutputAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/InputAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ConditionalStatementAst.cpp"
+
 )
 
 target_sources(gazc PRIVATE ${gazprea_statements_src})

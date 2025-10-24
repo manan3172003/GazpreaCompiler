@@ -8,6 +8,7 @@
 #include "ast/prototypes/FunctionParamAst.h"
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
+#include "ast/statements/ConditionalStatementAst.h"
 #include "ast/statements/DeclarationAst.h"
 #include "ast/statements/InputAst.h"
 #include "ast/statements/OutputAst.h"
@@ -151,10 +152,22 @@ std::any AstBuilder::visitReturn_stat(GazpreaParser::Return_statContext *ctx) {
   return std::static_pointer_cast<statements::StatementAst>(returnAst);
 }
 std::any AstBuilder::visitIf_stat(GazpreaParser::If_statContext *ctx) {
-  return GazpreaBaseVisitor::visitIf_stat(ctx);
+  const auto ifAst =
+      std::make_shared<statements::ConditionalStatementAst>(ctx->getStart());
+  ifAst->condition = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+      visit(ctx->expr()));
+
+  ifAst->thenBody = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+      visit(ctx->stat()));
+
+  if (ctx->else_stat()) {
+    ifAst->elseBody = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+        visit(ctx->else_stat()));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(ifAst);
 }
 std::any AstBuilder::visitElse_stat(GazpreaParser::Else_statContext *ctx) {
-  return GazpreaBaseVisitor::visitElse_stat(ctx);
+  return visit(ctx->stat());
 }
 std::any AstBuilder::visitLoop_stat(GazpreaParser::Loop_statContext *ctx) {
   return GazpreaBaseVisitor::visitLoop_stat(ctx);

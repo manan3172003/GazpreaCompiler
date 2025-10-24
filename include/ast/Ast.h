@@ -19,7 +19,8 @@ enum class NodeType {
   Real,
   Return,
   Root,
-  TupleAccess
+  TupleAccess,
+  ConditionalStatement
 };
 
 enum class Qualifier {
