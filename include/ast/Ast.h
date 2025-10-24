@@ -1,11 +1,20 @@
 #pragma once
 
 #include <Token.h>
-#include <memory>
 #include <string>
 
 namespace gazprea::ast {
-enum class NodeType { Assignment, Integer, Declaration, Real, Root };
+enum class NodeType {
+  Real,
+  Assignment,
+  Integer,
+  Declaration,
+  Root,
+  Block,
+  Function,
+  Prototype,
+  FunctionParam
+};
 
 enum class Qualifier {
   Var,
@@ -17,7 +26,7 @@ protected:
   antlr4::Token *token;
 
 public:
-  Ast(antlr4::Token *token) : token(token) {};
+  explicit Ast(antlr4::Token *token) : token(token) {};
   virtual NodeType getNodeType() const = 0;
   virtual std::string toStringTree(std::string prefix) const = 0;
   static std::string qualifierToString(Qualifier qualifier);

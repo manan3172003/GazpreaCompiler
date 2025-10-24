@@ -4,7 +4,7 @@
 namespace gazprea::ast::statements {
 class StatementAst : public Ast {
 public:
-  StatementAst(antlr4::Token *token) : Ast(token) {}
-  ~StatementAst() = default;
+  explicit StatementAst(antlr4::Token *token) : Ast(token) {}
+  ~StatementAst() override = default;
 };
 } // namespace gazprea::ast::statements

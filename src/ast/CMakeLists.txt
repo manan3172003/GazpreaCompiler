@@ -7,6 +7,8 @@ set(
 add_subdirectory(expressions)
 add_subdirectory(statements)
 add_subdirectory(walkers)
+add_subdirectory(prototypes)
+
 target_sources(gazc PRIVATE ${gazprea_ast_src})
 
 target_include_directories(gazc PUBLIC "${PROJECT_SOURCE_DIR}/include")
