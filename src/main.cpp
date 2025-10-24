@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
   auto rootAst = std::any_cast<std::shared_ptr<gazprea::ast::RootAst>>(
       astBuilder.visit(tree));
 
-  std::cout << rootAst->toStringTree() << std::endl;
+  std::cout << rootAst->toStringTree("") << std::endl;
 
   std::ofstream os(argv[2]);
   // BackEnd backend;

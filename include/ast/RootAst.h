@@ -8,7 +8,7 @@ public:
   explicit RootAst(antlr4::Token *token) : Ast(token) {};
   void addChild(std::shared_ptr<Ast> child);
   NodeType getNodeType() const override;
-  std::string toStringTree() const override;
+  std::string toStringTree(std::string prefix) const override;
   ~RootAst() override = default;
 };
 } // namespace gazprea::ast

@@ -3,10 +3,10 @@
 namespace gazprea::ast::expressions {
 
 NodeType IntegerAst::getNodeType() const { return NodeType::Integer; }
-std::string IntegerAst::toStringTree() const {
+std::string IntegerAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << "Integer: " << std::to_string(integerValue) << " " << token->toString()
-     << "\n";
+  ss << prefix << "Integer: " << std::to_string(integerValue) << " "
+     << token->toString() << "\n";
   return ss.str();
 }
 

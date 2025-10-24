@@ -5,15 +5,11 @@ void RootAst::addChild(std::shared_ptr<Ast> child) {
   children.push_back(child);
 }
 NodeType RootAst::getNodeType() const { return NodeType::Root; }
-std::string RootAst::toStringTree() const {
+std::string RootAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << "Root " << "\n";
-  for (int i = 0; i < children.size(); ++i) {
-    if (i == children.size() - 1) {
-      ss << "└──" << children[i]->toStringTree();
-    } else {
-      ss << "├──" << children[i]->toStringTree();
-    }
+  for (const auto &child : children) {
+    ss << child->toStringTree("----");
   }
   return ss.str();
 }

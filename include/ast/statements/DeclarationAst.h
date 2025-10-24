@@ -13,7 +13,7 @@ public:
   std::shared_ptr<expressions::ExpressionAst> expr;
   DeclarationAst(antlr4::Token *token) : StatementAst(token) {}
   NodeType getNodeType() const override;
-  std::string toStringTree() const override;
+  std::string toStringTree(std::string prefix) const override;
   ~DeclarationAst() override = default;
 };
 } // namespace gazprea::ast::statements
