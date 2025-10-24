@@ -23,7 +23,7 @@ std::string UnaryAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
 
   ss << prefix << "Unary(" << getOperator(unaryOpType) << "): \n";
-  ss << expression->toStringTree(prefix + "----");
+  ss << expression->toStringTree(prefix + indent);
 
   return ss.str();
 }
