@@ -3,6 +3,7 @@
 #include "ast/expressions/RealAst.h"
 #include "ast/prototypes/FunctionAst.h"
 #include "ast/prototypes/FunctionParamAst.h"
+#include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
 #include "ast/expressions/UnaryAst.h"
 #include "ast/statements/DeclarationAst.h"
@@ -137,7 +138,13 @@ std::any AstBuilder::visitBlock_stat(GazpreaParser::Block_statContext *ctx) {
   return std::static_pointer_cast<Ast>(blockAst);
 }
 std::any AstBuilder::visitAssign_stat(GazpreaParser::Assign_statContext *ctx) {
-  return GazpreaBaseVisitor::visitAssign_stat(ctx);
+  auto assignAst = std::make_shared<statements::AssignmentAst>(ctx->getStart());
+  if (ctx->ID()) {
+    assignAst->name = ctx->ID()->getText();
+  }
+  assignAst->expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+      visit(ctx->expr()));
+  return std::static_pointer_cast<Ast>(assignAst);
 }
 std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
   auto declAst = std::make_shared<statements::DeclarationAst>(ctx->getStart());
