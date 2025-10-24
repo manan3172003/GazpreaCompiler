@@ -3,8 +3,6 @@ set(
   gazprea_src_files
     "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/BackEnd.cpp"
-        ../include/ast/expressions/UnaryAst.h
-		ast/expressions/UnaryAst.cpp
 )
 
 # Build our executable from the source files.
