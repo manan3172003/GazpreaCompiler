@@ -26,6 +26,8 @@ protected:
   antlr4::Token *token;
 
 public:
+  std::string indent = ". . ";
+
   explicit Ast(antlr4::Token *token) : token(token) {};
   virtual NodeType getNodeType() const = 0;
   virtual std::string toStringTree(std::string prefix) const = 0;

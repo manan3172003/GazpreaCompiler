@@ -2,21 +2,25 @@
 
 namespace gazprea::ast::prototypes {
 NodeType FunctionAst::getNodeType() const { return NodeType::Function; }
-std::string FunctionAst::toStringTree() const {
+std::string FunctionAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
 
-  ss << "Function " << proto->getName() << "(";
-  for (auto it = proto->getArgs().begin(); it != proto->getArgs().end(); ++it) {
-    ss << (*it)->toStringTree();
-    if (std::next(it) != proto->getArgs().end()) {
+  ss << prefix << "Function " << proto->getName() << "(";
+
+  bool first = true;
+  for (const auto &arg : proto->getArgs()) {
+    if (!first) {
       ss << ", ";
     }
+    ss << arg->toStringTree("");
+    first = false;
   }
+
   ss << ")";
   ss << " Returns: " << proto->getType() << " " << token->toString() << "\n";
 
   if (body) {
-    ss << "└──" << body->toStringTree();
+    ss << body->toStringTree(prefix + indent);
   }
 
   return ss.str();

@@ -6,7 +6,7 @@ std::string DeclarationAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << "Declaration " << name << " " << qualifierToString(qualifier)
      << " " << type << '\n';
-  ss << expr->toStringTree(prefix + "----");
+  ss << expr->toStringTree(prefix + indent);
   return ss.str();
 }
 } // namespace gazprea::ast::statements

@@ -4,7 +4,7 @@ namespace gazprea::ast::prototypes {
 NodeType FunctionParamAst::getNodeType() const {
   return NodeType::FunctionParam;
 }
-std::string FunctionParamAst::toStringTree() const {
+std::string FunctionParamAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << type;
   if (!name.empty()) {

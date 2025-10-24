@@ -19,6 +19,6 @@ public:
   std::shared_ptr<Ast> getBody() const { return body; }
 
   NodeType getNodeType() const override;
-  std::string toStringTree() const override;
+  std::string toStringTree(std::string prefix) const override;
 };
 } // namespace gazprea::ast::prototypes

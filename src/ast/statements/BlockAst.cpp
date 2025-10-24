@@ -2,15 +2,11 @@
 
 namespace gazprea::ast::statements {
 NodeType BlockAst::getNodeType() const { return NodeType::Block; }
-std::string BlockAst::toStringTree() const {
+std::string BlockAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << "Block " << token->toString() << "\n";
-  for (int i = 0; i < children.size(); ++i) {
-    if (i == children.size() - 1) {
-      ss << "└──" << children[i]->toStringTree();
-    } else {
-      ss << "├──" << children[i]->toStringTree();
-    }
+  ss << prefix << "Block " << token->toString() << "\n";
+  for (size_t i = 0; i < children.size(); ++i) {
+    ss << children[i]->toStringTree(prefix + indent);
   }
   return ss.str();
 }
