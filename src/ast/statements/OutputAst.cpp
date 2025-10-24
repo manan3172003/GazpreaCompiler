@@ -5,7 +5,7 @@ NodeType OutputAst::getNodeType() const { return NodeType::Output; }
 std::string OutputAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << "Output " << "\n";
-  ss << expr->toStringTree(prefix + "----");
+  ss << expr->toStringTree(prefix + indent);
   return ss.str();
 }
 void OutputAst::setExpression(

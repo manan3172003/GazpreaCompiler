@@ -8,8 +8,8 @@
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
 #include "ast/statements/DeclarationAst.h"
-#include "ast/statements/ReturnAst.h"
 #include "ast/statements/OutputAst.h"
+#include "ast/statements/ReturnAst.h"
 
 #include <ast/walkers/AstBuilder.h>
 
@@ -131,7 +131,7 @@ std::any AstBuilder::visitOutput_stat(GazpreaParser::Output_statContext *ctx) {
   auto expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
       visit(ctx->expr()));
   outputAst->setExpression(expr);
-  return std::static_pointer_cast<Ast>(outputAst);
+  return std::static_pointer_cast<statements::StatementAst>(outputAst);
 }
 std::any AstBuilder::visitInput_stat(GazpreaParser::Input_statContext *ctx) {
   return GazpreaBaseVisitor::visitInput_stat(ctx);
