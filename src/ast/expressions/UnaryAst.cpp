@@ -22,8 +22,7 @@ NodeType UnaryAst::getNodeType() const { return NodeType::UnaryExpression; }
 std::string UnaryAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
 
-  ss << prefix << "Unary: \n";
-  ss << prefix + "---- " << getOperator(unaryOpType) << "\n";
+  ss << prefix << "Unary(" << getOperator(unaryOpType) << "): \n";
   ss << expression->toStringTree(prefix + "----");
 
   return ss.str();
