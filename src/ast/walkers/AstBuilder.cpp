@@ -9,6 +9,7 @@
 #include "ast/statements/BlockAst.h"
 #include "ast/statements/DeclarationAst.h"
 #include "ast/statements/ReturnAst.h"
+#include "ast/statements/OutputAst.h"
 
 #include <ast/walkers/AstBuilder.h>
 
@@ -126,7 +127,11 @@ std::any AstBuilder::visitArgs(GazpreaParser::ArgsContext *ctx) {
   return GazpreaBaseVisitor::visitArgs(ctx);
 }
 std::any AstBuilder::visitOutput_stat(GazpreaParser::Output_statContext *ctx) {
-  return GazpreaBaseVisitor::visitOutput_stat(ctx);
+  auto outputAst = std::make_shared<statements::OutputAst>(ctx->getStart());
+  auto expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+      visit(ctx->expr()));
+  outputAst->setExpression(expr);
+  return std::static_pointer_cast<Ast>(outputAst);
 }
 std::any AstBuilder::visitInput_stat(GazpreaParser::Input_statContext *ctx) {
   return GazpreaBaseVisitor::visitInput_stat(ctx);

@@ -3,11 +3,15 @@
 #include "ast/expressions/ExpressionAst.h"
 
 namespace gazprea::ast::statements {
-class OutputAst: public StatementAst {
-public:
+class OutputAst : public StatementAst {
   std::shared_ptr<expressions::ExpressionAst> expr;
-  OutputAst(antlr4::Token *token): StatementAst(token) {};
+
+public:
+  OutputAst(antlr4::Token *token) : StatementAst(token) {};
   NodeType getNodeType() const override;
-  std::string toStringTree() const override;
+  std::string toStringTree(std::string prefix) const override;
+
+  void setExpression(std::shared_ptr<expressions::ExpressionAst> expr);
+  std::shared_ptr<expressions::ExpressionAst> getExpression() const;
 };
-}
+} // namespace gazprea::ast::statements
