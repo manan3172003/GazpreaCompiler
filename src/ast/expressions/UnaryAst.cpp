@@ -1,4 +1,3 @@
-#pragma once
 #include "ast/expressions/UnaryAst.h"
 
 namespace gazprea::ast::expressions {

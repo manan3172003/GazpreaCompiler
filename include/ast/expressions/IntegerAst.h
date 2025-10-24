@@ -2,7 +2,7 @@
 #include "ExpressionAst.h"
 
 namespace gazprea::ast::expressions {
-class IntegerAst : public ExpressionAst {
+class IntegerAst final : public ExpressionAst {
 public:
   int integerValue;
   IntegerAst(antlr4::Token *token, const int integerValue)

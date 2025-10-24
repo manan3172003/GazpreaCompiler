@@ -14,7 +14,9 @@ enum class NodeType {
   Function,
   Prototype,
   FunctionParam,
-  UnaryExpression
+  UnaryExpression,
+  Return,
+  Identifier
 };
 
 enum class Qualifier {

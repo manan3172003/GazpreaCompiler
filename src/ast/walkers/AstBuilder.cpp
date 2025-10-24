@@ -1,12 +1,14 @@
 #include "ast/RootAst.h"
+#include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerAst.h"
 #include "ast/expressions/RealAst.h"
+#include "ast/expressions/UnaryAst.h"
 #include "ast/prototypes/FunctionAst.h"
 #include "ast/prototypes/FunctionParamAst.h"
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
-#include "ast/expressions/UnaryAst.h"
 #include "ast/statements/DeclarationAst.h"
+#include "ast/statements/ReturnAst.h"
 
 #include <ast/walkers/AstBuilder.h>
 
@@ -72,14 +74,21 @@ AstBuilder::visitFunction_stat(GazpreaParser::Function_statContext *ctx) {
 
   if (ctx->expr()) {
     // Handle single expression function body
-    // TODO: Inject block and return ast here instead of assigning expr to body
-    // const auto bodyAst =
-    //     std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
-    // functionAst->setBody(bodyAst);
+    const auto returnAst =
+        std::make_shared<statements::ReturnAst>(ctx->getStart());
+    returnAst->setExpr(
+        std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+            visit(ctx->expr())));
+    const auto blockAst =
+        std::make_shared<statements::BlockAst>(ctx->getStart());
+    blockAst->addChildren(returnAst);
+    functionAst->setBody(
+        std::static_pointer_cast<statements::StatementAst>(blockAst));
   } else if (ctx->block_stat()) {
     // Handle block function body
     const auto bodyAst =
-        std::any_cast<std::shared_ptr<Ast>>(visit(ctx->block_stat()));
+        std::any_cast<std::shared_ptr<statements::StatementAst>>(
+            visit(ctx->block_stat()));
     functionAst->setBody(bodyAst);
   } else {
     // Forward declaration without body
@@ -118,7 +127,14 @@ std::any AstBuilder::visitInput_stat(GazpreaParser::Input_statContext *ctx) {
   return GazpreaBaseVisitor::visitInput_stat(ctx);
 }
 std::any AstBuilder::visitReturn_stat(GazpreaParser::Return_statContext *ctx) {
-  return GazpreaBaseVisitor::visitReturn_stat(ctx);
+  const auto returnAst =
+      std::make_shared<statements::ReturnAst>(ctx->getStart());
+  if (ctx->expr()) {
+    returnAst->setExpr(
+        std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+            visit(ctx->expr())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(returnAst);
 }
 std::any AstBuilder::visitIf_stat(GazpreaParser::If_statContext *ctx) {
   return GazpreaBaseVisitor::visitIf_stat(ctx);
@@ -131,11 +147,12 @@ std::any AstBuilder::visitLoop_stat(GazpreaParser::Loop_statContext *ctx) {
 }
 std::any AstBuilder::visitBlock_stat(GazpreaParser::Block_statContext *ctx) {
   const auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
-  std::vector<std::shared_ptr<statements::StatementAst>> childStats;
   for (const auto child : ctx->stat()) {
-    blockAst->addChildren(std::any_cast<std::shared_ptr<Ast>>(visit(child)));
+    auto statementAst =
+        std::any_cast<std::shared_ptr<statements::StatementAst>>(visit(child));
+    blockAst->addChildren(statementAst);
   }
-  return std::static_pointer_cast<Ast>(blockAst);
+  return std::static_pointer_cast<statements::StatementAst>(blockAst);
 }
 std::any AstBuilder::visitAssign_stat(GazpreaParser::Assign_statContext *ctx) {
   auto assignAst = std::make_shared<statements::AssignmentAst>(ctx->getStart());
@@ -144,7 +161,7 @@ std::any AstBuilder::visitAssign_stat(GazpreaParser::Assign_statContext *ctx) {
   }
   assignAst->expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
       visit(ctx->expr()));
-  return std::static_pointer_cast<StatementAst>(assignAst);
+  return std::static_pointer_cast<statements::StatementAst>(assignAst);
 }
 std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
   auto declAst = std::make_shared<statements::DeclarationAst>(ctx->getStart());
@@ -157,9 +174,13 @@ std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
     declAst->qualifier = Qualifier::Const;
   declAst->type = ctx->type()->getText();
   declAst->name = ctx->ID()->getText();
-  declAst->expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr()));
-  return std::static_pointer_cast<Ast>(declAst);
+
+  if (ctx->expr()) {
+    declAst->expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+        visit(ctx->expr()));
+  }
+
+  return std::static_pointer_cast<statements::StatementAst>(declAst);
 }
 std::any
 AstBuilder::visitTuple_dec_stat(GazpreaParser::Tuple_dec_statContext *ctx) {
@@ -226,7 +247,10 @@ AstBuilder::visitTupleAccessExpr(GazpreaParser::TupleAccessExprContext *ctx) {
   return GazpreaBaseVisitor::visitTupleAccessExpr(ctx);
 }
 std::any AstBuilder::visitIdentifier(GazpreaParser::IdentifierContext *ctx) {
-  return GazpreaBaseVisitor::visitIdentifier(ctx);
+  const auto idAst =
+      std::make_shared<expressions::IdentifierAst>(ctx->getStart());
+  idAst->setName(ctx->ID()->getText());
+  return std::static_pointer_cast<expressions::ExpressionAst>(idAst);
 }
 std::any AstBuilder::visitAddSubExpr(GazpreaParser::AddSubExprContext *ctx) {
   return GazpreaBaseVisitor::visitAddSubExpr(ctx);

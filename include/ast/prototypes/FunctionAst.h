@@ -2,11 +2,12 @@
 #include <utility>
 
 #include "PrototypeAst.h"
+#include "ast/statements/StatementAst.h"
 
 namespace gazprea::ast::prototypes {
 class FunctionAst final : public Ast {
   std::shared_ptr<PrototypeAst> proto;
-  std::shared_ptr<Ast> body;
+  std::shared_ptr<statements::StatementAst> body;
 
 public:
   explicit FunctionAst(antlr4::Token *token) : Ast(token) {};
@@ -15,8 +16,10 @@ public:
     proto = std::move(proto_);
   }
   std::shared_ptr<PrototypeAst> getProto() const { return proto; }
-  void setBody(std::shared_ptr<Ast> body_) { body = std::move(body_); }
-  std::shared_ptr<Ast> getBody() const { return body; }
+  void setBody(std::shared_ptr<statements::StatementAst> body_) {
+    body = std::move(body_);
+  }
+  std::shared_ptr<statements::StatementAst> getBody() const { return body; }
 
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
