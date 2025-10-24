@@ -70,9 +70,10 @@ AstBuilder::visitFunction_stat(GazpreaParser::Function_statContext *ctx) {
 
   if (ctx->expr()) {
     // Handle single expression function body
-    const auto bodyAst =
-        std::any_cast<std::shared_ptr<Ast>>(visit(ctx->expr()));
-    functionAst->setBody(bodyAst);
+    // TODO: Inject block and return ast here instead of assigning expr to body
+    // const auto bodyAst =
+    //     std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+    // functionAst->setBody(bodyAst);
   } else if (ctx->block_stat()) {
     // Handle block function body
     const auto bodyAst =
@@ -148,7 +149,8 @@ std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
     declAst->qualifier = Qualifier::Const;
   declAst->type = ctx->type()->getText();
   declAst->name = ctx->ID()->getText();
-  declAst->expr = std::any_cast<std::shared_ptr<Ast>>(visit(ctx->expr()));
+  declAst->expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+      visit(ctx->expr()));
   return std::static_pointer_cast<Ast>(declAst);
 }
 std::any
@@ -207,7 +209,7 @@ std::any AstBuilder::visitAddSubExpr(GazpreaParser::AddSubExprContext *ctx) {
 std::any AstBuilder::visitIntLiteral(GazpreaParser::IntLiteralContext *ctx) {
   const auto intAst = std::make_shared<expressions::IntegerAst>(
       ctx->getStart(), std::stoi(ctx->INT_LIT()->getText()));
-  return std::static_pointer_cast<Ast>(intAst);
+  return std::static_pointer_cast<expressions::ExpressionAst>(intAst);
 }
 std::any AstBuilder::visitScientificFloatLiteral(
     GazpreaParser::ScientificFloatLiteralContext *ctx) {
