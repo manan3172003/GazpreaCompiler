@@ -7,6 +7,7 @@ namespace gazprea::ast {
 enum class NodeType {
   Arg,
   Assignment,
+  BinaryExpression,
   Block,
   Break,
   Bool,
@@ -33,8 +34,7 @@ enum class NodeType {
   TupleAccess,
   Typealias,
   TupleAssign,
-  UnaryExpression,
-  BinaryExpression
+  UnaryExpression
 };
 
 enum class Qualifier {
@@ -49,7 +49,7 @@ protected:
 public:
   std::string indent = ". . ";
 
-  explicit Ast(antlr4::Token *token) : token(token) {};
+  explicit Ast(antlr4::Token *token) : token(token){};
   virtual NodeType getNodeType() const = 0;
   virtual std::string toStringTree(std::string prefix) const = 0;
   static std::string qualifierToString(Qualifier qualifier);
