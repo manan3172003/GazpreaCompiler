@@ -1,15 +1,13 @@
 #pragma once
 #include "ExpressionAst.h"
 
-
 namespace gazprea::ast::expressions {
 
 enum class BinaryOpType {
   POWER,
   MULTIPLY,
   DIVIDE,
-  MODULO,
-  DOT_PRODUCT,
+  REM,
   ADD,
   SUBTRACT,
   LESS_THAN,
@@ -33,15 +31,15 @@ private:
 
 public:
   explicit BinaryAst(antlr4::Token *token)
-    : ExpressionAst(token), binaryOpType()  {}
+      : ExpressionAst(token), binaryOpType() {}
 
   void setBinaryOpType(BinaryOpType binOp);
   void setLeft(std::shared_ptr<ExpressionAst> leftExpr);
   void setRight(std::shared_ptr<ExpressionAst> rightExpr);
 
-  BinaryOpType getBinaryOpTYpe() const;
-  std::shared_ptr<ExpressionAst> getLeft const;
-  std::shared_ptr<ExpressionAst> getRight const;
+  BinaryOpType getBinaryOpType() const;
+  std::shared_ptr<ExpressionAst> getLeft() const;
+  std::shared_ptr<ExpressionAst> getRight() const;
 
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;

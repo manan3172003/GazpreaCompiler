@@ -2,7 +2,7 @@
 
 namespace gazprea::ast::expressions {
 
-void BinaryAst::setBinaryOptype(BinaryOpType binOp) {
+void BinaryAst::setBinaryOpType(BinaryOpType binOp) {
   this->binaryOpType = binOp;
 }
 
@@ -14,18 +14,20 @@ void BinaryAst::setRight(std::shared_ptr<ExpressionAst> rightExpr) {
   this->right = rightExpr;
 }
 
-BinaryOpType BinaryAst::getBinaryOpType() const { return this->binaryOpType;}
+BinaryOpType BinaryAst::getBinaryOpType() const { return this->binaryOpType; }
 
-std::shared_ptr<ExpressionAst> BinaryAst::getLeft() const { return this->left;}
+std::shared_ptr<ExpressionAst> BinaryAst::getLeft() const { return this->left; }
 
-std::shared_ptr<ExpressionAst> BinaryAst::getRight() const { return this->right;}
+std::shared_ptr<ExpressionAst> BinaryAst::getRight() const {
+  return this->right;
+}
 
 NodeType BinaryAst::getNodeType() const { return NodeType::BinaryExpression; }
 
 std::string BinaryAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
 
-  ss << prefix << getOperator(binaryOpType) << '\n';
+  ss << prefix << getOperator(binaryOpType) << ": \n";
   ss << left->toStringTree(prefix + indent);
   ss << right->toStringTree(prefix + indent);
   return ss.str();
@@ -34,38 +36,37 @@ std::string BinaryAst::toStringTree(std::string prefix) const {
 std::string BinaryAst::getOperator(BinaryOpType opType) {
   switch (opType) {
   case BinaryOpType::POWER:
-    return "^";
+    return "POWER ^";
   case BinaryOpType::MULTIPLY:
-    return "*";
+    return "MUL *";
   case BinaryOpType::DIVIDE:
-    return "/";
-  case BinaryOpType::MODULO:
-    return "%";
-  case BinaryOpType::DOT_PRODUCT:
-    return "**";
+    return "DIV /";
+  case BinaryOpType::REM:
+    return "REM %";
   case BinaryOpType::ADD:
-    return "+";
+    return "ADD +";
   case BinaryOpType::SUBTRACT:
-    return "-";
+    return "SUB -";
   case BinaryOpType::LESS_THAN:
-    return "<";
+    return "LT <";
   case BinaryOpType::GREATER_THAN:
-    return ">";
+    return "GT >";
   case BinaryOpType::LESS_EQUAL:
-    return "<=";
+    return "LE <=";
   case BinaryOpType::GREATER_EQUAL:
-    return ">=";
+    return "GE >=";
   case BinaryOpType::EQUAL:
-    return "==";
+    return "EQ ==";
   case BinaryOpType::NOT_EQUAL:
-    return "!=";
+    return "NE !=";
   case BinaryOpType::AND:
-    return "and";
+    return "AND and";
   case BinaryOpType::OR:
-    return "or";
+    return "OR or";
   case BinaryOpType::XOR:
-    return "xor";
-}
+    return "XOR xor";
+  }
+  return "";
 }
 
 } // namespace gazprea::ast::expressions
