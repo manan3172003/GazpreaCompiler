@@ -12,6 +12,7 @@ enum class NodeType {
   Continue,
   Conditional,
   Cast,
+  Char,
   Declaration,
   Function,
   FunctionParam,

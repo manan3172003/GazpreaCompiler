@@ -7,6 +7,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleAccessAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/CastAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ArgAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CharAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/FuncProcCallAst.cpp"
 )
 

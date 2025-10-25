@@ -1,5 +1,6 @@
 #include "ast/RootAst.h"
 #include "ast/expressions/CastAst.h"
+#include "ast/expressions/CharAst.h"
 #include "ast/expressions/FuncProcCallAst.h"
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerAst.h"
@@ -422,7 +423,9 @@ std::any AstBuilder::visitByExpr(GazpreaParser::ByExprContext *ctx) {
   return GazpreaBaseVisitor::visitByExpr(ctx);
 }
 std::any AstBuilder::visitCharLiteral(GazpreaParser::CharLiteralContext *ctx) {
-  return GazpreaBaseVisitor::visitCharLiteral(ctx);
+  const auto charAst = std::make_shared<expressions::CharAst>(ctx->getStart());
+  charAst->setValue(ctx->CHAR_LIT()->getText());
+  return std::static_pointer_cast<expressions::ExpressionAst>(charAst);
 }
 std::any
 AstBuilder::visitRelationalExpr(GazpreaParser::RelationalExprContext *ctx) {
