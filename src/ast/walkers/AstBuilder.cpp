@@ -8,6 +8,7 @@
 #include "ast/expressions/IntegerAst.h"
 #include "ast/expressions/RealAst.h"
 #include "ast/expressions/TupleAccessAst.h"
+#include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
 #include "ast/prototypes/FunctionAst.h"
 #include "ast/prototypes/FunctionParamAst.h"
@@ -451,7 +452,7 @@ AstBuilder::visitFloatDotLiteral(GazpreaParser::FloatDotLiteralContext *ctx) {
 }
 std::any
 AstBuilder::visitTupleLiteral(GazpreaParser::TupleLiteralContext *ctx) {
-  return GazpreaBaseVisitor::visitTupleLiteral(ctx);
+  return visit(ctx->tuple_lit());
 }
 std::any AstBuilder::visitMulDivRemDstarExpr(
     GazpreaParser::MulDivRemDstarExprContext *ctx) {
@@ -486,7 +487,16 @@ std::any AstBuilder::visitAndExpr(GazpreaParser::AndExprContext *ctx) {
   return createBinaryExpr(ctx->expr(0), "and", ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitTuple_lit(GazpreaParser::Tuple_litContext *ctx) {
-  return GazpreaBaseVisitor::visitTuple_lit(ctx);
+  auto tupleLiteral =
+      std::make_shared<expressions::TupleLiteralAst>(ctx->getStart());
+  for (auto const element : ctx->tuple_elements()->expr()) {
+    auto const expr =
+        std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+            visit(element));
+    tupleLiteral->addElement(expr);
+  }
+
+  return std::static_pointer_cast<expressions::ExpressionAst>(tupleLiteral);
 }
 
 // Helper function implementations

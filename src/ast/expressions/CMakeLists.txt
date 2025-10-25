@@ -11,6 +11,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/CharAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/BoolAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/FuncProcCallAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/TupleLiteralAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_expressions_src})

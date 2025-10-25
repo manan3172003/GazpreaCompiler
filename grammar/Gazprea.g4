@@ -131,7 +131,8 @@ expr
     | ID LPAREN args? RPAREN #funcProcExpr // TODO: Type check on procedure assign & decl & unary
     ;
 
-tuple_lit: LPAREN expr (COMMA expr)* RPAREN;
+tuple_lit: LPAREN tuple_elements RPAREN;
+tuple_elements: expr (COMMA expr)+;
 
 // Keywords
 AND: 'and';
