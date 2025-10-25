@@ -34,6 +34,7 @@ enum class NodeType {
   Input,
   RealLiteral,
   RealType,
+  Loop,
   Return,
   Root,
   TupleAccess,
