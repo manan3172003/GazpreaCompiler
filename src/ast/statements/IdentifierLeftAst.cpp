@@ -1,8 +1,6 @@
 #include "ast/statements/IdentifierLeftAst.h"
 #include "ast/Ast.h"
 
-#include <mlir/Dialect/LLVMIR/LLVMTypes.h.inc>
-
 namespace gazprea::ast::statements {
 
 NodeType IdentifierLeftAst::getNodeType() const {
