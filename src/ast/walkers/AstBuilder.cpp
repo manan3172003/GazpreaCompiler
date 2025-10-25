@@ -103,7 +103,7 @@ std::any
 AstBuilder::visitProcedure_param(GazpreaParser::Procedure_paramContext *ctx) {
   const auto paramAst =
       std::make_shared<prototypes::ProcedureParamAst>(ctx->getStart());
-  if (ctx->qualifier()->VAR()) {
+  if (ctx->qualifier() && ctx->qualifier()->VAR()) {
     paramAst->setQualifier(Qualifier::Var);
   } else {
     paramAst->setQualifier(Qualifier::Const); // Default qualifier
