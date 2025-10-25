@@ -10,6 +10,7 @@ enum class NodeType {
   Break,
   Continue,
   Conditional,
+  Cast,
   Declaration,
   Function,
   FunctionParam,

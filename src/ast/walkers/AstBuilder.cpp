@@ -1,4 +1,5 @@
 #include "ast/RootAst.h"
+#include "ast/expressions/CastAst.h"
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerAst.h"
 #include "ast/expressions/RealAst.h"
@@ -318,7 +319,12 @@ std::any AstBuilder::visitPowerExpr(GazpreaParser::PowerExprContext *ctx) {
   return GazpreaBaseVisitor::visitPowerExpr(ctx);
 }
 std::any AstBuilder::visitCastExpr(GazpreaParser::CastExprContext *ctx) {
-  return GazpreaBaseVisitor::visitCastExpr(ctx);
+  const auto castAst = std::make_shared<expressions::CastAst>(ctx->getStart());
+  castAst->setType(ctx->type()->getText());
+  castAst->setExpression(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+          visit(ctx->expr())));
+  return std::static_pointer_cast<expressions::ExpressionAst>(castAst);
 }
 std::any AstBuilder::visitLogicalExpr(GazpreaParser::LogicalExprContext *ctx) {
   return GazpreaBaseVisitor::visitLogicalExpr(ctx);
