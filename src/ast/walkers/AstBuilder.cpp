@@ -337,18 +337,7 @@ std::any AstBuilder::visitQualifier(GazpreaParser::QualifierContext *ctx) {
   return GazpreaBaseVisitor::visitQualifier(ctx);
 }
 std::any AstBuilder::visitPowerExpr(GazpreaParser::PowerExprContext *ctx) {
-  auto binaryAst = std::make_shared<expressions::BinaryAst>(ctx->getStart());
-
-  auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(0)));
-  auto right = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(1)));
-
-  binaryAst->setLeft(left);
-  binaryAst->setRight(right);
-  binaryAst->setBinaryOpType(expressions::BinaryOpType::POWER);
-
-  return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
+  return createBinaryExpr(ctx->expr(0), "^", ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitCastExpr(GazpreaParser::CastExprContext *ctx) {
   const auto castAst = std::make_shared<expressions::CastAst>(ctx->getStart());
@@ -359,23 +348,8 @@ std::any AstBuilder::visitCastExpr(GazpreaParser::CastExprContext *ctx) {
   return std::static_pointer_cast<expressions::ExpressionAst>(castAst);
 }
 std::any AstBuilder::visitLogicalExpr(GazpreaParser::LogicalExprContext *ctx) {
-  auto binaryAst = std::make_shared<expressions::BinaryAst>(ctx->getStart());
-
-  auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(0)));
-  auto right = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(1)));
-
-  binaryAst->setLeft(left);
-  binaryAst->setRight(right);
-
-  if (ctx->op->getText() == "or") {
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::OR);
-  } else if (ctx->op->getText() == "xor") {
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::XOR);
-  }
-
-  return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
+  return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1),
+                          ctx->getStart());
 }
 
 std::any AstBuilder::visitBoolLiteral(GazpreaParser::BoolLiteralContext *ctx) {
@@ -436,22 +410,8 @@ std::any AstBuilder::visitIdentifier(GazpreaParser::IdentifierContext *ctx) {
   return std::static_pointer_cast<expressions::ExpressionAst>(idAst);
 }
 std::any AstBuilder::visitAddSubExpr(GazpreaParser::AddSubExprContext *ctx) {
-  auto binaryAst = std::make_shared<expressions::BinaryAst>(ctx->getStart());
-
-  auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(0)));
-  auto right = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(1)));
-
-  binaryAst->setLeft(left);
-  binaryAst->setRight(right);
-
-  if (ctx->op->getText() == "+")
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::ADD);
-  else
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::SUBTRACT);
-
-  return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
+  return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1),
+                          ctx->getStart());
 }
 std::any AstBuilder::visitIntLiteral(GazpreaParser::IntLiteralContext *ctx) {
   const auto intAst = std::make_shared<expressions::IntegerAst>(
@@ -480,26 +440,8 @@ std::any AstBuilder::visitCharLiteral(GazpreaParser::CharLiteralContext *ctx) {
 }
 std::any
 AstBuilder::visitRelationalExpr(GazpreaParser::RelationalExprContext *ctx) {
-  auto binaryAst = std::make_shared<expressions::BinaryAst>(ctx->getStart());
-  auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(0)));
-  auto right = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(1)));
-
-  binaryAst->setLeft(left);
-  binaryAst->setRight(right);
-
-  if (ctx->op->getText() == "<") {
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::LESS_THAN);
-  } else if (ctx->op->getText() == ">") {
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::GREATER_THAN);
-  } else if (ctx->op->getText() == "<=") {
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::LESS_EQUAL);
-  } else if (ctx->op->getText() == ">=") {
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::GREATER_EQUAL);
-  }
-
-  return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
+  return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1),
+                          ctx->getStart());
 }
 std::any
 AstBuilder::visitFloatDotLiteral(GazpreaParser::FloatDotLiteralContext *ctx) {
@@ -513,25 +455,8 @@ AstBuilder::visitTupleLiteral(GazpreaParser::TupleLiteralContext *ctx) {
 }
 std::any AstBuilder::visitMulDivRemDstarExpr(
     GazpreaParser::MulDivRemDstarExprContext *ctx) {
-  auto binaryAst = std::make_shared<expressions::BinaryAst>(ctx->getStart());
-
-  auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(0)));
-  auto right = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(1)));
-
-  binaryAst->setLeft(left);
-  binaryAst->setRight(right);
-
-  if (ctx->op->getText() == "*") {
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::MULTIPLY);
-  } else if (ctx->op->getText() == "/") {
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::DIVIDE);
-  } else if (ctx->op->getText() == "%") {
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::REM);
-  }
-
-  return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
+  return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1),
+                          ctx->getStart());
 }
 std::any
 AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx) {
@@ -554,38 +479,65 @@ std::any AstBuilder::visitRangeExpr(GazpreaParser::RangeExprContext *ctx) {
 }
 std::any
 AstBuilder::visitEqualityExpr(GazpreaParser::EqualityExprContext *ctx) {
-  auto binaryAst = std::make_shared<expressions::BinaryAst>(ctx->getStart());
-
-  auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(0)));
-  auto right = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(1)));
-
-  binaryAst->setLeft(left);
-  binaryAst->setRight(right);
-
-  if (ctx->op->getText() == "==")
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::EQUAL);
-  else if (ctx->op->getText() == "!=")
-    binaryAst->setBinaryOpType(expressions::BinaryOpType::NOT_EQUAL);
-
-  return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
+  return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1),
+                          ctx->getStart());
 }
 std::any AstBuilder::visitAndExpr(GazpreaParser::AndExprContext *ctx) {
-  auto binaryAst = std::make_shared<expressions::BinaryAst>(ctx->getStart());
-
-  auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(0)));
-  auto right = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-      visit(ctx->expr(1)));
-
-  binaryAst->setLeft(left);
-  binaryAst->setRight(right);
-  binaryAst->setBinaryOpType(expressions::BinaryOpType::AND);
-
-  return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
+  return createBinaryExpr(ctx->expr(0), "and", ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitTuple_lit(GazpreaParser::Tuple_litContext *ctx) {
   return GazpreaBaseVisitor::visitTuple_lit(ctx);
+}
+
+// Helper function implementations
+expressions::BinaryOpType
+AstBuilder::stringToBinaryOpType(const std::string &op) {
+  if (op == "^")
+    return expressions::BinaryOpType::POWER;
+  if (op == "*")
+    return expressions::BinaryOpType::MULTIPLY;
+  if (op == "/")
+    return expressions::BinaryOpType::DIVIDE;
+  if (op == "%")
+    return expressions::BinaryOpType::REM;
+  if (op == "+")
+    return expressions::BinaryOpType::ADD;
+  if (op == "-")
+    return expressions::BinaryOpType::SUBTRACT;
+  if (op == "<")
+    return expressions::BinaryOpType::LESS_THAN;
+  if (op == ">")
+    return expressions::BinaryOpType::GREATER_THAN;
+  if (op == "<=")
+    return expressions::BinaryOpType::LESS_EQUAL;
+  if (op == ">=")
+    return expressions::BinaryOpType::GREATER_EQUAL;
+  if (op == "==")
+    return expressions::BinaryOpType::EQUAL;
+  if (op == "!=")
+    return expressions::BinaryOpType::NOT_EQUAL;
+  if (op == "and")
+    return expressions::BinaryOpType::AND;
+  if (op == "or")
+    return expressions::BinaryOpType::OR;
+  if (op == "xor")
+    return expressions::BinaryOpType::XOR;
+
+  throw std::runtime_error("Unknown binary operator: " + op);
+}
+
+std::shared_ptr<expressions::ExpressionAst> AstBuilder::createBinaryExpr(
+    antlr4::tree::ParseTree *leftCtx, const std::string &op,
+    antlr4::tree::ParseTree *rightCtx, antlr4::Token *token) {
+  auto binaryAst = std::make_shared<expressions::BinaryAst>(token);
+  auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+      visit(leftCtx));
+  auto right = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+      visit(rightCtx));
+  binaryAst->setLeft(left);
+  binaryAst->setRight(right);
+  binaryAst->setBinaryOpType(stringToBinaryOpType(op));
+
+  return binaryAst;
 }
 } // namespace gazprea::ast::walkers

@@ -1,5 +1,7 @@
 #pragma once
 #include "GazpreaBaseVisitor.h"
+#include "ast/expressions/BinaryAst.h"
+#include "ast/expressions/ExpressionAst.h"
 
 namespace gazprea::ast::walkers {
 
@@ -73,5 +75,11 @@ public:
   std::any visitEqualityExpr(GazpreaParser::EqualityExprContext *ctx) override;
   std::any visitAndExpr(GazpreaParser::AndExprContext *ctx) override;
   std::any visitTuple_lit(GazpreaParser::Tuple_litContext *ctx) override;
+
+private:
+  expressions::BinaryOpType stringToBinaryOpType(const std::string &op);
+  std::shared_ptr<expressions::ExpressionAst>
+  createBinaryExpr(antlr4::tree::ParseTree *leftCtx, const std::string &op,
+                   antlr4::tree::ParseTree *rightCtx, antlr4::Token *token);
 };
 } // namespace gazprea::ast::walkers
