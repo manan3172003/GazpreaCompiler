@@ -9,6 +9,7 @@ enum class NodeType {
   Assignment,
   Block,
   Break,
+  Bool,
   Continue,
   Conditional,
   Cast,
@@ -39,6 +40,8 @@ enum class Qualifier {
   Var,
   Const,
 };
+
+enum class BoolValue { TRUE, FALSE };
 
 class Ast {
 protected:
