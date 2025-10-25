@@ -1,6 +1,6 @@
 #include "ast/RootAst.h"
-#include "ast/expressions/CastAst.h"
 #include "ast/expressions/BoolAst.h"
+#include "ast/expressions/CastAst.h"
 #include "ast/expressions/CharAst.h"
 #include "ast/expressions/FuncProcCallAst.h"
 #include "ast/expressions/IdentifierAst.h"
@@ -352,9 +352,9 @@ std::any AstBuilder::visitLogicalExpr(GazpreaParser::LogicalExprContext *ctx) {
 std::any AstBuilder::visitBoolLiteral(GazpreaParser::BoolLiteralContext *ctx) {
   const auto boolAst = std::make_shared<expressions::BoolAst>(ctx->getStart());
   if (ctx->TRUE()) {
-    boolAst->setValue(BoolValue::TRUE);
+    boolAst->setValue(true);
   } else {
-    boolAst->setValue(BoolValue::FALSE);
+    boolAst->setValue(false);
   }
   return std::static_pointer_cast<expressions::ExpressionAst>(boolAst);
 }

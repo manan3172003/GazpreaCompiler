@@ -41,8 +41,6 @@ enum class Qualifier {
   Const,
 };
 
-enum class BoolValue { TRUE, FALSE };
-
 class Ast {
 protected:
   antlr4::Token *token;
