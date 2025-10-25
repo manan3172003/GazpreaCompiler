@@ -1,4 +1,5 @@
 #include "ast/RootAst.h"
+#include "ast/expressions/BinaryAst.h"
 #include "ast/expressions/BoolAst.h"
 #include "ast/expressions/CastAst.h"
 #include "ast/expressions/CharAst.h"
@@ -407,7 +408,20 @@ std::any AstBuilder::visitIdentifier(GazpreaParser::IdentifierContext *ctx) {
   return std::static_pointer_cast<expressions::ExpressionAst>(idAst);
 }
 std::any AstBuilder::visitAddSubExpr(GazpreaParser::AddSubExprContext *ctx) {
-  return GazpreaBaseVisitor::visitAddSubExpr(ctx);
+  auto binaryAst = std::make_shared<expressions::BinaryAst>(ctx->getStart());
+
+  auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(0)));
+  auto right = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(1)));\
+
+  binaryAst->setLeft(left);
+  binaryAst->setRight(right);
+
+  if (ctx->op->getText() == "+")
+    binaryAst->setBinaryOpType(expressions::BinaryOpType::ADD);
+  else
+    binaryAst->setBinaryOpType(expressions::BinaryOpType::SUBTRACT);
+
+  return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
 }
 std::any AstBuilder::visitIntLiteral(GazpreaParser::IntLiteralContext *ctx) {
   const auto intAst = std::make_shared<expressions::IntegerAst>(

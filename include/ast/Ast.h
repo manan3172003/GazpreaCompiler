@@ -33,7 +33,8 @@ enum class NodeType {
   TupleAccess,
   Typealias,
   TupleAssign,
-  UnaryExpression
+  UnaryExpression,
+  BinaryExpression
 };
 
 enum class Qualifier {
