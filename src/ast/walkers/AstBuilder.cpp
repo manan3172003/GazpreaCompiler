@@ -1,5 +1,6 @@
 #include "ast/RootAst.h"
 #include "ast/expressions/CastAst.h"
+#include "ast/expressions/FuncProcCallAst.h"
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerAst.h"
 #include "ast/expressions/RealAst.h"
@@ -12,12 +13,13 @@
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
 #include "ast/statements/BreakAst.h"
-#include "ast/statements/ContinueAst.h"
 #include "ast/statements/ConditionalAst.h"
+#include "ast/statements/ContinueAst.h"
 #include "ast/statements/DeclarationAst.h"
 #include "ast/statements/IdentifierLeftAst.h"
 #include "ast/statements/InputAst.h"
 #include "ast/statements/OutputAst.h"
+#include "ast/statements/ProcedureCallAst.h"
 #include "ast/statements/ReturnAst.h"
 #include "ast/statements/TupleAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
@@ -124,7 +126,15 @@ AstBuilder::visitProcedure_param(GazpreaParser::Procedure_paramContext *ctx) {
 }
 std::any AstBuilder::visitProcedure_call_stat(
     GazpreaParser::Procedure_call_statContext *ctx) {
-  return GazpreaBaseVisitor::visitProcedure_call_stat(ctx);
+  const auto procCallAst =
+      std::make_shared<statements::ProcedureCallAst>(ctx->getStart());
+  procCallAst->setName(ctx->ID()->getText());
+  if (ctx->args()) {
+    procCallAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(
+            visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(procCallAst);
 }
 std::any
 AstBuilder::visitFunction_stat(GazpreaParser::Function_statContext *ctx) {
@@ -189,7 +199,15 @@ AstBuilder::visitFunction_param(GazpreaParser::Function_paramContext *ctx) {
   return std::static_pointer_cast<Ast>(paramAst);
 }
 std::any AstBuilder::visitArgs(GazpreaParser::ArgsContext *ctx) {
-  return GazpreaBaseVisitor::visitArgs(ctx);
+  auto args = std::vector<std::shared_ptr<expressions::ArgAst>>{};
+  for (const auto &argCtx : ctx->expr()) {
+    const auto argAst =
+        std::make_shared<expressions::ArgAst>(argCtx->getStart());
+    argAst->setExpr(std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+        visit(argCtx)));
+    args.push_back(argAst);
+  }
+  return args;
 }
 std::any AstBuilder::visitOutput_stat(GazpreaParser::Output_statContext *ctx) {
   auto outputAst = std::make_shared<statements::OutputAst>(ctx->getStart());
@@ -430,7 +448,15 @@ AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx) {
 }
 std::any
 AstBuilder::visitFuncProcExpr(GazpreaParser::FuncProcExprContext *ctx) {
-  return GazpreaBaseVisitor::visitFuncProcExpr(ctx);
+  const auto fpCallAst =
+      std::make_shared<expressions::FuncProcCallAst>(ctx->getStart());
+  fpCallAst->setName(ctx->ID()->getText());
+  if (ctx->args()) {
+    fpCallAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(
+            visit(ctx->args())));
+  }
+  return std::static_pointer_cast<expressions::ExpressionAst>(fpCallAst);
 }
 std::any AstBuilder::visitRangeExpr(GazpreaParser::RangeExprContext *ctx) {
   return GazpreaBaseVisitor::visitRangeExpr(ctx);

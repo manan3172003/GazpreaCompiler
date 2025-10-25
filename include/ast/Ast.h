@@ -5,6 +5,7 @@
 
 namespace gazprea::ast {
 enum class NodeType {
+  Arg,
   Assignment,
   Block,
   Break,
@@ -14,8 +15,10 @@ enum class NodeType {
   Declaration,
   Function,
   FunctionParam,
+  FuncProcCall,
   Procedure,
   ProcedureParam,
+  ProcedureCall,
   Prototype,
   Output,
   Identifier,
