@@ -362,7 +362,7 @@ std::any AstBuilder::visitBoolLiteral(GazpreaParser::BoolLiteralContext *ctx) {
   return std::static_pointer_cast<expressions::ExpressionAst>(boolAst);
 }
 std::any AstBuilder::visitParenExpr(GazpreaParser::ParenExprContext *ctx) {
-  return GazpreaBaseVisitor::visitParenExpr(ctx);
+  return visit(ctx->expr());
 }
 std::any AstBuilder::visitUnaryExpr(GazpreaParser::UnaryExprContext *ctx) {
   auto unaryExpression =
@@ -526,9 +526,10 @@ AstBuilder::stringToBinaryOpType(const std::string &op) {
   throw std::runtime_error("Unknown binary operator: " + op);
 }
 
-std::shared_ptr<expressions::ExpressionAst> AstBuilder::createBinaryExpr(
-    antlr4::tree::ParseTree *leftCtx, const std::string &op,
-    antlr4::tree::ParseTree *rightCtx, antlr4::Token *token) {
+std::any AstBuilder::createBinaryExpr(antlr4::tree::ParseTree *leftCtx,
+                                      const std::string &op,
+                                      antlr4::tree::ParseTree *rightCtx,
+                                      antlr4::Token *token) {
   auto binaryAst = std::make_shared<expressions::BinaryAst>(token);
   auto left = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
       visit(leftCtx));
@@ -538,6 +539,6 @@ std::shared_ptr<expressions::ExpressionAst> AstBuilder::createBinaryExpr(
   binaryAst->setRight(right);
   binaryAst->setBinaryOpType(stringToBinaryOpType(op));
 
-  return binaryAst;
+  return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
 }
 } // namespace gazprea::ast::walkers
