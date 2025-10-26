@@ -579,15 +579,15 @@ std::any AstBuilder::createBinaryExpr(antlr4::tree::ParseTree *leftCtx,
 std::shared_ptr<types::DataTypeAst>
 AstBuilder::makeType(GazpreaParser::TypeContext *typeContext,
                      antlr4::Token *token) {
-  if (typeContext->INTEGER()) {
+  if (typeContext->INTEGER())
     return std::make_shared<types::IntegerTypeAst>(token);
-  } else if (typeContext->REAL()) {
+  if (typeContext->REAL())
     return std::make_shared<types::RealTypeAst>(token);
-  } else if (typeContext->CHARACTER()) {
+  if (typeContext->CHARACTER())
     return std::make_shared<types::CharacterTypeAst>(token);
-  } else if (typeContext->BOOLEAN()) {
+  if (typeContext->BOOLEAN())
     return std::make_shared<types::BooleanTypeAst>(token);
-  } else if (typeContext->ID()) {
+  if (typeContext->ID()) {
     auto aliasType = std::make_shared<types::AliasTypeAst>(token);
     aliasType->setAlias(typeContext->ID()->getText());
     return aliasType;
