@@ -84,6 +84,14 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
         std::static_pointer_cast<statements::TupleAssignAst>(ast));
   case NodeType::UnaryExpression:
     return visitUnary(std::static_pointer_cast<expressions::UnaryAst>(ast));
+  case NodeType::Loop:
+    return visitLoop(std::static_pointer_cast<statements::LoopAst>(ast));
+  case NodeType::IteratorLoop:
+    return visitIteratorLoop(
+        std::static_pointer_cast<statements::IteratorLoopAst>(ast));
+  case NodeType::TupleLiteral:
+    return visitTuple(
+        std::static_pointer_cast<expressions::TupleLiteralAst>(ast));
   }
 }
 } // namespace gazprea::ast::walkers

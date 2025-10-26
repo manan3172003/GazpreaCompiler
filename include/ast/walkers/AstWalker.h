@@ -8,6 +8,7 @@
 #include "ast/expressions/IntegerLiteralAst.h"
 #include "ast/expressions/RealLiteralAst.h"
 #include "ast/expressions/TupleAccessAst.h"
+#include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
 #include "ast/prototypes/FunctionAst.h"
 #include "ast/prototypes/FunctionParamAst.h"
@@ -21,6 +22,8 @@
 #include "ast/statements/DeclarationAst.h"
 #include "ast/statements/IdentifierLeftAst.h"
 #include "ast/statements/InputAst.h"
+#include "ast/statements/IteratorLoopAst.h"
+#include "ast/statements/LoopAst.h"
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/ReturnAst.h"
 #include "ast/statements/TupleAssignAst.h"
@@ -86,6 +89,10 @@ public:
     return {};
   }
   virtual std::any
+  visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
+    return {};
+  }
+  virtual std::any
   visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
     return {};
   }
@@ -132,6 +139,13 @@ public:
     return {};
   }
   virtual std::any visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
+    return {};
+  }
+  virtual std::any visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
+    return {};
+  }
+  virtual std::any
+  visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {
     return {};
   }
 };
