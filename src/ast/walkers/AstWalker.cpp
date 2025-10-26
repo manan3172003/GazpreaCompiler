@@ -16,7 +16,8 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::Break:
     return visitBreak(std::static_pointer_cast<statements::BreakAst>(ast));
   case NodeType::BoolLiteral:
-    return visitBool(std::static_pointer_cast<expressions::BoolLiteralAst>(ast));
+    return visitBool(
+        std::static_pointer_cast<expressions::BoolLiteralAst>(ast));
   case NodeType::Continue:
     return visitContinue(
         std::static_pointer_cast<statements::ContinueAst>(ast));
@@ -26,7 +27,8 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::Cast:
     return visitCast(std::static_pointer_cast<expressions::CastAst>(ast));
   case NodeType::CharLiteral:
-    return visitChar(std::static_pointer_cast<expressions::CharLiteralAst>(ast));
+    return visitChar(
+        std::static_pointer_cast<expressions::CharLiteralAst>(ast));
   case NodeType::Declaration:
     return visitDeclaration(
         std::static_pointer_cast<statements::DeclarationAst>(ast));
@@ -60,11 +62,13 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
     return visitIdentifierLeft(
         std::static_pointer_cast<statements::IdentifierLeftAst>(ast));
   case NodeType::IntegerLiteral:
-    return visitInteger(std::static_pointer_cast<expressions::IntegerLiteralAst>(ast));
+    return visitInteger(
+        std::static_pointer_cast<expressions::IntegerLiteralAst>(ast));
   case NodeType::Input:
     return visitInput(std::static_pointer_cast<statements::InputAst>(ast));
   case NodeType::RealLiteral:
-    return visitReal(std::static_pointer_cast<expressions::RealLiteralAst>(ast));
+    return visitReal(
+        std::static_pointer_cast<expressions::RealLiteralAst>(ast));
   case NodeType::Return:
     return visitReturn(std::static_pointer_cast<statements::ReturnAst>(ast));
   case NodeType::Root:

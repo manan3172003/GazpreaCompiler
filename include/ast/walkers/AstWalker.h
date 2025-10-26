@@ -124,7 +124,8 @@ public:
   visitIdentifierLeft(std::shared_ptr<statements::IdentifierLeftAst> ctx) {
     return {};
   }
-  virtual std::any visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
+  virtual std::any
+  visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
     return {};
   }
   virtual std::any visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
