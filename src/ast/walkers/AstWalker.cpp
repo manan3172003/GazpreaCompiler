@@ -15,8 +15,8 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
     return visitBlock(std::static_pointer_cast<statements::BlockAst>(ast));
   case NodeType::Break:
     return visitBreak(std::static_pointer_cast<statements::BreakAst>(ast));
-  case NodeType::Bool:
-    return visitBool(std::static_pointer_cast<expressions::BoolAst>(ast));
+  case NodeType::BoolLiteral:
+    return visitBool(std::static_pointer_cast<expressions::BoolLiteralAst>(ast));
   case NodeType::Continue:
     return visitContinue(
         std::static_pointer_cast<statements::ContinueAst>(ast));
@@ -25,8 +25,8 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
         std::static_pointer_cast<statements::ConditionalAst>(ast));
   case NodeType::Cast:
     return visitCast(std::static_pointer_cast<expressions::CastAst>(ast));
-  case NodeType::Char:
-    return visitChar(std::static_pointer_cast<expressions::CharAst>(ast));
+  case NodeType::CharLiteral:
+    return visitChar(std::static_pointer_cast<expressions::CharLiteralAst>(ast));
   case NodeType::Declaration:
     return visitDeclaration(
         std::static_pointer_cast<statements::DeclarationAst>(ast));
@@ -59,12 +59,12 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::IdentifierLeft:
     return visitIdentifierLeft(
         std::static_pointer_cast<statements::IdentifierLeftAst>(ast));
-  case NodeType::Integer:
-    return visitInteger(std::static_pointer_cast<expressions::IntegerAst>(ast));
+  case NodeType::IntegerLiteral:
+    return visitInteger(std::static_pointer_cast<expressions::IntegerLiteralAst>(ast));
   case NodeType::Input:
     return visitInput(std::static_pointer_cast<statements::InputAst>(ast));
-  case NodeType::Real:
-    return visitReal(std::static_pointer_cast<expressions::RealAst>(ast));
+  case NodeType::RealLiteral:
+    return visitReal(std::static_pointer_cast<expressions::RealLiteralAst>(ast));
   case NodeType::Return:
     return visitReturn(std::static_pointer_cast<statements::ReturnAst>(ast));
   case NodeType::Root:

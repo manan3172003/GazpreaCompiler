@@ -1,12 +1,12 @@
 #include "ast/Ast.h"
 #include "ast/RootAst.h"
-#include "ast/expressions/BoolAst.h"
+#include "ast/expressions/BoolLiteralAst.h"
 #include "ast/expressions/CastAst.h"
-#include "ast/expressions/CharAst.h"
+#include "ast/expressions/CharLiteralAst.h"
 #include "ast/expressions/FuncProcCallAst.h"
 #include "ast/expressions/IdentifierAst.h"
-#include "ast/expressions/IntegerAst.h"
-#include "ast/expressions/RealAst.h"
+#include "ast/expressions/IntegerLiteralAst.h"
+#include "ast/expressions/RealLiteralAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/UnaryAst.h"
 #include "ast/prototypes/FunctionAst.h"
@@ -107,13 +107,13 @@ public:
   virtual std::any visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
     return {};
   }
-  virtual std::any visitBool(std::shared_ptr<expressions::BoolAst> ctx) {
+  virtual std::any visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
     return {};
   }
   virtual std::any visitCast(std::shared_ptr<expressions::CastAst> ctx) {
     return {};
   }
-  virtual std::any visitChar(std::shared_ptr<expressions::CharAst> ctx) {
+  virtual std::any visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
     return {};
   }
   virtual std::any
@@ -124,10 +124,10 @@ public:
   visitIdentifierLeft(std::shared_ptr<statements::IdentifierLeftAst> ctx) {
     return {};
   }
-  virtual std::any visitInteger(std::shared_ptr<expressions::IntegerAst> ctx) {
+  virtual std::any visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
     return {};
   }
-  virtual std::any visitReal(std::shared_ptr<expressions::RealAst> ctx) {
+  virtual std::any visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
     return {};
   }
   virtual std::any visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
