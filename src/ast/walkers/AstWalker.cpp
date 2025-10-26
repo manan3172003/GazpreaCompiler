@@ -92,6 +92,8 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::TupleLiteral:
     return visitTuple(
         std::static_pointer_cast<expressions::TupleLiteralAst>(ast));
+  default:
+    return {};
   }
 }
 } // namespace gazprea::ast::walkers

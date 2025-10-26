@@ -25,6 +25,7 @@
 #include "ast/statements/IteratorLoopAst.h"
 #include "ast/statements/LoopAst.h"
 #include "ast/statements/OutputAst.h"
+#include "ast/statements/ProcedureCallAst.h"
 #include "ast/statements/ReturnAst.h"
 #include "ast/statements/TupleAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
@@ -34,7 +35,7 @@ namespace gazprea::ast::walkers {
 class AstWalker {
 public:
   AstWalker();
-  ~AstWalker() = default;
+  virtual ~AstWalker() = default;
 
   std::any visit(std::shared_ptr<Ast> ast);
   virtual std::any visitRoot(std::shared_ptr<RootAst> ctx) { return {}; }

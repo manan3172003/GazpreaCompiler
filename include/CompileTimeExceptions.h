@@ -1,5 +1,7 @@
-#ifndef GAZPREABASE_INCLUDE_COMPILETIMEEXCEPTIONS_H_
-#define GAZPREABASE_INCLUDE_COMPILETIMEEXCEPTIONS_H_
+#pragma once
+
+#include <sstream>
+#include <string>
 
 class CompileTimeException : public std::exception {
 protected:
@@ -44,5 +46,3 @@ DEF_COMPILE_TIME_EXCEPTION(SyntaxError);
 DEF_COMPILE_TIME_EXCEPTION(LiteralError);
 
 DEF_COMPILE_TIME_EXCEPTION(TypeError);
-
-#endif // GAZPREABASE_INCLUDE_COMPILETIMEEXCEPTIONS_H_
