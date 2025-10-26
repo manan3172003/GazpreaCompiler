@@ -7,6 +7,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/OutputAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/InputAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/LoopAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/IteratorLoopAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TypealiasAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/BreakAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ContinueAst.cpp"

@@ -22,6 +22,7 @@
 #include "ast/statements/DeclarationAst.h"
 #include "ast/statements/IdentifierLeftAst.h"
 #include "ast/statements/InputAst.h"
+#include "ast/statements/IteratorLoopAst.h"
 #include "ast/statements/LoopAst.h"
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/ProcedureCallAst.h"
@@ -280,52 +281,80 @@ std::any AstBuilder::visitIf_stat(GazpreaParser::If_statContext *ctx) {
 std::any AstBuilder::visitElse_stat(GazpreaParser::Else_statContext *ctx) {
   return visit(ctx->stat());
 }
-std::any AstBuilder::visitLoop_stat(GazpreaParser::Loop_statContext *ctx) {
-  const auto loopAst = std::make_shared<statements::LoopAst>(ctx->getStart());
 
-  if (ctx->WHILE() && ctx->expr() && !ctx->SC()) {
-    loopAst->setCondition(
-        std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-            visit(ctx->expr())));
-    loopAst->setIsPostPredicated(false);
-
-    auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
-        visit(ctx->stat()));
-    if (stmt->getNodeType() == NodeType::Block) {
-      loopAst->setBody(std::static_pointer_cast<statements::BlockAst>(stmt));
-    } else {
-      auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
-      blockAst->addChildren(stmt);
-      loopAst->setBody(blockAst);
-    }
-  } else if (ctx->WHILE() && ctx->expr() && ctx->SC()) {
-    loopAst->setCondition(
-        std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-            visit(ctx->expr())));
-    loopAst->setIsPostPredicated(true);
-
-    auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
-        visit(ctx->stat()));
-    if (stmt->getNodeType() == NodeType::Block) {
-      loopAst->setBody(std::static_pointer_cast<statements::BlockAst>(stmt));
-    } else {
-      auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
-      blockAst->addChildren(stmt);
-      loopAst->setBody(blockAst);
-    }
+std::any
+AstBuilder::visitInfiniteLoop(GazpreaParser::InfiniteLoopContext *ctx) {
+  auto loopAst = std::make_shared<statements::LoopAst>(ctx->getStart());
+  auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+      visit(ctx->stat()));
+  if (stmt->getNodeType() == NodeType::Block) {
+    loopAst->setBody(std::static_pointer_cast<statements::BlockAst>(stmt));
   } else {
-    auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
-        visit(ctx->stat()));
-    if (stmt->getNodeType() == NodeType::Block) {
-      loopAst->setBody(std::static_pointer_cast<statements::BlockAst>(stmt));
-    } else {
-      auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
-      blockAst->addChildren(stmt);
-      loopAst->setBody(blockAst);
-    }
+    auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
+    blockAst->addChildren(stmt);
+    loopAst->setBody(blockAst);
   }
   return std::static_pointer_cast<statements::StatementAst>(loopAst);
 }
+
+std::any AstBuilder::visitPrePredicatedLoop(
+    GazpreaParser::PrePredicatedLoopContext *ctx) {
+  auto loopAst = std::make_shared<statements::LoopAst>(ctx->getStart());
+  loopAst->setCondition(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+          visit(ctx->expr())));
+  loopAst->setIsPostPredicated(false);
+  auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+      visit(ctx->stat()));
+  if (stmt->getNodeType() == NodeType::Block) {
+    loopAst->setBody(std::static_pointer_cast<statements::BlockAst>(stmt));
+  } else {
+    auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
+    blockAst->addChildren(stmt);
+    loopAst->setBody(blockAst);
+  }
+  return std::static_pointer_cast<statements::StatementAst>(loopAst);
+}
+
+std::any AstBuilder::visitPostPredicatedLoop(
+    GazpreaParser::PostPredicatedLoopContext *ctx) {
+  auto loopAst = std::make_shared<statements::LoopAst>(ctx->getStart());
+  loopAst->setCondition(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+          visit(ctx->expr())));
+  loopAst->setIsPostPredicated(true);
+  auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+      visit(ctx->stat()));
+  if (stmt->getNodeType() == NodeType::Block) {
+    loopAst->setBody(std::static_pointer_cast<statements::BlockAst>(stmt));
+  } else {
+    auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
+    blockAst->addChildren(stmt);
+    loopAst->setBody(blockAst);
+  }
+  return std::static_pointer_cast<statements::StatementAst>(loopAst);
+}
+
+std::any
+AstBuilder::visitIterativeLoop(GazpreaParser::IterativeLoopContext *ctx) {
+  auto loopAst = std::make_shared<statements::IteratorLoopAst>(ctx->getStart());
+
+  loopAst->setIteratorName(ctx->ID()->getText());
+  loopAst->setDomainExpr(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+          visit(ctx->expr())));
+  auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(
+      visit(ctx->stat()));
+  if (stmt->getNodeType() == NodeType::Block) {
+    loopAst->setBody(std::static_pointer_cast<statements::BlockAst>(stmt));
+  } else {
+    auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
+    blockAst->addChildren(stmt);
+    loopAst->setBody(blockAst);
+  }
+  return std::static_pointer_cast<statements::StatementAst>(loopAst);
+}
+
 std::any AstBuilder::visitBlock_stat(GazpreaParser::Block_statContext *ctx) {
   const auto blockAst = std::make_shared<statements::BlockAst>(ctx->getStart());
   for (const auto child : ctx->stat()) {

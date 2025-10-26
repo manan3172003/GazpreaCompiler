@@ -63,10 +63,10 @@ if_stat: IF LPAREN expr RPAREN stat else_stat?;
 else_stat: ELSE stat;
 
 loop_stat
-    : LOOP WHILE LPAREN expr RPAREN stat
-    | LOOP ID IN expr stat
-    | LOOP stat WHILE LPAREN expr RPAREN SC
-    | LOOP stat
+    : LOOP WHILE LPAREN expr RPAREN stat #prePredicatedLoop
+    | LOOP ID IN expr stat #iterativeLoop
+    | LOOP stat WHILE LPAREN expr RPAREN SC #postPredicatedLoop
+    | LOOP stat #infiniteLoop
     ;
 
 block_stat: LBRACE stat+ RBRACE;

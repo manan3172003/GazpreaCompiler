@@ -36,7 +36,13 @@ public:
   std::any visitReturn_stat(GazpreaParser::Return_statContext *ctx) override;
   std::any visitIf_stat(GazpreaParser::If_statContext *ctx) override;
   std::any visitElse_stat(GazpreaParser::Else_statContext *ctx) override;
-  std::any visitLoop_stat(GazpreaParser::Loop_statContext *ctx) override;
+  std::any visitInfiniteLoop(GazpreaParser::InfiniteLoopContext *ctx) override;
+  std::any
+  visitPrePredicatedLoop(GazpreaParser::PrePredicatedLoopContext *ctx) override;
+  std::any visitPostPredicatedLoop(
+      GazpreaParser::PostPredicatedLoopContext *ctx) override;
+  std::any
+  visitIterativeLoop(GazpreaParser::IterativeLoopContext *ctx) override;
   std::any visitBlock_stat(GazpreaParser::Block_statContext *ctx) override;
   std::any visitAssign_stat(GazpreaParser::Assign_statContext *ctx) override;
   std::any visitDec_stat(GazpreaParser::Dec_statContext *ctx) override;
