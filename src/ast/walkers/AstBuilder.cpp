@@ -68,7 +68,12 @@ AstBuilder::visitTypealias_stat(GazpreaParser::Typealias_statContext *ctx) {
   auto typealiasAst =
       std::make_shared<statements::TypealiasAst>(ctx->getStart());
   typealiasAst->setAlias(ctx->ID()->getText());
-  typealiasAst->setType(ctx->type()->getText());
+  if (ctx->type()->tuple_type())
+    typealiasAst->setType(std::any_cast<std::shared_ptr<types::TupleTypeAst>>(
+        visit(ctx->type()->tuple_type())));
+  else
+    typealiasAst->setType(makeType(ctx->type(), ctx->getStart()));
+
   return std::static_pointer_cast<Ast>(typealiasAst);
 }
 std::any AstBuilder::visitStat(GazpreaParser::StatContext *ctx) {
