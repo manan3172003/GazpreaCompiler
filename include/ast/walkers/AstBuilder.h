@@ -6,6 +6,10 @@
 namespace gazprea::ast::walkers {
 
 class AstBuilder : public GazpreaBaseVisitor {
+private:
+  static std::shared_ptr<types::DataTypeAst>
+  makeType(GazpreaParser::TypeContext *typeContext, antlr4::Token *token);
+
 public:
   std::any visitFile(GazpreaParser::FileContext *ctx) override;
   std::any visitGlobal_stat(GazpreaParser::Global_statContext *ctx) override;

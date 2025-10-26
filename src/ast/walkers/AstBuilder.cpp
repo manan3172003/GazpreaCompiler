@@ -1,12 +1,12 @@
 #include "ast/RootAst.h"
 #include "ast/expressions/BinaryAst.h"
-#include "ast/expressions/BoolAst.h"
+#include "ast/expressions/BoolLiteralAst.h"
 #include "ast/expressions/CastAst.h"
-#include "ast/expressions/CharAst.h"
+#include "ast/expressions/CharLiteralAst.h"
 #include "ast/expressions/FuncProcCallAst.h"
 #include "ast/expressions/IdentifierAst.h"
-#include "ast/expressions/IntegerAst.h"
-#include "ast/expressions/RealAst.h"
+#include "ast/expressions/IntegerLiteralAst.h"
+#include "ast/expressions/RealLiteralAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
@@ -27,6 +27,11 @@
 #include "ast/statements/ReturnAst.h"
 #include "ast/statements/TupleAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
+#include "ast/types/BooleanTypeAst.h"
+#include "ast/types/CharacterTypeAst.h"
+#include "ast/types/IntegerTypeAst.h"
+#include "ast/types/RealTypeAst.h"
+#include "ast/types/TupleTypeAst.h"
 
 #include <ast/walkers/AstBuilder.h>
 
@@ -306,17 +311,24 @@ std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
   auto declAst = std::make_shared<statements::DeclarationAst>(ctx->getStart());
   if (ctx->qualifier()) {
     if (ctx->qualifier()->CONST())
-      declAst->qualifier = Qualifier::Const;
+      declAst->setQualifier(Qualifier::Const);
     else if (ctx->qualifier()->VAR())
-      declAst->qualifier = Qualifier::Var;
+      declAst->setQualifier(Qualifier::Var);
   } else
-    declAst->qualifier = Qualifier::Const;
-  declAst->type = ctx->type()->getText();
-  declAst->name = ctx->ID()->getText();
+    declAst->setQualifier(Qualifier::Const);
+
+  if (ctx->type()->tuple_type()) {
+    declAst->setType(std::any_cast<std::shared_ptr<types::TupleTypeAst>>(
+        visit(ctx->type()->tuple_type())));
+  } else {
+    declAst->setType(makeType(ctx->type(), ctx->getStart()));
+  }
+
+  declAst->setName(ctx->ID()->getText());
 
   if (ctx->expr()) {
-    declAst->expr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
-        visit(ctx->expr()));
+    declAst->setExpr(std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+        visit(ctx->expr())));
   }
 
   return std::static_pointer_cast<statements::StatementAst>(declAst);
@@ -326,7 +338,11 @@ AstBuilder::visitTuple_dec_stat(GazpreaParser::Tuple_dec_statContext *ctx) {
   return GazpreaBaseVisitor::visitTuple_dec_stat(ctx);
 }
 std::any AstBuilder::visitTuple_type(GazpreaParser::Tuple_typeContext *ctx) {
-  return GazpreaBaseVisitor::visitTuple_type(ctx);
+  auto tupleType = std::make_shared<types::TupleTypeAst>(ctx->getStart());
+  for (auto const type : ctx->type_list()->type()) {
+    tupleType->addType(makeType(type, ctx->getStart()));
+  }
+  return tupleType;
 }
 std::any AstBuilder::visitType_list(GazpreaParser::Type_listContext *ctx) {
   return GazpreaBaseVisitor::visitType_list(ctx);
@@ -354,7 +370,8 @@ std::any AstBuilder::visitLogicalExpr(GazpreaParser::LogicalExprContext *ctx) {
 }
 
 std::any AstBuilder::visitBoolLiteral(GazpreaParser::BoolLiteralContext *ctx) {
-  const auto boolAst = std::make_shared<expressions::BoolAst>(ctx->getStart());
+  const auto boolAst =
+      std::make_shared<expressions::BoolLiteralAst>(ctx->getStart());
   if (ctx->TRUE()) {
     boolAst->setValue(true);
   } else {
@@ -387,7 +404,7 @@ std::any AstBuilder::visitUnaryExpr(GazpreaParser::UnaryExprContext *ctx) {
 }
 std::any
 AstBuilder::visitFloatLiteral(GazpreaParser::FloatLiteralContext *ctx) {
-  auto realAst = std::make_shared<expressions::RealAst>(
+  auto realAst = std::make_shared<expressions::RealLiteralAst>(
       ctx->getStart(), std::stof(ctx->FLOAT_LIT()->getText()));
   return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
@@ -415,19 +432,19 @@ std::any AstBuilder::visitAddSubExpr(GazpreaParser::AddSubExprContext *ctx) {
                           ctx->getStart());
 }
 std::any AstBuilder::visitIntLiteral(GazpreaParser::IntLiteralContext *ctx) {
-  const auto intAst = std::make_shared<expressions::IntegerAst>(
+  const auto intAst = std::make_shared<expressions::IntegerLiteralAst>(
       ctx->getStart(), std::stoi(ctx->INT_LIT()->getText()));
   return std::static_pointer_cast<expressions::ExpressionAst>(intAst);
 }
 std::any AstBuilder::visitScientificFloatLiteral(
     GazpreaParser::ScientificFloatLiteralContext *ctx) {
-  auto realAst = std::make_shared<expressions::RealAst>(
+  auto realAst = std::make_shared<expressions::RealLiteralAst>(
       ctx->getStart(), std::stof(ctx->SCIENTIFIC_FLOAT()->getText()));
   return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any
 AstBuilder::visitDotFloatLiteral(GazpreaParser::DotFloatLiteralContext *ctx) {
-  auto realAst = std::make_shared<expressions::RealAst>(
+  auto realAst = std::make_shared<expressions::RealLiteralAst>(
       ctx->getStart(), std::stof(ctx->DOT_FLOAT()->getText()));
   return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
@@ -435,7 +452,8 @@ std::any AstBuilder::visitByExpr(GazpreaParser::ByExprContext *ctx) {
   return GazpreaBaseVisitor::visitByExpr(ctx);
 }
 std::any AstBuilder::visitCharLiteral(GazpreaParser::CharLiteralContext *ctx) {
-  const auto charAst = std::make_shared<expressions::CharAst>(ctx->getStart());
+  const auto charAst =
+      std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
   charAst->setValue(ctx->CHAR_LIT()->getText());
   return std::static_pointer_cast<expressions::ExpressionAst>(charAst);
 }
@@ -446,7 +464,7 @@ AstBuilder::visitRelationalExpr(GazpreaParser::RelationalExprContext *ctx) {
 }
 std::any
 AstBuilder::visitFloatDotLiteral(GazpreaParser::FloatDotLiteralContext *ctx) {
-  auto realAst = std::make_shared<expressions::RealAst>(
+  auto realAst = std::make_shared<expressions::RealLiteralAst>(
       ctx->getStart(), std::stof(ctx->FLOAT_DOT()->getText().substr(0, -1)));
   return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
@@ -550,5 +568,19 @@ std::any AstBuilder::createBinaryExpr(antlr4::tree::ParseTree *leftCtx,
   binaryAst->setBinaryOpType(stringToBinaryOpType(op));
 
   return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
+}
+
+std::shared_ptr<types::DataTypeAst>
+AstBuilder::makeType(GazpreaParser::TypeContext *typeContext,
+                     antlr4::Token *token) {
+  if (typeContext->INTEGER()) {
+    return std::make_shared<types::IntegerTypeAst>(token);
+  } else if (typeContext->REAL()) {
+    return std::make_shared<types::RealTypeAst>(token);
+  } else if (typeContext->CHARACTER()) {
+    return std::make_shared<types::CharacterTypeAst>(token);
+  } else {
+    return std::make_shared<types::BooleanTypeAst>(token);
+  }
 }
 } // namespace gazprea::ast::walkers

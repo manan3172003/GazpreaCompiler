@@ -2,11 +2,11 @@
 #include "ExpressionAst.h"
 
 namespace gazprea::ast::expressions {
-class CharAst final : public ExpressionAst {
+class CharLiteralAst final : public ExpressionAst {
   std::string value;
 
 public:
-  explicit CharAst(antlr4::Token *token) : ExpressionAst(token) {}
+  explicit CharLiteralAst(antlr4::Token *token) : ExpressionAst(token) {}
 
   void setValue(const std::string &value_) { value = value_; }
   std::string getValue() const { return value; }

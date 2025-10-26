@@ -1,0 +1,13 @@
+#pragma once
+#include "DataTypeAst.h"
+
+namespace gazprea::ast::types {
+
+class BooleanTypeAst final : public DataTypeAst {
+public:
+  explicit BooleanTypeAst(antlr4::Token *token) : DataTypeAst(token) {}
+  NodeType getNodeType() const override;
+  std::string toStringTree(std::string prefix) const override;
+};
+
+} // namespace gazprea::ast::types

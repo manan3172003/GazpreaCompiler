@@ -8,6 +8,7 @@ add_subdirectory(expressions)
 add_subdirectory(statements)
 add_subdirectory(walkers)
 add_subdirectory(prototypes)
+add_subdirectory(types)
 
 target_sources(gazc PRIVATE ${gazprea_ast_src})
 
