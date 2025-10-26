@@ -1,6 +1,7 @@
 set(
         gazprea_walkers_src
         "${CMAKE_CURRENT_SOURCE_DIR}/AstBuilder.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/AstWalker.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_walkers_src})
