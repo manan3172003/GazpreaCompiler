@@ -27,6 +27,7 @@
 #include "ast/statements/ReturnAst.h"
 #include "ast/statements/TupleAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
+#include "ast/types/AliasTypeAst.h"
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/IntegerTypeAst.h"
@@ -584,8 +585,13 @@ AstBuilder::makeType(GazpreaParser::TypeContext *typeContext,
     return std::make_shared<types::RealTypeAst>(token);
   } else if (typeContext->CHARACTER()) {
     return std::make_shared<types::CharacterTypeAst>(token);
-  } else {
+  } else if (typeContext->BOOLEAN()) {
     return std::make_shared<types::BooleanTypeAst>(token);
+  } else if (typeContext->ID()) {
+    auto aliasType = std::make_shared<types::AliasTypeAst>(token);
+    aliasType->setAlias(typeContext->ID()->getText());
+    return aliasType;
   }
+  return nullptr;
 }
 } // namespace gazprea::ast::walkers

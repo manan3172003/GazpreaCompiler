@@ -5,6 +5,7 @@
 
 namespace gazprea::ast {
 enum class NodeType {
+  AliasType,
   Arg,
   Assignment,
   BinaryExpression,
