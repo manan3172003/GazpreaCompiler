@@ -1,5 +1,6 @@
 #include "ast/types/AliasTypeAst.h"
 #include "symTable/TupleTypeSymbol.h"
+#include "symTable/TypealiasSymbol.h"
 #include "symTable/VariableSymbol.h"
 
 #include <ast/walkers/DefineWalker.h>
@@ -23,14 +24,11 @@ std::any DefineWalker::visitDeclaration(
   }
   const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
       ctx->getName(), ctx->getQualifier());
-
+  varSymbol->setDef(ctx);
   // TODO: Start from here tomorrow
 
   if (ctx->getType()->getNodeType() == NodeType::TupleType) {
-    const auto tupleType =
-        std::any_cast<std::shared_ptr<symTable::TupleTypeSymbol>>(
-            visit(ctx->getType()));
-    varSymbol->setType(std::static_pointer_cast<symTable::Type>(tupleType));
+    visit(ctx->getType());
   }
 
   symTab->getCurrentScope()->define(varSymbol);
@@ -142,11 +140,18 @@ DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
       throw std::runtime_error("Unhandled node type");
     }
   }
-  return tupTypeSymbol;
+  ctx->setSymbol(tupTypeSymbol);
+  return {};
 }
 std::any
 DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
-  return AstWalker::visitTypealias(ctx);
+  auto typealiasSymbol =
+      std::make_shared<symTable::TypealiasSymbol>(ctx->getAlias());
+  typealiasSymbol->setDef(ctx);
+  symTab->getGlobalScope()->define(typealiasSymbol);
+  ctx->setSymbol(typealiasSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any
 DefineWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {

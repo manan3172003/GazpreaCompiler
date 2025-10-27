@@ -1,4 +1,6 @@
 #include "ast/types/AliasTypeAst.h"
+#include "symTable/TupleTypeSymbol.h"
+#include "symTable/TypealiasSymbol.h"
 #include "symTable/VariableSymbol.h"
 
 #include <ast/walkers/ResolveWalker.h>
@@ -50,9 +52,18 @@ std::any ResolveWalker::visitDeclaration(
     const auto aliasSym = resolveType(aliasTypeNode->getAlias());
     varSymb->setType(resolveType(aliasSym->getName()));
   } break;
+  case NodeType::TupleType: {
+    visit(ctx->getType());
+    // in visit we resolve the recursive interior types for tuple and set the
+    // resolved tuple type here
+    varSymb->setType(
+        std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol()));
+  } break;
   default:
     return {};
   }
+
+  return {};
 }
 std::any
 ResolveWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
@@ -108,10 +119,53 @@ ResolveWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   return AstWalker::visitTuple(ctx);
 }
 std::any
-ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {}
+ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
+  auto tupleTypeSymbol =
+      std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getSymbol());
+  for (const auto &subType : tupleTypeSymbol->getUnresolvedTypes()) {
+    tupleTypeSymbol->addResolvedType(resolveType(subType));
+  }
+  return {};
+}
 std::any
 ResolveWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
-  return AstWalker::visitTypealias(ctx);
+  auto typealiasSymbol =
+      std::dynamic_pointer_cast<symTable::TypealiasSymbol>(ctx->getSymbol());
+  switch (ctx->getType()->getNodeType()) {
+  case NodeType::TupleType: {
+    visit(ctx->getType());
+    auto resolvedType =
+        std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
+    typealiasSymbol->setType(resolvedType);
+  } break;
+  // TODO: Add struct type alias
+  case NodeType::IntegerType: {
+    auto resolvedType = resolveType("integer");
+    typealiasSymbol->setType(resolvedType);
+  } break;
+  case NodeType::CharType: {
+    auto resolvedType = resolveType("character");
+    typealiasSymbol->setType(resolvedType);
+  } break;
+  case NodeType::BoolType: {
+    auto resolvedType = resolveType("boolean");
+    typealiasSymbol->setType(resolvedType);
+  } break;
+  case NodeType::RealType: {
+    auto resolvedType = resolveType("real");
+    typealiasSymbol->setType(resolvedType);
+  } break;
+  case NodeType::AliasType: {
+    auto resolvedType = resolveType(
+        std::dynamic_pointer_cast<types::AliasTypeAst>(ctx->getType())
+            ->getAlias());
+    typealiasSymbol->setType(resolvedType);
+  } break;
+  default: {
+    throw std::runtime_error("Unknown node type");
+  }
+  }
+  return {};
 }
 std::any
 ResolveWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
