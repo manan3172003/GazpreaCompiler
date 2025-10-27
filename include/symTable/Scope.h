@@ -39,6 +39,9 @@ public:
   void define(std::shared_ptr<Symbol> sym) override;
   std::shared_ptr<Symbol> resolve(const std::string &name) override;
   std::string toString() override;
+  std::unordered_map<std::string, std::shared_ptr<Symbol>> &getSymbols() {
+    return symbols;
+  }
 };
 
 class GlobalScope final : public BaseScope {

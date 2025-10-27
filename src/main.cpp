@@ -11,6 +11,7 @@
 #include "ast/statements/DeclarationAst.h"
 #include "ast/walkers/AstBuilder.h"
 #include "ast/walkers/DefineWalker.h"
+#include "ast/walkers/ResolveWalker.h"
 
 #include <fstream>
 #include <iostream>
@@ -40,6 +41,11 @@ int main(int argc, char **argv) {
   auto symTab = std::make_shared<gazprea::symTable::SymbolTable>();
   gazprea::ast::walkers::DefineWalker defineWalker(symTab);
   defineWalker.visit(rootAst);
+
+  std::cout << rootAst->toStringTree("") << std::endl;
+
+  gazprea::ast::walkers::ResolveWalker resolveWalker(symTab);
+  resolveWalker.visit(rootAst);
 
   std::cout << rootAst->toStringTree("") << std::endl;
 

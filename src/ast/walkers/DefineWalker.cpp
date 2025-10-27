@@ -1,3 +1,5 @@
+#include "ast/types/AliasTypeAst.h"
+#include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 
 #include <ast/walkers/DefineWalker.h>
@@ -21,6 +23,16 @@ std::any DefineWalker::visitDeclaration(
   }
   const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
       ctx->getName(), ctx->getQualifier());
+
+  // TODO: Start from here tomorrow
+
+  if (ctx->getType()->getNodeType() == NodeType::TupleType) {
+    const auto tupleType =
+        std::any_cast<std::shared_ptr<symTable::TupleTypeSymbol>>(
+            visit(ctx->getType()));
+    varSymbol->setType(std::static_pointer_cast<symTable::Type>(tupleType));
+  }
+
   symTab->getCurrentScope()->define(varSymbol);
   ctx->setScope(symTab->getCurrentScope());
   ctx->setSymbol(varSymbol);
@@ -104,7 +116,32 @@ DefineWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
 }
 std::any
 DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
-  return AstWalker::visitTupleType(ctx);
+  auto tupTypeSymbol = std::make_shared<symTable::TupleTypeSymbol>("");
+  for (const auto &typeAst : ctx->getTypes()) {
+    switch (typeAst->getNodeType()) {
+    case NodeType::IntegerType:
+      tupTypeSymbol->addUnresolvedType("integer");
+      break;
+    case NodeType::RealType:
+      tupTypeSymbol->addUnresolvedType("real");
+      break;
+    case NodeType::CharType:
+      tupTypeSymbol->addUnresolvedType("character");
+      break;
+    case NodeType::BoolType:
+      tupTypeSymbol->addUnresolvedType("boolean");
+      break;
+    case NodeType::AliasType: {
+      const auto aliasTypeNode =
+          std::dynamic_pointer_cast<types::AliasTypeAst>(typeAst);
+      tupTypeSymbol->addUnresolvedType(aliasTypeNode->getAlias());
+      break;
+    }
+    default:
+      throw std::runtime_error("Unhandled node type");
+    }
+  }
+  return tupTypeSymbol;
 }
 std::any
 DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {

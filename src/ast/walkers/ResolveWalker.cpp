@@ -1,11 +1,22 @@
+#include "ast/types/AliasTypeAst.h"
+#include "symTable/VariableSymbol.h"
+
 #include <ast/walkers/ResolveWalker.h>
 
 namespace gazprea::ast::walkers {
 std::shared_ptr<symTable::Type>
 ResolveWalker::resolveType(std::string type) const {
-  const auto symbol = symTab->getCurrentScope()->resolve(type);
-  auto resolvedType = std::dynamic_pointer_cast<symTable::Type>(symbol);
-  return resolvedType;
+  if (type == "integer" || type == "real" || type == "character" ||
+      type == "boolean") {
+    return std::dynamic_pointer_cast<symTable::Type>(
+        symTab->getGlobalScope()->resolve(type));
+  }
+  if (symTab->getGlobalScope()->getSymbols().count(type) == 0) {
+    return nullptr;
+  }
+  const auto typeSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(
+      symTab->getGlobalScope()->resolve(type));
+  return resolveType(typeSym->getType()->getName());
 }
 std::any ResolveWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   return AstWalker::visitRoot(ctx);
@@ -16,7 +27,32 @@ ResolveWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
 }
 std::any ResolveWalker::visitDeclaration(
     std::shared_ptr<statements::DeclarationAst> ctx) {
-  return AstWalker::visitDeclaration(ctx);
+  visit(ctx->getExpr());
+  const auto typeNode = ctx->getType()->getNodeType();
+  const auto varSymb =
+      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  switch (typeNode) {
+  case NodeType::IntegerType:
+    varSymb->setType(resolveType("integer"));
+    break;
+  case NodeType::RealType:
+    varSymb->setType(resolveType("real"));
+    break;
+  case NodeType::CharType:
+    varSymb->setType(resolveType("character"));
+    break;
+  case NodeType::BoolType:
+    varSymb->setType(resolveType("boolean"));
+    break;
+  case NodeType::AliasType: {
+    const auto aliasTypeNode =
+        std::dynamic_pointer_cast<types::AliasTypeAst>(ctx->getType());
+    const auto aliasSym = resolveType(aliasTypeNode->getAlias());
+    varSymb->setType(resolveType(aliasSym->getName()));
+  } break;
+  default:
+    return {};
+  }
 }
 std::any
 ResolveWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
@@ -73,7 +109,7 @@ ResolveWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
 }
 std::any
 ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
-  return AstWalker::visitTupleType(ctx);
+
 }
 std::any
 ResolveWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {

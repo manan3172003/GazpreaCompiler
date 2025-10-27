@@ -5,7 +5,11 @@ NodeType DeclarationAst::getNodeType() const { return NodeType::Declaration; }
 std::string DeclarationAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << "Declaration " << name << " " << qualifierToString(qualifier)
-     << " " << type->toStringTree(prefix + indent) << '\n';
+     << " " << type->toStringTree(prefix + indent);
+  if (sym) {
+    ss << sym->toString();
+  }
+  ss << '\n';
   if (expr) {
     ss << expr->toStringTree(prefix + indent);
   } else {

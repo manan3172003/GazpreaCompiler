@@ -6,7 +6,7 @@
 #include "ast/types/DataTypeAst.h"
 
 namespace gazprea::ast::statements {
-class DeclarationAst : public StatementAst {
+class DeclarationAst final : public StatementAst {
 private:
   std::string name;
   Qualifier qualifier;
