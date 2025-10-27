@@ -108,9 +108,7 @@ ResolveWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   return AstWalker::visitTuple(ctx);
 }
 std::any
-ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
-
-}
+ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {}
 std::any
 ResolveWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   return AstWalker::visitTypealias(ctx);

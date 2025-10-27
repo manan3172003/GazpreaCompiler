@@ -53,11 +53,11 @@ std::any DefineWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   return {};
 }
 std::any DefineWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
-  return AstWalker::visitBreak(ctx);
+  return {};
 }
 std::any
 DefineWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) {
-  return AstWalker::visitContinue(ctx);
+  return {};
 }
 std::any DefineWalker::visitConditional(
     std::shared_ptr<statements::ConditionalAst> ctx) {
@@ -67,7 +67,8 @@ std::any DefineWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
   return AstWalker::visitInput(ctx);
 }
 std::any DefineWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
-  return AstWalker::visitOutput(ctx);
+  visit(ctx->getExpression());
+  return {};
 }
 std::any
 DefineWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
@@ -149,11 +150,24 @@ DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
 }
 std::any
 DefineWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
-  return AstWalker::visitFunction(ctx);
+  const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
+      ctx->getProto()->getName(), ctx->getProto()->getProtoType());
+  symTab->getCurrentScope()->define(methodSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  symTab->pushScope(methodSymbol);
+  visit(ctx->getProto()); // visit the params
+  visit(ctx->getBody());
+  symTab->popScope();
+  return {};
 }
 std::any DefineWalker::visitFunctionParam(
     std::shared_ptr<prototypes::FunctionParamAst> ctx) {
-  return AstWalker::visitFunctionParam(ctx);
+  const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
+      ctx->getName(), ctx->getQualifier());
+  ctx->setScope(symTab->getCurrentScope());
+  symTab->getCurrentScope()->define(varSymbol);
+  ctx->setSymbol(varSymbol);
+  return {};
 }
 std::any
 DefineWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
