@@ -149,6 +149,8 @@ DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
       std::make_shared<symTable::TypealiasSymbol>(ctx->getAlias());
   typealiasSymbol->setDef(ctx);
   symTab->getGlobalScope()->define(typealiasSymbol);
+  if (ctx->getType()->getNodeType() == NodeType::TupleType)
+    visit(ctx->getType());
   ctx->setSymbol(typealiasSymbol);
   ctx->setScope(symTab->getCurrentScope());
   return {};

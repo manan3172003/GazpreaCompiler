@@ -13,15 +13,18 @@ ResolveWalker::resolveType(std::string type) const {
     return std::dynamic_pointer_cast<symTable::Type>(
         symTab->getGlobalScope()->resolve(type));
   }
-  if (symTab->getGlobalScope()->getSymbols().count(type) == 0) {
+  if (symTab->getGlobalScope()->getSymbols().find(type) == symTab->getGlobalScope()->getSymbols().end()) {
     return nullptr;
   }
-  const auto typeSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(
+  const auto typeSym = std::dynamic_pointer_cast<symTable::TypealiasSymbol>(
       symTab->getGlobalScope()->resolve(type));
   return resolveType(typeSym->getType()->getName());
 }
 std::any ResolveWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
-  return AstWalker::visitRoot(ctx);
+  for (const auto &child : ctx->children) {
+    visit(child);
+  }
+  return {};
 }
 std::any
 ResolveWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
@@ -29,7 +32,9 @@ ResolveWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
 }
 std::any ResolveWalker::visitDeclaration(
     std::shared_ptr<statements::DeclarationAst> ctx) {
-  visit(ctx->getExpr());
+  if (ctx->getExpr()) {
+    visit(ctx->getExpr());
+  }
   const auto typeNode = ctx->getType()->getNodeType();
   const auto varSymb =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
@@ -122,6 +127,7 @@ std::any
 ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   auto tupleTypeSymbol =
       std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getSymbol());
+  std::cout << "here" << std::endl;
   for (const auto &subType : tupleTypeSymbol->getUnresolvedTypes()) {
     tupleTypeSymbol->addResolvedType(resolveType(subType));
   }
