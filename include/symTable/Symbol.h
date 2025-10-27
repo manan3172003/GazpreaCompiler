@@ -16,7 +16,7 @@ public:
   explicit Symbol(const std::string &name);
 
   std::weak_ptr<Scope> getScope();
-  void setScope(std::weak_ptr<Scope> scope_) { scope = std::move(scope_); }
+  void setScope(std::weak_ptr<Scope> scope_) { scope = scope_; }
 
   virtual std::string getName();
   virtual std::string toString();

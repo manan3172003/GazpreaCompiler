@@ -6,6 +6,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/Type.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/VariableSymbol.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/BuiltInTypeSymbol.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ScopedSymbol.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_symtable_src})

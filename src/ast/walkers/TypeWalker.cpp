@@ -15,6 +15,9 @@ TypeWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
 std::any TypeWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   return AstWalker::visitBlock(ctx);
 }
+std::any TypeWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
+  return AstWalker::visitBinary(ctx);
+}
 std::any TypeWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
   return AstWalker::visitBreak(ctx);
 }
@@ -58,6 +61,9 @@ TypeWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
 std::any
 TypeWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   return AstWalker::visitTuple(ctx);
+}
+std::any TypeWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
+  return AstWalker::visitTupleType(ctx);
 }
 std::any
 TypeWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {

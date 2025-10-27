@@ -4,7 +4,7 @@
 namespace gazprea::symTable {
 Scope::~Scope() = default;
 void BaseScope::setEnclosingScope(std::shared_ptr<Scope> scope) {
-  enclosingScope = std::move(scope);
+  enclosingScope = scope;
 }
 std::shared_ptr<Scope> BaseScope::getEnclosingScope() {
   return enclosingScope.lock();
@@ -22,7 +22,7 @@ std::shared_ptr<Symbol> BaseScope::resolve(const std::string &name) {
   }
   return nullptr;
 }
-std::string BaseScope::scTypeToString() const {
+std::string Scope::scTypeToString() const {
   switch (scType) {
   case ScopeType::Global:
     return "Global";
@@ -45,7 +45,6 @@ std::string BaseScope::toString() {
   ss << "}";
   return ss.str();
 }
-ScopeType BaseScope::getScopeType() { return scType; }
 std::string BaseScope::getScopeName() { return "BaseScope"; }
 std::string GlobalScope::getScopeName() { return "GlobalScope"; }
 std::string LocalScope::getScopeName() { return "LocalScope"; }

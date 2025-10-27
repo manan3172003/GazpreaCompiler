@@ -65,13 +65,9 @@ public:
   explicit Ast(antlr4::Token *token) : token(token) {};
 
   std::shared_ptr<symTable::Symbol> getSymbol() { return sym; }
-  void setSymbol(std::shared_ptr<symTable::Symbol> symbol) {
-    sym = std::move(symbol);
-  }
+  void setSymbol(std::shared_ptr<symTable::Symbol> symbol) { sym = symbol; }
   std::shared_ptr<symTable::Scope> getScope() { return scope; }
-  void setScope(std::shared_ptr<symTable::Scope> scope_) {
-    scope = std::move(scope_);
-  }
+  void setScope(std::shared_ptr<symTable::Scope> scope_) { scope = scope_; }
 
   virtual NodeType getNodeType() const = 0;
   virtual std::string toStringTree(std::string prefix) const = 0;

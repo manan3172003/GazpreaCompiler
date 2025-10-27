@@ -1,5 +1,8 @@
+#pragma once
+
 #include "ast/Ast.h"
 #include "ast/RootAst.h"
+#include "ast/expressions/BinaryAst.h"
 #include "ast/expressions/BoolLiteralAst.h"
 #include "ast/expressions/CastAst.h"
 #include "ast/expressions/CharLiteralAst.h"
@@ -29,6 +32,7 @@
 #include "ast/statements/ReturnAst.h"
 #include "ast/statements/TupleAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
+#include "ast/types/TupleTypeAst.h"
 
 #include <any>
 namespace gazprea::ast::walkers {
@@ -45,6 +49,9 @@ public:
   }
   virtual std::any
   visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
+    return {};
+  }
+  virtual std::any visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
     return {};
   }
   virtual std::any visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
@@ -91,6 +98,9 @@ public:
   }
   virtual std::any
   visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
+    return {};
+  }
+  virtual std::any visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
     return {};
   }
   virtual std::any

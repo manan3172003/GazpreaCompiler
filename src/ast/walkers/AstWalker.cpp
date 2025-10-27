@@ -1,3 +1,4 @@
+#include "ast/expressions/BinaryAst.h"
 #include "ast/statements/ProcedureCallAst.h"
 
 #include <ast/walkers/AstWalker.h>
@@ -13,6 +14,8 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::Assignment:
     return visitAssignment(
         std::static_pointer_cast<statements::AssignmentAst>(ast));
+  case NodeType::BinaryExpression:
+    return visitBinary(std::static_pointer_cast<expressions::BinaryAst>(ast));
   case NodeType::Block:
     return visitBlock(std::static_pointer_cast<statements::BlockAst>(ast));
   case NodeType::Break:
@@ -94,6 +97,8 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::TupleLiteral:
     return visitTuple(
         std::static_pointer_cast<expressions::TupleLiteralAst>(ast));
+  case NodeType::TupleType:
+    return visitTupleType(std::static_pointer_cast<types::TupleTypeAst>(ast));
   default:
     return {};
   }

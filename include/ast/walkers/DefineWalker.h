@@ -15,6 +15,7 @@ public:
   visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) override;
   std::any
   visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) override;
+  std::any visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) override;
   std::any visitBlock(std::shared_ptr<statements::BlockAst> ctx) override;
   std::any visitBreak(std::shared_ptr<statements::BreakAst> ctx) override;
   std::any visitContinue(std::shared_ptr<statements::ContinueAst> ctx) override;
@@ -35,6 +36,7 @@ public:
   visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) override;
   std::any
   visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) override;
+  std::any visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) override;
   std::any
   visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) override;
   std::any visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) override;

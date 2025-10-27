@@ -25,10 +25,10 @@ public:
   void setName(std::string name_) { this->name = std::move(name_); }
   void setQualifier(Qualifier qualifier_) { this->qualifier = qualifier_; }
   void setType(std::shared_ptr<types::DataTypeAst> type_) {
-    this->type = std::move(type_);
+    this->type = type_;
   }
   void setExpr(std::shared_ptr<expressions::ExpressionAst> expr_) {
-    this->expr = std::move(expr_);
+    this->expr = expr_;
   }
 
   NodeType getNodeType() const override;

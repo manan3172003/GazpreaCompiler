@@ -41,6 +41,8 @@ int main(int argc, char **argv) {
   gazprea::ast::walkers::DefineWalker defineWalker(symTab);
   defineWalker.visit(rootAst);
 
+  std::cout << rootAst->toStringTree("") << std::endl;
+
   std::ofstream os(argv[2]);
   // BackEnd backend;
   // backend.emitModule();

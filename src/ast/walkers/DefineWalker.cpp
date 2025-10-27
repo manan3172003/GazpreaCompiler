@@ -16,16 +16,27 @@ DefineWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
 }
 std::any DefineWalker::visitDeclaration(
     std::shared_ptr<statements::DeclarationAst> ctx) {
-  return AstWalker::visitDeclaration(ctx);
+  if (ctx->getExpr()) {
+    visit(ctx->getExpr());
+  }
+  const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
+      ctx->getName(), ctx->getQualifier());
+  symTab->getCurrentScope()->define(varSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  ctx->setSymbol(varSymbol);
+  return {};
+}
+std::any
+DefineWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
+  visit(ctx->getLeft());
+  visit(ctx->getRight());
+  return {};
 }
 std::any DefineWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   symTab->pushScope(std::make_shared<symTable::LocalScope>());
   for (const auto &child : ctx->getChildren()) {
     visit(child);
   }
-
-  std::cout << symTab->toString() << std::endl;
-
   symTab->popScope();
   return {};
 }
@@ -59,8 +70,6 @@ DefineWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
   visit(ctx->getProto()); // visit the params
   visit(ctx->getBody());
 
-  std::cout << symTab->toString() << std::endl;
-
   symTab->popScope();
   return {};
 }
@@ -92,6 +101,10 @@ std::any DefineWalker::visitTupleAccess(
 std::any
 DefineWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   return AstWalker::visitTuple(ctx);
+}
+std::any
+DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
+  return AstWalker::visitTupleType(ctx);
 }
 std::any
 DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {

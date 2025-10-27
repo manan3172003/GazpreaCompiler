@@ -18,6 +18,10 @@ std::any ResolveWalker::visitDeclaration(
     std::shared_ptr<statements::DeclarationAst> ctx) {
   return AstWalker::visitDeclaration(ctx);
 }
+std::any
+ResolveWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
+  return AstWalker::visitBinary(ctx);
+}
 std::any ResolveWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   return AstWalker::visitBlock(ctx);
 }
@@ -66,6 +70,10 @@ std::any ResolveWalker::visitTupleAccess(
 std::any
 ResolveWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   return AstWalker::visitTuple(ctx);
+}
+std::any
+ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
+  return AstWalker::visitTupleType(ctx);
 }
 std::any
 ResolveWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {

@@ -16,6 +16,12 @@ std::string ProcedureAst::toStringTree(std::string prefix) const {
   if (!proto->getType().empty()) {
     ss << " Returns: " << proto->getType();
   }
+  if (scope) {
+    ss << " (Scope: " << scope->toString() << ")";
+  }
+  if (sym) {
+    ss << " (Symbol: " << sym->toString() << ")";
+  }
   ss << "\n";
   if (body) {
     ss << body->toStringTree(prefix + indent);
