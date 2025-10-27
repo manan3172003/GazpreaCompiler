@@ -5,7 +5,7 @@ NodeType ProcedureAst::getNodeType() const { return NodeType::Procedure; }
 std::string ProcedureAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << "Procedure " << proto->getName() << "(";
-  const auto &args = proto->getArgs();
+  const auto &args = proto->getParams();
   for (size_t i = 0; i < args.size(); ++i) {
     if (i > 0) {
       ss << ", ";

@@ -1,10 +1,7 @@
 #include <symTable/Symbol.h>
 
 namespace gazprea::symTable {
-Symbol::Symbol(const std::string &name) {}
-Symbol::Symbol(std::string name, std::shared_ptr<symTable::Type> type) {}
-Symbol::Symbol(std::string name, std::shared_ptr<symTable::Type> type,
-               std::shared_ptr<Scope> scope) {}
+Symbol::Symbol(const std::string &name) : name(name) {}
 
 std::weak_ptr<Scope> Symbol::getScope() { return scope; }
 std::string Symbol::getName() { return name; }

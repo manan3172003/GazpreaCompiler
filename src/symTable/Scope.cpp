@@ -10,7 +10,7 @@ std::shared_ptr<Scope> BaseScope::getEnclosingScope() {
   return enclosingScope.lock();
 }
 void BaseScope::define(std::shared_ptr<Symbol> sym) {
-  symbols.emplace(sym->getName(), std::move(sym));
+  symbols.emplace(sym->getName(), sym);
   sym->setScope(shared_from_this());
 }
 std::shared_ptr<Symbol> BaseScope::resolve(const std::string &name) {
@@ -48,9 +48,5 @@ std::string BaseScope::toString() {
 ScopeType BaseScope::getScopeType() { return scType; }
 std::string BaseScope::getScopeName() { return "BaseScope"; }
 std::string GlobalScope::getScopeName() { return "GlobalScope"; }
-std::string LocalScope::getScopeName() {
-  std::stringstream ss;
-  ss << "LocalScope(" << name << ")";
-  return ss.str();
-}
+std::string LocalScope::getScopeName() { return "LocalScope"; }
 } // namespace gazprea::symTable

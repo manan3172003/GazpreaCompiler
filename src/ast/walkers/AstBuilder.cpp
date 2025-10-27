@@ -95,9 +95,10 @@ AstBuilder::visitProcedure_stat(GazpreaParser::Procedure_statContext *ctx) {
   const auto protoAst =
       std::make_shared<prototypes::PrototypeAst>(ctx->getStart());
   protoAst->setName(ctx->ID()->getText());
+  protoAst->setProtoType(symTable::ScopeType::Procedure);
   if (ctx->procedure_params()) {
     // Handle Procedure parameters
-    protoAst->setArgs(std::any_cast<std::vector<std::shared_ptr<Ast>>>(
+    protoAst->setParams(std::any_cast<std::vector<std::shared_ptr<Ast>>>(
         visit(ctx->procedure_params())));
   }
   if (ctx->type())
@@ -158,9 +159,10 @@ AstBuilder::visitFunction_stat(GazpreaParser::Function_statContext *ctx) {
   const auto protoAst =
       std::make_shared<prototypes::PrototypeAst>(ctx->getStart());
   protoAst->setName(ctx->ID()->getText());
+  protoAst->setProtoType(symTable::ScopeType::Function);
   if (ctx->function_params()) {
     // Handle function parameters
-    protoAst->setArgs(std::any_cast<std::vector<std::shared_ptr<Ast>>>(
+    protoAst->setParams(std::any_cast<std::vector<std::shared_ptr<Ast>>>(
         visit(ctx->function_params())));
   }
   protoAst->setType(ctx->type()->getText());

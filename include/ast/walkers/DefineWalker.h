@@ -8,7 +8,7 @@ class DefineWalker final : public AstWalker {
 
 public:
   explicit DefineWalker(std::shared_ptr<symTable::SymbolTable> symTab)
-      : symTab(std::move(symTab)) {};
+      : symTab(symTab) {};
   ~DefineWalker() override = default;
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
   std::any

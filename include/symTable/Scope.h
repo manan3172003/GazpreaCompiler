@@ -47,8 +47,6 @@ public:
 };
 
 class LocalScope final : public BaseScope {
-  std::string name;
-
 public:
   LocalScope() : BaseScope(ScopeType::Local) {};
   std::string getScopeName() override;

@@ -12,7 +12,8 @@ void SymbolTable::initTypeSystem() const {
 
   // TODO: Add more built-in types for part 2
 }
-SymbolTable::SymbolTable() : globalScope(std::make_shared<GlobalScope>()) {
+SymbolTable::SymbolTable() {
+  globalScope = std::make_shared<GlobalScope>();
   initTypeSystem();
   currentScope = getGlobalScope();
 }

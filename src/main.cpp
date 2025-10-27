@@ -10,6 +10,7 @@
 #include "ast/RootAst.h"
 #include "ast/statements/DeclarationAst.h"
 #include "ast/walkers/AstBuilder.h"
+#include "ast/walkers/DefineWalker.h"
 
 #include <fstream>
 #include <iostream>
@@ -35,6 +36,10 @@ int main(int argc, char **argv) {
       astBuilder.visit(tree));
 
   std::cout << rootAst->toStringTree("") << std::endl;
+
+  auto symTab = std::make_shared<gazprea::symTable::SymbolTable>();
+  gazprea::ast::walkers::DefineWalker defineWalker(symTab);
+  defineWalker.visit(rootAst);
 
   std::ofstream os(argv[2]);
   // BackEnd backend;

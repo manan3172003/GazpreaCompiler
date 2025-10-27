@@ -4,6 +4,8 @@
 
 namespace gazprea::ast::walkers {
 
+AstWalker::AstWalker() {}
+
 std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   switch (ast->getNodeType()) {
   case NodeType::Arg:

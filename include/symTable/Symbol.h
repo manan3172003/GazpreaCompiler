@@ -14,9 +14,6 @@ class Symbol {
 
 public:
   explicit Symbol(const std::string &name);
-  Symbol(std::string name, std::shared_ptr<symTable::Type> type);
-  Symbol(std::string name, std::shared_ptr<symTable::Type> type,
-         std::shared_ptr<Scope> scope);
 
   std::weak_ptr<Scope> getScope();
   void setScope(std::weak_ptr<Scope> scope_) { scope = std::move(scope_); }

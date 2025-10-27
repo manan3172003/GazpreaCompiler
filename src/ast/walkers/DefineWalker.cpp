@@ -1,8 +1,14 @@
+#include "symTable/VariableSymbol.h"
+
 #include <ast/walkers/DefineWalker.h>
+#include <symTable/MethodSymbol.h>
 
 namespace gazprea::ast::walkers {
 std::any DefineWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
-  return AstWalker::visitRoot(ctx);
+  for (const auto &child : ctx->children) {
+    visit(child);
+  }
+  return {};
 }
 std::any
 DefineWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
@@ -13,7 +19,15 @@ std::any DefineWalker::visitDeclaration(
   return AstWalker::visitDeclaration(ctx);
 }
 std::any DefineWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
-  return AstWalker::visitBlock(ctx);
+  symTab->pushScope(std::make_shared<symTable::LocalScope>());
+  for (const auto &child : ctx->getChildren()) {
+    visit(child);
+  }
+
+  std::cout << symTab->toString() << std::endl;
+
+  symTab->popScope();
+  return {};
 }
 std::any DefineWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
   return AstWalker::visitBreak(ctx);
@@ -34,18 +48,38 @@ std::any DefineWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
 }
 std::any
 DefineWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
-  return AstWalker::visitProcedure(ctx);
+  const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
+      ctx->getProto()->getName(), ctx->getProto()->getProtoType());
+
+  symTab->getCurrentScope()->define(methodSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+
+  symTab->pushScope(methodSymbol);
+
+  visit(ctx->getProto()); // visit the params
+  visit(ctx->getBody());
+
+  std::cout << symTab->toString() << std::endl;
+
+  symTab->popScope();
+  return {};
 }
 std::any DefineWalker::visitProcedureParams(
     std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
-  return AstWalker::visitProcedureParams(ctx);
+  const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
+      ctx->getName(), ctx->getQualifier());
+  ctx->setScope(symTab->getCurrentScope());
+  symTab->getCurrentScope()->define(varSymbol);
+  ctx->setSymbol(varSymbol);
+  return {};
 }
 std::any DefineWalker::visitProcedureCall(
     std::shared_ptr<statements::ProcedureCallAst> ctx) {
   return AstWalker::visitProcedureCall(ctx);
 }
 std::any DefineWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
-  return AstWalker::visitReturn(ctx);
+  visit(ctx->getExpr());
+  return {};
 }
 std::any DefineWalker::visitTupleAssign(
     std::shared_ptr<statements::TupleAssignAst> ctx) {
@@ -73,7 +107,10 @@ std::any DefineWalker::visitFunctionParam(
 }
 std::any
 DefineWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
-  return AstWalker::visitPrototype(ctx);
+  for (const auto &param : ctx->getParams()) {
+    visit(param);
+  }
+  return {};
 }
 std::any DefineWalker::visitFuncProcCall(
     std::shared_ptr<expressions::FuncProcCallAst> ctx) {
@@ -95,7 +132,8 @@ DefineWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
 }
 std::any
 DefineWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
-  return AstWalker::visitIdentifier(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefineWalker::visitIdentifierLeft(
     std::shared_ptr<statements::IdentifierLeftAst> ctx) {
