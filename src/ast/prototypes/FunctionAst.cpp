@@ -5,7 +5,8 @@ NodeType FunctionAst::getNodeType() const { return NodeType::Function; }
 std::string FunctionAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
 
-  ss << prefix << "Function " << proto->getName() << "(";
+  ss << prefix << "Function" << scopeToString() << " " << proto->getName()
+     << "(";
 
   const auto &args = proto->getParams();
   for (size_t i = 0; i < args.size(); ++i) {
@@ -21,7 +22,8 @@ std::string FunctionAst::toStringTree(std::string prefix) const {
     ss << " (Scope: " << scope->toString() << ")";
   }
   if (proto->getSymbol()) {
-    ss << " (Symbol: " << proto->getSymbol()->toString() << ")";
+    ss << " (Symbol: " << proto->getSymbol()->toString() << " "
+       << proto->scopeToString() << ")";
   }
   ss << "\n";
   if (body) {

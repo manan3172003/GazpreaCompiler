@@ -27,6 +27,7 @@ public:
 
   virtual std::string getName();
 
+  std::string scopeToString() const;
   virtual std::string toString();
   virtual ~Symbol() = default;
 };

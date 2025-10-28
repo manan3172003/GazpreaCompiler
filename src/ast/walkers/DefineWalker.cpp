@@ -8,6 +8,7 @@
 
 namespace gazprea::ast::walkers {
 std::any DefineWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
+  ctx->setScope(symTab->getGlobalScope());
   for (const auto &child : ctx->children) {
     visit(child);
   }
@@ -43,7 +44,9 @@ DefineWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
   return {};
 }
 std::any DefineWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
-  symTab->pushScope(std::make_shared<symTable::LocalScope>());
+  auto newScope = std::make_shared<symTable::LocalScope>();
+  ctx->setScope(newScope);
+  symTab->pushScope(newScope);
   for (const auto &child : ctx->getChildren()) {
     visit(child);
   }
@@ -188,6 +191,7 @@ std::any DefineWalker::visitFunctionParam(
 }
 std::any
 DefineWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   for (const auto &param : ctx->getParams()) {
     visit(param);
   }

@@ -1,3 +1,5 @@
+#include "Colors.h"
+
 #include <ast/Ast.h>
 namespace gazprea::ast {
 std::string Ast::qualifierToString(Qualifier qualifier) {
@@ -7,5 +9,14 @@ std::string Ast::qualifierToString(Qualifier qualifier) {
   case Qualifier::Const:
     return "const";
   }
+}
+std::string Ast::scopeToString() const {
+  std::stringstream ss;
+  if (scope) {
+    ss << " (Scope: " << KYEL << scope << RST << ")";
+  } else {
+    ss << " (Scope: " << KRED << "undefined" << RST << ")";
+  }
+  return ss.str();
 }
 } // namespace gazprea::ast

@@ -5,9 +5,7 @@ NodeType IdentifierAst::getNodeType() const { return NodeType::Identifier; }
 std::string IdentifierAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << "Identifier: " << name;
-  if (scope) {
-    ss << " (Scope: " << scope->toString() << ")";
-  }
+  ss << scopeToString();
   if (sym) {
     ss << " (Symbol: " << sym->toString() << ")";
   }

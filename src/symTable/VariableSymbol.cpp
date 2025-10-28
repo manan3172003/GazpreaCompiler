@@ -30,8 +30,8 @@ std::string VariableSymbol::toString() {
     // Unresolved type
     ss << KRED << "unresolved" << RST;
   }
-
   ss << ">";
+  ss << scopeToString();
   return ss.str();
 }
 } // namespace gazprea::symTable

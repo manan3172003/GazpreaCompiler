@@ -4,7 +4,9 @@ namespace gazprea::ast::statements {
 NodeType BlockAst::getNodeType() const { return NodeType::Block; }
 std::string BlockAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << prefix << "Block " << "\n";
+  ss << prefix << "Block ";
+  ss << scopeToString();
+  ss << "\n";
   for (size_t i = 0; i < children.size(); ++i) {
     ss << children[i]->toStringTree(prefix + indent);
   }
