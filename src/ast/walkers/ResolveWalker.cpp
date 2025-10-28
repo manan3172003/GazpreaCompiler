@@ -115,7 +115,13 @@ std::any ResolveWalker::visitProcedureParams(
 }
 std::any ResolveWalker::visitProcedureCall(
     std::shared_ptr<statements::ProcedureCallAst> ctx) {
-  return AstWalker::visitProcedureCall(ctx);
+  for (const auto &args : ctx->getArgs()) {
+    visit(args);
+  }
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
+      ctx->getScope()->resolve(ctx->getName()));
+  ctx->setSymbol(methodSymbol);
+  return {};
 }
 std::any
 ResolveWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
@@ -182,10 +188,17 @@ ResolveWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
 }
 std::any ResolveWalker::visitFuncProcCall(
     std::shared_ptr<expressions::FuncProcCallAst> ctx) {
-  return AstWalker::visitFuncProcCall(ctx);
+  for (const auto &args : ctx->getArgs()) {
+    visit(args);
+  }
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
+      ctx->getScope()->resolve(ctx->getName()));
+  ctx->setSymbol(methodSymbol);
+  return {};
 }
 std::any ResolveWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
-  return AstWalker::visitArg(ctx);
+  visit(ctx->getExpr());
+  return {};
 }
 std::any
 ResolveWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {

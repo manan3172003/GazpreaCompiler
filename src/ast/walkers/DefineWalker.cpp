@@ -114,7 +114,8 @@ std::any DefineWalker::visitProcedureParams(
 }
 std::any DefineWalker::visitProcedureCall(
     std::shared_ptr<statements::ProcedureCallAst> ctx) {
-  return AstWalker::visitProcedureCall(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefineWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   visit(ctx->getExpr());
@@ -224,10 +225,15 @@ DefineWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
 }
 std::any DefineWalker::visitFuncProcCall(
     std::shared_ptr<expressions::FuncProcCallAst> ctx) {
-  return AstWalker::visitFuncProcCall(ctx);
+  for (const auto &args : ctx->getArgs()) {
+    visit(args);
+  }
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefineWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
-  return AstWalker::visitArg(ctx);
+  visit(ctx->getExpr());
+  return {};
 }
 std::any
 DefineWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
