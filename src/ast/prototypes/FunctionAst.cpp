@@ -16,8 +16,14 @@ std::string FunctionAst::toStringTree(std::string prefix) const {
   }
 
   ss << ")";
-  ss << " Returns: " << proto->getType() << "\n";
-
+  ss << " Returns: " << proto->getType();
+  if (scope) {
+    ss << " (Scope: " << scope->toString() << ")";
+  }
+  if (proto->getSymbol()) {
+    ss << " (Symbol: " << proto->getSymbol()->toString() << ")";
+  }
+  ss << "\n";
   if (body) {
     ss << body->toStringTree(prefix + indent);
   }

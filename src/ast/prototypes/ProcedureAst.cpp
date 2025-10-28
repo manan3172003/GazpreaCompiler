@@ -19,8 +19,8 @@ std::string ProcedureAst::toStringTree(std::string prefix) const {
   if (scope) {
     ss << " (Scope: " << scope->toString() << ")";
   }
-  if (sym) {
-    ss << " (Symbol: " << sym->toString() << ")";
+  if (proto->getSymbol()) {
+    ss << " (Symbol: " << proto->getSymbol()->toString() << ")";
   }
   ss << "\n";
   if (body) {

@@ -1,10 +1,10 @@
 #include "ast/types/AliasTypeAst.h"
+#include "symTable/MethodSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
 #include "symTable/VariableSymbol.h"
 
 #include <ast/walkers/ResolveWalker.h>
-#include <mlir/IR/SymbolTable.h>
 
 namespace gazprea::ast::walkers {
 std::shared_ptr<symTable::Type> ResolveWalker::resolveType(std::string type) {
@@ -19,8 +19,6 @@ std::shared_ptr<symTable::Type> ResolveWalker::resolveType(std::string type) {
   }
   auto typeSym = std::dynamic_pointer_cast<symTable::TypealiasSymbol>(
       symTab->getGlobalScope()->resolve(type));
-  // const auto typeSym2 = symTab->getCurrentScope()->resolve(type)->getName();
-  // std::cout << typeSym2 << std::endl;
   // TODO: do the same thing for structs
   if (typeSym->getType()->getName() == "tuple") {
     auto tupleTypeSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
@@ -108,11 +106,17 @@ ResolveWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
 }
 std::any
 ResolveWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
-  return AstWalker::visitProcedure(ctx);
+  visit(ctx->getProto());
+  visit(ctx->getBody());
+  return {};
 }
 std::any ResolveWalker::visitProcedureParams(
     std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
-  return AstWalker::visitProcedureParams(ctx);
+  const auto varSym =
+      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  const auto resolvedType = resolveType(ctx->getType());
+  varSym->setType(resolvedType);
+  return {};
 }
 std::any ResolveWalker::visitProcedureCall(
     std::shared_ptr<statements::ProcedureCallAst> ctx) {
@@ -185,15 +189,24 @@ ResolveWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
 }
 std::any
 ResolveWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
-  return AstWalker::visitFunction(ctx);
+  visit(ctx->getProto());
+  visit(ctx->getBody());
+  return {};
 }
 std::any ResolveWalker::visitFunctionParam(
     std::shared_ptr<prototypes::FunctionParamAst> ctx) {
-  return AstWalker::visitFunctionParam(ctx);
+  const auto varSym =
+      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  const auto resolvedType = resolveType(ctx->getType());
+  varSym->setType(resolvedType);
+  return {};
 }
 std::any
 ResolveWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
-  return AstWalker::visitPrototype(ctx);
+  for (const auto &param : ctx->getParams()) {
+    visit(param);
+  }
+  return {};
 }
 std::any ResolveWalker::visitFuncProcCall(
     std::shared_ptr<expressions::FuncProcCallAst> ctx) {

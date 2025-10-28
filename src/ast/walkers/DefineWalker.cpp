@@ -73,6 +73,10 @@ DefineWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
   const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
       ctx->getProto()->getName(), ctx->getProto()->getProtoType());
 
+  ctx->getProto()->setSymbol(methodSymbol);
+  // Method Sym points to its prototype AST node which contains the method
+  methodSymbol->setDef(ctx->getProto());
+
   symTab->getCurrentScope()->define(methodSymbol);
   ctx->setScope(symTab->getCurrentScope());
 
@@ -91,6 +95,7 @@ std::any DefineWalker::visitProcedureParams(
   ctx->setScope(symTab->getCurrentScope());
   symTab->getCurrentScope()->define(varSymbol);
   ctx->setSymbol(varSymbol);
+  varSymbol->setDef(ctx);
   return {};
 }
 std::any DefineWalker::visitProcedureCall(
@@ -160,6 +165,9 @@ std::any
 DefineWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
       ctx->getProto()->getName(), ctx->getProto()->getProtoType());
+  ctx->getProto()->setSymbol(methodSymbol);
+  // Method Sym points to its prototype AST node which contains the method
+  methodSymbol->setDef(ctx->getProto());
   symTab->getCurrentScope()->define(methodSymbol);
   ctx->setScope(symTab->getCurrentScope());
   symTab->pushScope(methodSymbol);
@@ -175,6 +183,7 @@ std::any DefineWalker::visitFunctionParam(
   ctx->setScope(symTab->getCurrentScope());
   symTab->getCurrentScope()->define(varSymbol);
   ctx->setSymbol(varSymbol);
+  varSymbol->setDef(ctx);
   return {};
 }
 std::any
