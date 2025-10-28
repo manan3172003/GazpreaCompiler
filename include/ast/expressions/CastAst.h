@@ -1,10 +1,14 @@
 #pragma once
 #include "ExpressionAst.h"
+#include "symTable/Type.h"
 
 namespace gazprea::ast::expressions {
 class CastAst final : public ExpressionAst {
   std::string type;
   std::shared_ptr<ExpressionAst> expr;
+  // Resolved type of the cast target. Populated during the resolve pass
+  // and used for type validation of the cast operation.
+  std::shared_ptr<symTable::Type> resolvedTargetType;
 
 public:
   explicit CastAst(antlr4::Token *token) : ExpressionAst(token) {};
@@ -13,6 +17,12 @@ public:
   void setType(const std::string &type_) { type = type_; }
   std::shared_ptr<ExpressionAst> getExpression() const { return expr; }
   void setExpression(std::shared_ptr<ExpressionAst> expr_) { expr = expr_; }
+  std::shared_ptr<symTable::Type> getResolvedTargetType() const {
+    return resolvedTargetType;
+  }
+  void setResolvedTargetType(std::shared_ptr<symTable::Type> resolvedType_) {
+    resolvedTargetType = resolvedType_;
+  }
 
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;

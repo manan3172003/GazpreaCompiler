@@ -192,7 +192,9 @@ ResolveWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
   return AstWalker::visitBool(ctx);
 }
 std::any ResolveWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
-  return AstWalker::visitCast(ctx);
+  visit(ctx->getExpression());
+  ctx->setResolvedTargetType(resolveType(ctx->getType()));
+  return {};
 }
 std::any
 ResolveWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {

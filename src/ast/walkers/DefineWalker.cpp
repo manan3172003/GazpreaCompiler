@@ -234,7 +234,8 @@ DefineWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
   return AstWalker::visitBool(ctx);
 }
 std::any DefineWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
-  return AstWalker::visitCast(ctx);
+  visit(ctx->getExpression());
+  return {};
 }
 std::any
 DefineWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {

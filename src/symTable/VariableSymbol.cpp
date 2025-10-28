@@ -9,7 +9,7 @@ namespace gazprea::symTable {
 std::string VariableSymbol::getName() { return Symbol::getName(); }
 std::string VariableSymbol::toString() {
   std::stringstream ss;
-  ss << "<" << getName() << ": ";
+  ss << "<" << getName() << ":";
 
   if (type) {
     // Try to cast to different type symbols to use their custom toString
