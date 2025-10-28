@@ -99,7 +99,7 @@ std::any ResolveWalker::visitConditional(
 }
 std::any ResolveWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
   ctx->setSymbol(ctx->getScope()->resolve(ctx->getIdentifier()));
-  return AstWalker::visitInput(ctx);
+  return {};
 }
 std::any
 ResolveWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
@@ -244,7 +244,7 @@ std::any ResolveWalker::visitIdentifierLeft(
 }
 std::any ResolveWalker::visitInteger(
     std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
-  return {};
+  return AstWalker::visitInteger(ctx);
 }
 std::any
 ResolveWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
