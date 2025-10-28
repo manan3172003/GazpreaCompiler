@@ -83,7 +83,10 @@ ResolveWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
   return AstWalker::visitBinary(ctx);
 }
 std::any ResolveWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
-  return AstWalker::visitBlock(ctx);
+  for (const auto &child : ctx->getChildren()) {
+    visit(child);
+  }
+  return {};
 }
 std::any ResolveWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
   return AstWalker::visitBreak(ctx);
