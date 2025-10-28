@@ -232,7 +232,10 @@ std::any DefineWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   return AstWalker::visitUnary(ctx);
 }
 std::any DefineWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
-  return AstWalker::visitLoop(ctx);
+  if (ctx->getCondition())
+    visit(ctx->getCondition());
+  visit(ctx->getBody());
+  return {};
 }
 std::any DefineWalker::visitIteratorLoop(
     std::shared_ptr<statements::IteratorLoopAst> ctx) {

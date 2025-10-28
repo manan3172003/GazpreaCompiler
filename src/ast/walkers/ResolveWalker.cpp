@@ -253,7 +253,10 @@ std::any ResolveWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   return AstWalker::visitUnary(ctx);
 }
 std::any ResolveWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
-  return AstWalker::visitLoop(ctx);
+  if (ctx->getCondition())
+    visit(ctx->getCondition());
+  visit(ctx->getBody());
+  return {};
 }
 std::any ResolveWalker::visitIteratorLoop(
     std::shared_ptr<statements::IteratorLoopAst> ctx) {
