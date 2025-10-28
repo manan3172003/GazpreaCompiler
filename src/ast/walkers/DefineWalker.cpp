@@ -62,7 +62,8 @@ std::any DefineWalker::visitConditional(
   return AstWalker::visitConditional(ctx);
 }
 std::any DefineWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
-  return AstWalker::visitInput(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefineWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
   visit(ctx->getExpression());

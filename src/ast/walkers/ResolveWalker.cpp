@@ -98,11 +98,13 @@ std::any ResolveWalker::visitConditional(
   return AstWalker::visitConditional(ctx);
 }
 std::any ResolveWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
+  ctx->setSymbol(ctx->getScope()->resolve(ctx->getIdentifier()));
   return AstWalker::visitInput(ctx);
 }
 std::any
 ResolveWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
-  return AstWalker::visitOutput(ctx);
+  visit(ctx->getExpression());
+  return {};
 }
 std::any
 ResolveWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
@@ -233,7 +235,8 @@ ResolveWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
 }
 std::any ResolveWalker::visitIdentifier(
     std::shared_ptr<expressions::IdentifierAst> ctx) {
-  return AstWalker::visitIdentifier(ctx);
+  ctx->setSymbol(ctx->getScope()->resolve(ctx->getName()));
+  return {};
 }
 std::any ResolveWalker::visitIdentifierLeft(
     std::shared_ptr<statements::IdentifierLeftAst> ctx) {
