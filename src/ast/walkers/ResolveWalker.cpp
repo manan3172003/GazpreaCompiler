@@ -244,7 +244,7 @@ std::any ResolveWalker::visitIdentifierLeft(
 }
 std::any ResolveWalker::visitInteger(
     std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
-  return AstWalker::visitInteger(ctx);
+  return {};
 }
 std::any
 ResolveWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
