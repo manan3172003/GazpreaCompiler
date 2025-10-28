@@ -116,6 +116,7 @@ DefineWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
 std::any
 DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   auto tupTypeSymbol = std::make_shared<symTable::TupleTypeSymbol>("");
+  tupTypeSymbol->setDef(ctx);
   for (const auto &typeAst : ctx->getTypes()) {
     switch (typeAst->getNodeType()) {
     case NodeType::IntegerType:

@@ -5,7 +5,7 @@
 namespace gazprea::ast::walkers {
 class ResolveWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
-  std::shared_ptr<symTable::Type> resolveType(std::string type) const;
+  std::shared_ptr<symTable::Type> resolveType(std::string type);
 
 public:
   explicit ResolveWalker(std::shared_ptr<symTable::SymbolTable> symTab)

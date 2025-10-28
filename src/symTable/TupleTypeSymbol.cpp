@@ -4,7 +4,7 @@
 #include <symTable/TupleTypeSymbol.h>
 
 namespace gazprea::symTable {
-std::string TupleTypeSymbol::getName() { return Symbol::getName(); }
+std::string TupleTypeSymbol::getName() { return "tuple"; }
 std::string TupleTypeSymbol::toString() {
   std::stringstream ss;
   ss << "TupleType( ";

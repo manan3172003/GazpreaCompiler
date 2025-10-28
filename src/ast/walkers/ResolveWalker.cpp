@@ -4,20 +4,29 @@
 #include "symTable/VariableSymbol.h"
 
 #include <ast/walkers/ResolveWalker.h>
+#include <mlir/IR/SymbolTable.h>
 
 namespace gazprea::ast::walkers {
-std::shared_ptr<symTable::Type>
-ResolveWalker::resolveType(std::string type) const {
+std::shared_ptr<symTable::Type> ResolveWalker::resolveType(std::string type) {
   if (type == "integer" || type == "real" || type == "character" ||
       type == "boolean") {
     return std::dynamic_pointer_cast<symTable::Type>(
         symTab->getGlobalScope()->resolve(type));
   }
-  if (symTab->getGlobalScope()->getSymbols().find(type) == symTab->getGlobalScope()->getSymbols().end()) {
+  if (symTab->getGlobalScope()->getSymbols().find(type) ==
+      symTab->getGlobalScope()->getSymbols().end()) {
     return nullptr;
   }
-  const auto typeSym = std::dynamic_pointer_cast<symTable::TypealiasSymbol>(
+  auto typeSym = std::dynamic_pointer_cast<symTable::TypealiasSymbol>(
       symTab->getGlobalScope()->resolve(type));
+  // const auto typeSym2 = symTab->getCurrentScope()->resolve(type)->getName();
+  // std::cout << typeSym2 << std::endl;
+  // TODO: do the same thing for structs
+  if (typeSym->getType()->getName() == "tuple") {
+    auto tupleTypeSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
+        typeSym->getType());
+    return typeSym->getType();
+  }
   return resolveType(typeSym->getType()->getName());
 }
 std::any ResolveWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
@@ -54,13 +63,12 @@ std::any ResolveWalker::visitDeclaration(
   case NodeType::AliasType: {
     const auto aliasTypeNode =
         std::dynamic_pointer_cast<types::AliasTypeAst>(ctx->getType());
-    const auto aliasSym = resolveType(aliasTypeNode->getAlias());
-    varSymb->setType(resolveType(aliasSym->getName()));
+    const auto aliasSymType = resolveType(aliasTypeNode->getAlias());
+    varSymb->setType(aliasSymType);
   } break;
   case NodeType::TupleType: {
+    // visiting the tuple
     visit(ctx->getType());
-    // in visit we resolve the recursive interior types for tuple and set the
-    // resolved tuple type here
     varSymb->setType(
         std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol()));
   } break;
@@ -127,7 +135,6 @@ std::any
 ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   auto tupleTypeSymbol =
       std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getSymbol());
-  std::cout << "here" << std::endl;
   for (const auto &subType : tupleTypeSymbol->getUnresolvedTypes()) {
     tupleTypeSymbol->addResolvedType(resolveType(subType));
   }
