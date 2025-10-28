@@ -62,8 +62,6 @@ DefineWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) {
 }
 std::any DefineWalker::visitConditional(
     std::shared_ptr<statements::ConditionalAst> ctx) {
-  // ctx->setScope(symTab->getCurrentScope());
-
   visit(ctx->getCondition());
   visit(ctx->getThenBody());
   if (ctx->getElseBody()) {
