@@ -5,10 +5,10 @@
 
 namespace gazprea::symTable {
 void SymbolTable::initTypeSystem() const {
-  globalScope->define(std::make_shared<BuiltInTypeSymbol>("integer"));
-  globalScope->define(std::make_shared<BuiltInTypeSymbol>("real"));
-  globalScope->define(std::make_shared<BuiltInTypeSymbol>("character"));
-  globalScope->define(std::make_shared<BuiltInTypeSymbol>("boolean"));
+  globalScope->defineTypeSymbol(std::make_shared<BuiltInTypeSymbol>("integer"));
+  globalScope->defineTypeSymbol(std::make_shared<BuiltInTypeSymbol>("real"));
+  globalScope->defineTypeSymbol(std::make_shared<BuiltInTypeSymbol>("character"));
+  globalScope->defineTypeSymbol(std::make_shared<BuiltInTypeSymbol>("boolean"));
 
   // TODO: Add more built-in types for part 2
 }

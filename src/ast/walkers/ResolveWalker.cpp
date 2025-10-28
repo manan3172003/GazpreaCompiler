@@ -11,14 +11,15 @@ std::shared_ptr<symTable::Type> ResolveWalker::resolveType(std::string type) {
   if (type == "integer" || type == "real" || type == "character" ||
       type == "boolean") {
     return std::dynamic_pointer_cast<symTable::Type>(
-        symTab->getGlobalScope()->resolve(type));
+        symTab->getGlobalScope()->getTypeSymbols().at(type));
   }
-  if (symTab->getGlobalScope()->getSymbols().find(type) ==
-      symTab->getGlobalScope()->getSymbols().end()) {
+  if (symTab->getGlobalScope()->getTypeSymbols().find(type) ==
+      symTab->getGlobalScope()->getTypeSymbols().end()) {
     return nullptr;
   }
+  // TODO: Error handling check if the symbol exists
   auto typeSym = std::dynamic_pointer_cast<symTable::TypealiasSymbol>(
-      symTab->getGlobalScope()->resolve(type));
+      symTab->getGlobalScope()->getTypeSymbols().at(type));
   // TODO: do the same thing for structs
   if (typeSym->getType()->getName() == "tuple") {
     auto tupleTypeSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(

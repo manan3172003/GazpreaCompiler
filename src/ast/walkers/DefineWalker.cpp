@@ -34,7 +34,7 @@ std::any DefineWalker::visitDeclaration(
     visit(ctx->getType());
   }
 
-  symTab->getCurrentScope()->define(varSymbol);
+  symTab->getCurrentScope()->defineSymbol(varSymbol);
   ctx->setScope(symTab->getCurrentScope());
   ctx->setSymbol(varSymbol);
   return {};
@@ -88,7 +88,7 @@ DefineWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
   // Method Sym points to its prototype AST node which contains the method
   methodSymbol->setDef(ctx->getProto());
 
-  symTab->getCurrentScope()->define(methodSymbol);
+  symTab->getCurrentScope()->defineSymbol(methodSymbol);
   ctx->setScope(symTab->getCurrentScope());
 
   symTab->pushScope(methodSymbol);
@@ -104,7 +104,7 @@ std::any DefineWalker::visitProcedureParams(
   const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
       ctx->getName(), ctx->getQualifier());
   ctx->setScope(symTab->getCurrentScope());
-  symTab->getCurrentScope()->define(varSymbol);
+  symTab->getCurrentScope()->defineSymbol(varSymbol);
   ctx->setSymbol(varSymbol);
   varSymbol->setDef(ctx);
   return {};
@@ -166,7 +166,7 @@ DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   auto typealiasSymbol =
       std::make_shared<symTable::TypealiasSymbol>(ctx->getAlias());
   typealiasSymbol->setDef(ctx);
-  symTab->getGlobalScope()->define(typealiasSymbol);
+  symTab->getGlobalScope()->defineTypeSymbol(typealiasSymbol);
   if (ctx->getType()->getNodeType() == NodeType::TupleType)
     visit(ctx->getType());
   ctx->setSymbol(typealiasSymbol);
@@ -180,7 +180,7 @@ DefineWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   ctx->getProto()->setSymbol(methodSymbol);
   // Method Sym points to its prototype AST node which contains the method
   methodSymbol->setDef(ctx->getProto());
-  symTab->getCurrentScope()->define(methodSymbol);
+  symTab->getCurrentScope()->defineSymbol(methodSymbol);
   ctx->setScope(symTab->getCurrentScope());
   symTab->pushScope(methodSymbol);
   visit(ctx->getProto()); // visit the params
@@ -193,7 +193,7 @@ std::any DefineWalker::visitFunctionParam(
   const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
       ctx->getName(), ctx->getQualifier());
   ctx->setScope(symTab->getCurrentScope());
-  symTab->getCurrentScope()->define(varSymbol);
+  symTab->getCurrentScope()->defineSymbol(varSymbol);
   ctx->setSymbol(varSymbol);
   varSymbol->setDef(ctx);
   return {};

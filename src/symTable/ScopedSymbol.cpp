@@ -9,8 +9,12 @@ void ScopedSymbol::setEnclosingScope(std::shared_ptr<Scope> scope) {
 std::shared_ptr<Scope> ScopedSymbol::getEnclosingScope() {
   return enclosingScope.lock();
 }
-void ScopedSymbol::define(std::shared_ptr<Symbol> sym) {
+void ScopedSymbol::defineSymbol(std::shared_ptr<Symbol> sym) {
   symbols.emplace_back(sym->getName(), sym);
+  sym->setScope(shared_from_this());
+}
+void ScopedSymbol::defineTypeSymbol(std::shared_ptr<Symbol> sym) {
+  typeSymbols.emplace_back(sym->getName(), sym);
   sym->setScope(shared_from_this());
 }
 std::shared_ptr<Symbol> ScopedSymbol::resolve(const std::string &name) {
