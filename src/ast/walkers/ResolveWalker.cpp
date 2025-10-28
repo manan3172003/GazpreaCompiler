@@ -78,7 +78,9 @@ std::any ResolveWalker::visitDeclaration(
 }
 std::any
 ResolveWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
-  return AstWalker::visitBinary(ctx);
+  visit(ctx->getLeft());
+  visit(ctx->getRight());
+  return {};
 }
 std::any ResolveWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   for (const auto &child : ctx->getChildren()) {
@@ -250,7 +252,8 @@ ResolveWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
   return AstWalker::visitReal(ctx);
 }
 std::any ResolveWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
-  return AstWalker::visitUnary(ctx);
+  visit(ctx->getExpression());
+  return {};
 }
 std::any ResolveWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
   if (ctx->getCondition())

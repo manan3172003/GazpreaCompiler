@@ -229,7 +229,8 @@ DefineWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
   return AstWalker::visitReal(ctx);
 }
 std::any DefineWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
-  return AstWalker::visitUnary(ctx);
+  visit(ctx->getExpression());
+  return {};
 }
 std::any DefineWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
   if (ctx->getCondition())
