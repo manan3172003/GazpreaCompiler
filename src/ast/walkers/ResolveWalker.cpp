@@ -7,26 +7,37 @@
 #include <ast/walkers/ResolveWalker.h>
 
 namespace gazprea::ast::walkers {
-std::shared_ptr<symTable::Type> ResolveWalker::resolveType(std::string type) {
-  if (type == "integer" || type == "real" || type == "character" ||
-      type == "boolean") {
+std::shared_ptr<symTable::Type> ResolveWalker::resolvedType(
+    const std::shared_ptr<types::DataTypeAst> &dataType) {
+  auto globalScope = symTab->getGlobalScope();
+  switch (dataType->getNodeType()) {
+  case NodeType::IntegerType:
     return std::dynamic_pointer_cast<symTable::Type>(
-        symTab->getGlobalScope()->getTypeSymbols().at(type));
+        globalScope->resolveType("integer"));
+  case NodeType::RealType:
+    return std::dynamic_pointer_cast<symTable::Type>(
+        globalScope->resolveType("real"));
+  case NodeType::CharType:
+    return std::dynamic_pointer_cast<symTable::Type>(
+        globalScope->resolveType("character"));
+  case NodeType::BoolType:
+    return std::dynamic_pointer_cast<symTable::Type>(
+        globalScope->resolveType("boolean"));
+  case NodeType::AliasType: {
+    const auto aliasTypeNode =
+        std::dynamic_pointer_cast<types::AliasTypeAst>(dataType);
+    const auto aliasSymType =
+        globalScope->resolveType(aliasTypeNode->getAlias());
+    return std::dynamic_pointer_cast<symTable::Type>(aliasSymType);
   }
-  if (symTab->getGlobalScope()->getTypeSymbols().find(type) ==
-      symTab->getGlobalScope()->getTypeSymbols().end()) {
-    return nullptr;
+  case NodeType::TupleType: {
+    // visiting the tuple
+    visit(dataType);
+    return std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
   }
-  // TODO: Error handling check if the symbol exists
-  auto typeSym = std::dynamic_pointer_cast<symTable::TypealiasSymbol>(
-      symTab->getGlobalScope()->getTypeSymbols().at(type));
-  // TODO: do the same thing for structs
-  if (typeSym->getType()->getName() == "tuple") {
-    auto tupleTypeSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
-        typeSym->getType());
-    return typeSym->getType();
+  default:
+    return {};
   }
-  return resolveType(typeSym->getType()->getName());
 }
 std::any ResolveWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   for (const auto &child : ctx->children) {
@@ -45,38 +56,10 @@ std::any ResolveWalker::visitDeclaration(
   if (ctx->getExpr()) {
     visit(ctx->getExpr());
   }
-  const auto typeNode = ctx->getType()->getNodeType();
+
   const auto varSymb =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  switch (typeNode) {
-  case NodeType::IntegerType:
-    varSymb->setType(resolveType("integer"));
-    break;
-  case NodeType::RealType:
-    varSymb->setType(resolveType("real"));
-    break;
-  case NodeType::CharType:
-    varSymb->setType(resolveType("character"));
-    break;
-  case NodeType::BoolType:
-    varSymb->setType(resolveType("boolean"));
-    break;
-  case NodeType::AliasType: {
-    const auto aliasTypeNode =
-        std::dynamic_pointer_cast<types::AliasTypeAst>(ctx->getType());
-    const auto aliasSymType = resolveType(aliasTypeNode->getAlias());
-    varSymb->setType(aliasSymType);
-  } break;
-  case NodeType::TupleType: {
-    // visiting the tuple
-    visit(ctx->getType());
-    varSymb->setType(
-        std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol()));
-  } break;
-  default:
-    return {};
-  }
-
+  varSymb->setType(resolvedType(ctx->getType()));
   return {};
 }
 std::any
@@ -127,8 +110,7 @@ std::any ResolveWalker::visitProcedureParams(
     std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
   const auto varSym =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  const auto resolvedType = resolveType(ctx->getType());
-  varSym->setType(resolvedType);
+  varSym->setType(resolvedType(ctx->getType());
   return {};
 }
 std::any ResolveWalker::visitProcedureCall(
@@ -156,8 +138,8 @@ std::any
 ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   auto tupleTypeSymbol =
       std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getSymbol());
-  for (const auto &subType : tupleTypeSymbol->getUnresolvedTypes()) {
-    tupleTypeSymbol->addResolvedType(resolveType(subType));
+  for (const auto &subType : ctx->getTypes()) {
+    tupleTypeSymbol->addResolvedType(resolvedType(subType));
   }
   return {};
 }
@@ -165,40 +147,7 @@ std::any
 ResolveWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   auto typealiasSymbol =
       std::dynamic_pointer_cast<symTable::TypealiasSymbol>(ctx->getSymbol());
-  switch (ctx->getType()->getNodeType()) {
-  case NodeType::TupleType: {
-    visit(ctx->getType());
-    auto resolvedType =
-        std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
-    typealiasSymbol->setType(resolvedType);
-  } break;
-  // TODO: Add struct type alias
-  case NodeType::IntegerType: {
-    auto resolvedType = resolveType("integer");
-    typealiasSymbol->setType(resolvedType);
-  } break;
-  case NodeType::CharType: {
-    auto resolvedType = resolveType("character");
-    typealiasSymbol->setType(resolvedType);
-  } break;
-  case NodeType::BoolType: {
-    auto resolvedType = resolveType("boolean");
-    typealiasSymbol->setType(resolvedType);
-  } break;
-  case NodeType::RealType: {
-    auto resolvedType = resolveType("real");
-    typealiasSymbol->setType(resolvedType);
-  } break;
-  case NodeType::AliasType: {
-    auto resolvedType = resolveType(
-        std::dynamic_pointer_cast<types::AliasTypeAst>(ctx->getType())
-            ->getAlias());
-    typealiasSymbol->setType(resolvedType);
-  } break;
-  default: {
-    throw std::runtime_error("Unknown node type");
-  }
-  }
+  typealiasSymbol->setType(resolvedType(ctx->getType()));
   return {};
 }
 std::any
@@ -211,8 +160,7 @@ std::any ResolveWalker::visitFunctionParam(
     std::shared_ptr<prototypes::FunctionParamAst> ctx) {
   const auto varSym =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  const auto resolvedType = resolveType(ctx->getType());
-  varSym->setType(resolvedType);
+  varSym->setType(resolvedType(ctx->getType()));
   return {};
 }
 std::any
@@ -222,8 +170,8 @@ ResolveWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
   }
   const auto methodSym =
       std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
-  if (ctx->getType() != "") { // void procedures can have empty type
-    methodSym->setReturnType(resolveType(ctx->getType()));
+  if (ctx->getType() != nullptr) { // void procedures can have empty type
+    methodSym->setReturnType(resolvedType(ctx->getType()));
   }
   return {};
 }
@@ -247,7 +195,7 @@ ResolveWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
 }
 std::any ResolveWalker::visitIdentifier(
     std::shared_ptr<expressions::IdentifierAst> ctx) {
-  ctx->setSymbol(ctx->getScope()->resolve(ctx->getName()));
+  ctx->setSymbol(ctx->getScope()->resolveSymbol(ctx->getName()));
   return {};
 }
 std::any ResolveWalker::visitIdentifierLeft(

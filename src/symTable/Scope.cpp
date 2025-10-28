@@ -1,3 +1,5 @@
+#include "symTable/TupleTypeSymbol.h"
+#include "symTable/TypealiasSymbol.h"
 #include <sstream>
 #include <symTable/Scope.h>
 
@@ -24,12 +26,45 @@ void BaseScope::defineTypeSymbol(std::shared_ptr<Symbol> sym) {
   typeSymbols.emplace(sym->getName(), sym);
   sym->setScope(shared_from_this());
 }
-std::shared_ptr<Symbol> BaseScope::resolve(const std::string &name) {
+
+std::shared_ptr<Symbol> BaseScope::resolveType(const std::string &type) {
+  if (const auto it = typeSymbols.find(type); it != typeSymbols.end()) {
+    return it->second;
+  }
+  if (const auto parent = getEnclosingScope()) {
+    return parent->resolveType(type);
+  }
+  return nullptr;
+}
+std::shared_ptr<Symbol> GlobalScope::resolveType(const std::string &type) {
+  if (type == "integer" || type == "real" || type == "character" ||
+      type == "boolean") {
+    return getTypeSymbols().at(type);
+  }
+
+  if (getTypeSymbols().find(type) == getTypeSymbols().end()) {
+    return nullptr;
+  }
+
+  // TODO: Error handling check if the symbol exists
+  auto typeSym =
+      std::dynamic_pointer_cast<TypealiasSymbol>(getTypeSymbols().at(type));
+
+  // TODO: do the same thing for structs
+  if (typeSym->getType()->getName() == "tuple") {
+    auto tupleTypeSym =
+        std::dynamic_pointer_cast<TupleTypeSymbol>(typeSym->getType());
+    return tupleTypeSym;
+  }
+
+  return resolveType(typeSym->getType()->getName());
+}
+std::shared_ptr<Symbol> BaseScope::resolveSymbol(const std::string &name) {
   if (const auto it = symbols.find(name); it != symbols.end()) {
     return it->second;
   }
   if (const auto parent = getEnclosingScope()) {
-    return parent->resolve(name);
+    return parent->resolveSymbol(name);
   }
   return nullptr;
 }

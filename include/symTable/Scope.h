@@ -21,7 +21,8 @@ public:
   virtual std::shared_ptr<Scope> getEnclosingScope() = 0;
   virtual void defineSymbol(std::shared_ptr<Symbol> sym) = 0;
   virtual void defineTypeSymbol(std::shared_ptr<Symbol> sym) = 0;
-  virtual std::shared_ptr<Symbol> resolve(const std::string &name) = 0;
+  virtual std::shared_ptr<Symbol> resolveType(const std::string &name) = 0;
+  virtual std::shared_ptr<Symbol> resolveSymbol(const std::string &name) = 0;
   virtual std::string toString() = 0;
   ScopeType getScopeType() const { return scType; }
   std::string scTypeToString() const;
@@ -40,7 +41,8 @@ public:
   std::shared_ptr<Scope> getEnclosingScope() override;
   void defineSymbol(std::shared_ptr<Symbol> sym) override;
   void defineTypeSymbol(std::shared_ptr<Symbol> sym) override;
-  std::shared_ptr<Symbol> resolve(const std::string &name) override;
+  std::shared_ptr<Symbol> resolveType(const std::string &name) override;
+  std::shared_ptr<Symbol> resolveSymbol(const std::string &name) override;
   std::string toString() override;
   std::unordered_map<std::string, std::shared_ptr<Symbol>> &getSymbols() {
     return symbols;
@@ -54,6 +56,7 @@ class GlobalScope final : public BaseScope {
 public:
   GlobalScope() : BaseScope(ScopeType::Global) {};
   std::string getScopeName() override;
+  std::shared_ptr<Symbol> resolveType(const std::string &name) override;
 };
 
 class LocalScope final : public BaseScope {

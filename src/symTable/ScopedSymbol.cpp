@@ -17,14 +17,25 @@ void ScopedSymbol::defineTypeSymbol(std::shared_ptr<Symbol> sym) {
   typeSymbols.emplace_back(sym->getName(), sym);
   sym->setScope(shared_from_this());
 }
-std::shared_ptr<Symbol> ScopedSymbol::resolve(const std::string &name) {
+std::shared_ptr<Symbol> ScopedSymbol::resolveType(const std::string &type) {
+  for (const auto &[symName, symbol] : typeSymbols) {
+    if (symName == type) {
+      return symbol;
+    }
+  }
+  if (const auto parent = getEnclosingScope()) {
+    return parent->resolveType(type);
+  }
+  return nullptr;
+}
+std::shared_ptr<Symbol> ScopedSymbol::resolveSymbol(const std::string &name) {
   for (const auto &[symName, symbol] : symbols) {
     if (symName == name) {
       return symbol;
     }
   }
   if (const auto parent = getEnclosingScope()) {
-    return parent->resolve(name);
+    return parent->resolveSymbol(name);
   }
   return nullptr;
 }

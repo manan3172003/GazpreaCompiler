@@ -10,7 +10,7 @@ public:
   explicit TypealiasSymbol(const std::string &name)
       : Symbol(name), name(name) {}
   std::string getName() override { return name; }
-  void setType(std::shared_ptr<Type> &type_) { type = type_; }
+  void setType(std::shared_ptr<Type> type_) { type = type_; }
   std::shared_ptr<Type> getType() { return type; }
   std::string toString() override;
 };

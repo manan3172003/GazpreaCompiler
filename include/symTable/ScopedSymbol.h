@@ -18,10 +18,15 @@ public:
   std::shared_ptr<Scope> getEnclosingScope() override;
   void defineSymbol(std::shared_ptr<Symbol> sym) override;
   void defineTypeSymbol(std::shared_ptr<Symbol> sym) override;
-  std::shared_ptr<Symbol> resolve(const std::string &name) override;
+  std::shared_ptr<Symbol> resolveType(const std::string &name) override;
+  std::shared_ptr<Symbol> resolveSymbol(const std::string &name) override;
   std::string toString() override;
   const std::vector<std::pair<std::string, std::shared_ptr<Symbol>>> &
   getSymbols() const {
+    return symbols;
+  }
+  const std::vector<std::pair<std::string, std::shared_ptr<Symbol>>> &
+  getTypeSymbols() const {
     return symbols;
   }
 };
