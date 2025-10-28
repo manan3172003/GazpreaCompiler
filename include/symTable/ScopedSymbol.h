@@ -17,5 +17,9 @@ public:
   void define(std::shared_ptr<Symbol> sym) override;
   std::shared_ptr<Symbol> resolve(const std::string &name) override;
   std::string toString() override;
+  const std::vector<std::pair<std::string, std::shared_ptr<Symbol>>> &
+  getSymbols() const {
+    return symbols;
+  }
 };
 } // namespace gazprea::symTable

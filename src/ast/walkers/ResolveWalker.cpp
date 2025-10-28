@@ -206,6 +206,11 @@ ResolveWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
   for (const auto &param : ctx->getParams()) {
     visit(param);
   }
+  const auto methodSym =
+      std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  if (ctx->getType() != "") { // void procedures can have empty type
+    methodSym->setReturnType(resolveType(ctx->getType()));
+  }
   return {};
 }
 std::any ResolveWalker::visitFuncProcCall(
