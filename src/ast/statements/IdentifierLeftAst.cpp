@@ -10,7 +10,7 @@ std::string IdentifierLeftAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << "Id: " << name;
   if (sym) {
-    ss << " " <<  sym->toString();
+    ss << " " << sym->toString();
   }
   ss << "\n";
   return ss.str();

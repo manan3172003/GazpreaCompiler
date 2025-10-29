@@ -16,8 +16,8 @@ std::any DefineWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
 }
 std::any
 DefineWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
-  visit(ctx->getExpr());
-  visit(ctx->getLVal());
+    visit(ctx->getExpr());
+    visit(ctx->getLVal());
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
