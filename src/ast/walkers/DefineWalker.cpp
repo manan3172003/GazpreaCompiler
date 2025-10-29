@@ -113,6 +113,9 @@ std::any DefineWalker::visitProcedureParams(
 }
 std::any DefineWalker::visitProcedureCall(
     std::shared_ptr<statements::ProcedureCallAst> ctx) {
+  for (const auto &args : ctx->getArgs()) {
+    visit(args);
+  }
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
