@@ -47,7 +47,7 @@ std::any ResolveWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
 }
 std::any
 ResolveWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
-  visit(ctx->getLhs());
+  visit(ctx->getLVal());
   visit(ctx->getExpr());
   return {};
 }
