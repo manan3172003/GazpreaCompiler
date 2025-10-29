@@ -52,7 +52,10 @@ args: expr (COMMA expr)*;
 
 output_stat: expr '->' STD_OUTPUT SC;
 
-input_stat: ID '<-' STD_INPUT SC;
+input_stat
+    : ID '<-' STD_INPUT SC #idInput
+    | TUPLE_ACCESS '<-' STD_INPUT SC #tupleElementInput
+    ;
 
 return_stat: RETURN expr? SC;
 
@@ -73,8 +76,8 @@ block_stat: LBRACE stat+ RBRACE;
 
 // TODO: tuple assignment
 assign_stat
-    : qualifier? ID EQUAL expr SC
-    | TUPLE_ACCESS EQUAL expr SC
+    : qualifier? ID EQUAL expr SC #idAssign
+    | TUPLE_ACCESS EQUAL expr SC #tupleElementAssign
     ;
 
 dec_stat

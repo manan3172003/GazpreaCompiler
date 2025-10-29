@@ -32,7 +32,9 @@ public:
   visitFunction_param(GazpreaParser::Function_paramContext *ctx) override;
   std::any visitArgs(GazpreaParser::ArgsContext *ctx) override;
   std::any visitOutput_stat(GazpreaParser::Output_statContext *ctx) override;
-  std::any visitInput_stat(GazpreaParser::Input_statContext *ctx) override;
+  std::any visitIdInput(GazpreaParser::IdInputContext *ctx) override;
+  std::any
+  visitTupleElementInput(GazpreaParser::TupleElementInputContext *ctx) override;
   std::any visitReturn_stat(GazpreaParser::Return_statContext *ctx) override;
   std::any visitIf_stat(GazpreaParser::If_statContext *ctx) override;
   std::any visitElse_stat(GazpreaParser::Else_statContext *ctx) override;
@@ -44,7 +46,9 @@ public:
   std::any
   visitIterativeLoop(GazpreaParser::IterativeLoopContext *ctx) override;
   std::any visitBlock_stat(GazpreaParser::Block_statContext *ctx) override;
-  std::any visitAssign_stat(GazpreaParser::Assign_statContext *ctx) override;
+  std::any visitIdAssign(GazpreaParser::IdAssignContext *ctx) override;
+  std::any visitTupleElementAssign(
+      GazpreaParser::TupleElementAssignContext *ctx) override;
   std::any visitDec_stat(GazpreaParser::Dec_statContext *ctx) override;
   std::any
   visitTuple_dec_stat(GazpreaParser::Tuple_dec_statContext *ctx) override;

@@ -5,14 +5,14 @@
 
 namespace gazprea::ast::statements {
 class AssignmentAst : public StatementAst {
-  std::shared_ptr<AssignLeftAst> lhs;
+  std::shared_ptr<AssignLeftAst> lVal;
   std::shared_ptr<expressions::ExpressionAst> expr;
 
 public:
   explicit AssignmentAst(antlr4::Token *token) : StatementAst(token) {}
-  std::shared_ptr<AssignLeftAst> getLhs() const { return lhs; }
+  std::shared_ptr<AssignLeftAst> getLVal() const { return lVal; }
   std::shared_ptr<expressions::ExpressionAst> getExpr() const { return expr; }
-  void setLhs(std::shared_ptr<AssignLeftAst> left) { lhs = std::move(left); }
+  void setLVal(std::shared_ptr<AssignLeftAst> left) { lVal = std::move(left); }
   void setExpr(std::shared_ptr<expressions::ExpressionAst> expression) {
     expr = std::move(expression);
   }

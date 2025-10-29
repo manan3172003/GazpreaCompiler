@@ -235,9 +235,22 @@ std::any AstBuilder::visitOutput_stat(GazpreaParser::Output_statContext *ctx) {
   outputAst->setExpression(expr);
   return std::static_pointer_cast<statements::StatementAst>(outputAst);
 }
-std::any AstBuilder::visitInput_stat(GazpreaParser::Input_statContext *ctx) {
+std::any AstBuilder::visitIdInput(GazpreaParser::IdInputContext *ctx) {
   auto inputAst = std::make_shared<statements::InputAst>(ctx->getStart());
-  inputAst->setIdentifier(ctx->ID()->getText());
+  auto lVal = std::make_shared<statements::IdentifierLeftAst>(ctx->getStart());
+  lVal->setName(ctx->ID()->getText());
+  inputAst->setLVal(lVal);
+  return std::static_pointer_cast<statements::StatementAst>(inputAst);
+}
+std::any AstBuilder::visitTupleElementInput(
+    GazpreaParser::TupleElementInputContext *ctx) {
+  auto inputAst = std::make_shared<statements::InputAst>(ctx->getStart());
+  auto lVal = std::make_shared<statements::TupleAssignAst>(ctx->getStart());
+  std::string accessToken = ctx->TUPLE_ACCESS()->getText();
+  size_t pos = accessToken.find('.');
+  lVal->setTupleName(accessToken.substr(0, pos));
+  lVal->setFieldIndex(std::stoi(accessToken.substr(pos + 1)));
+  inputAst->setLVal(lVal);
   return std::static_pointer_cast<statements::StatementAst>(inputAst);
 }
 std::any AstBuilder::visitReturn_stat(GazpreaParser::Return_statContext *ctx) {
@@ -366,24 +379,24 @@ std::any AstBuilder::visitBlock_stat(GazpreaParser::Block_statContext *ctx) {
   }
   return std::static_pointer_cast<statements::StatementAst>(blockAst);
 }
-std::any AstBuilder::visitAssign_stat(GazpreaParser::Assign_statContext *ctx) {
+std::any AstBuilder::visitIdAssign(GazpreaParser::IdAssignContext *ctx) {
   auto assignAst = std::make_shared<statements::AssignmentAst>(ctx->getStart());
-  if (ctx->ID()) {
-    auto leftId =
-        std::make_shared<statements::IdentifierLeftAst>(ctx->getStart());
-    leftId->setName(ctx->ID()->getText());
-    assignAst->setLhs(leftId);
-  }
-  if (ctx->TUPLE_ACCESS()) {
-    auto leftNode =
-        std::make_shared<statements::TupleAssignAst>(ctx->getStart());
-    std::string accessToken = ctx->TUPLE_ACCESS()->getText();
-    size_t pos = accessToken.find('.');
-    leftNode->setTupleName(accessToken.substr(0, pos));
-    leftNode->setFieldIndex(std::stoi(accessToken.substr(pos + 1)));
-
-    assignAst->setLhs(leftNode);
-  }
+  auto lVal = std::make_shared<statements::IdentifierLeftAst>(ctx->getStart());
+  lVal->setName(ctx->ID()->getText());
+  assignAst->setLVal(lVal);
+  assignAst->setExpr(std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
+      visit(ctx->expr())));
+  return std::static_pointer_cast<statements::StatementAst>(assignAst);
+}
+std::any AstBuilder::visitTupleElementAssign(
+    GazpreaParser::TupleElementAssignContext *ctx) {
+  auto assignAst = std::make_shared<statements::AssignmentAst>(ctx->getStart());
+  auto lVal = std::make_shared<statements::TupleAssignAst>(ctx->getStart());
+  std::string accessToken = ctx->TUPLE_ACCESS()->getText();
+  size_t pos = accessToken.find('.');
+  lVal->setTupleName(accessToken.substr(0, pos));
+  lVal->setFieldIndex(std::stoi(accessToken.substr(pos + 1)));
+  assignAst->setLVal(lVal);
   assignAst->setExpr(std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
       visit(ctx->expr())));
   return std::static_pointer_cast<statements::StatementAst>(assignAst);

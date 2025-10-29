@@ -6,7 +6,7 @@ NodeType AssignmentAst::getNodeType() const { return NodeType::Assignment; }
 std::string AssignmentAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << "Assignment\n";
-  ss << lhs->toStringTree(prefix + indent);
+  ss << lVal->toStringTree(prefix + indent);
   if (expr) {
     ss << expr->toStringTree(prefix + indent);
   }
