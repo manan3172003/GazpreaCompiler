@@ -3,9 +3,16 @@
 #include "symTable/Symbol.h"
 
 #include <Token.h>
+#include <TokenSource.h>
+#include <llvm/Support/CommandLine.h>
 #include <string>
 
 namespace gazprea::ast {
+struct Location {
+  int lineNumber;
+  int columnNumber;
+  std::string fileName;
+};
 enum class NodeType {
   AliasType,
   Arg,
@@ -58,11 +65,16 @@ protected:
   antlr4::Token *token;
   std::shared_ptr<symTable::Scope> scope;
   std::shared_ptr<symTable::Symbol> sym;
+  Location location;
 
 public:
   std::string indent = ". . ";
 
-  explicit Ast(antlr4::Token *token) : token(token) {};
+  explicit Ast(antlr4::Token *token) : token(token) {
+    location.columnNumber = static_cast<int>(token->getStartIndex());
+    location.lineNumber = static_cast<int>(token->getLine());
+    location.fileName = token->getTokenSource()->getSourceName();
+  };
 
   std::shared_ptr<symTable::Symbol> getSymbol() { return sym; }
   void setSymbol(std::shared_ptr<symTable::Symbol> symbol) { sym = symbol; }
