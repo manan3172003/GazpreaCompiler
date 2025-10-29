@@ -5,10 +5,42 @@
 namespace gazprea::ast::walkers {
 class TypeWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
+  int opTable[5][15] = {
+      //  ^  *  /  %  +  -  <  > <= >= == !=  & or xor
+      {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Integer
+      {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Real
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Character
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1}, // Boolean
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Tuple
+  };
+
+  int nodeTypeToIndex(const std::string &typeName) {
+    if (typeName == "integer")
+      return 0;
+    if (typeName == "real")
+      return 1;
+    if (typeName == "character")
+      return 2;
+    if (typeName == "boolean")
+      return 3;
+    if (typeName == "tuple")
+      return 4;
+    return -1;
+  }
+
+  bool isValidOp(const std::string &typeName,
+                 expressions::BinaryOpType opType) {
+    if (nodeTypeToIndex(typeName) == -1)
+      throw std::runtime_error("Invalid data type");
+    return opTable[nodeTypeToIndex(typeName)][static_cast<int>(opType)];
+  }
 
 public:
   std::shared_ptr<symTable::Type>
   resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
+  bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
+                      const std::string &typeName);
+  template <typename T> T dPointerCast(symTable::Symbol symbol);
 
   explicit TypeWalker(std::shared_ptr<symTable::SymbolTable> symTab)
       : symTab(symTab) {};

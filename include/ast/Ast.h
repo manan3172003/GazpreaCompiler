@@ -79,6 +79,9 @@ public:
   void setSymbol(std::shared_ptr<symTable::Symbol> symbol) { sym = symbol; }
   std::shared_ptr<symTable::Scope> getScope() { return scope; }
   void setScope(std::shared_ptr<symTable::Scope> scope_) { scope = scope_; }
+  int getLineNumber() const { return location.lineNumber; }
+  int getColumnNumber() const { return location.columnNumber; }
+  const std::string &getFileName() const { return location.fileName; }
   std::string scopeToString() const;
 
   virtual NodeType getNodeType() const = 0;

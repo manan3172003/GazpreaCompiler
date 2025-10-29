@@ -1,3 +1,4 @@
+#include "CompileTimeExceptions.h"
 #include "ast/types/AliasTypeAst.h"
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
@@ -8,6 +9,17 @@
 #include <ast/walkers/TypeWalker.h>
 
 namespace gazprea::ast::walkers {
+bool TypeWalker::isOfSymbolType(
+    const std::shared_ptr<symTable::Type> &symbolType,
+    const std::string &typeName) {
+  if (!symbolType)
+    throw std::runtime_error("SymbolType should not be null");
+
+  return symbolType->getName() == typeName;
+}
+template <typename T> T TypeWalker::dPointerCast(symTable::Symbol symbol) {
+  return std::dynamic_pointer_cast<T>(symbol);
+}
 
 std::shared_ptr<symTable::Type> TypeWalker::resolvedInferredType(
     const std::shared_ptr<types::DataTypeAst> &dataType) {
@@ -61,10 +73,10 @@ std::any
 TypeWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
   visit(ctx->getExpr());
   if (ctx->getType()) {
-    // setting inferred type here
     // Promoting type here
 
   } else {
+    // setting inferred type here
     std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())
         ->setType(ctx->getExpr()->getInferredSymbolType());
     ctx->setType(ctx->getExpr()->getInferredDataType());
@@ -77,7 +89,53 @@ std::any TypeWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   return AstWalker::visitBlock(ctx);
 }
 std::any TypeWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
-  return AstWalker::visitBinary(ctx);
+  auto leftExpr = ctx->getLeft();
+  auto rightExpr = ctx->getRight();
+  visit(leftExpr);
+  visit(rightExpr);
+
+  // Type promote Integer to Real if either of the operands is a real
+  if (isOfSymbolType(leftExpr->getInferredSymbolType(), "integer") &&
+      isOfSymbolType(rightExpr->getInferredSymbolType(), "integer")) {
+    ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
+    ctx->setInferredDataType(leftExpr->getInferredDataType());
+  } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "integer") &&
+             isOfSymbolType(rightExpr->getInferredSymbolType(), "real")) {
+    ctx->setInferredSymbolType(rightExpr->getInferredSymbolType());
+    ctx->setInferredDataType(rightExpr->getInferredDataType());
+  } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "real") &&
+             isOfSymbolType(rightExpr->getInferredSymbolType(), "integer")) {
+    ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
+    ctx->setInferredDataType(leftExpr->getInferredDataType());
+  } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "real") &&
+             isOfSymbolType(rightExpr->getInferredSymbolType(), "real")) {
+    ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
+    ctx->setInferredDataType(leftExpr->getInferredDataType());
+  } else {
+    if (leftExpr->getInferredDataType()->getNodeType() !=
+        rightExpr->getInferredDataType()->getNodeType()) {
+      throw TypeError(ctx->getLineNumber(), "Binary operation: Type mismatch");
+    }
+  }
+  // Both left and right expressions from here on will be equal because of the
+  // above else statement throwing error
+
+  if (!isValidOp(leftExpr->getInferredSymbolType()->getName(),
+                 ctx->getBinaryOpType()))
+    throw TypeError(ctx->getLineNumber(), "Invalid binary operation");
+
+  // If the operation is == or != or operands are bool set expression type to
+  // boolean
+  if (ctx->getBinaryOpType() == expressions::BinaryOpType::EQUAL ||
+      ctx->getBinaryOpType() == expressions::BinaryOpType::NOT_EQUAL ||
+      isOfSymbolType(ctx->getLeft()->getInferredSymbolType(), "boolean")) {
+    auto booleanDataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+    auto booleanTypeSymbol = resolvedInferredType(booleanDataType);
+    ctx->setInferredSymbolType(booleanTypeSymbol);
+    ctx->setInferredDataType(booleanDataType);
+  }
+
+  return {};
 }
 std::any TypeWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
   return AstWalker::visitBreak(ctx);
@@ -202,7 +260,10 @@ TypeWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
   return {};
 }
 std::any TypeWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
-  return AstWalker::visitUnary(ctx);
+  visit(ctx->getExpression());
+  ctx->setInferredSymbolType(ctx->getExpression()->getInferredSymbolType());
+  ctx->setInferredDataType(ctx->getExpression()->getInferredDataType());
+  return {};
 }
 std::any TypeWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
   return AstWalker::visitLoop(ctx);
