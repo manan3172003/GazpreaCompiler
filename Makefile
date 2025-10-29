@@ -1,6 +1,6 @@
 .PHONY: build format emit-llvm compile run-llvm test run
 build: format
-	cd build/ && cmake .. && make && cd -
+	cd build/ && cmake .. && make -j 8 && cd -
 
 format:
 	find src include -type f \( -name "*.cpp" -o -name "*.h" \) -exec clang-format -i {} +
