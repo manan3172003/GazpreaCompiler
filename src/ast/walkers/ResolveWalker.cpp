@@ -127,7 +127,7 @@ std::any ResolveWalker::visitTupleAssign(
 }
 std::any ResolveWalker::visitTupleAccess(
     std::shared_ptr<expressions::TupleAccessAst> ctx) {
-  ctx->setSymbol(ctx->getScope()->resolve(ctx->getTupleName()));
+  ctx->setSymbol(ctx->getScope()->resolveSymbol(ctx->getTupleName()));
   return {};
 }
 std::any
