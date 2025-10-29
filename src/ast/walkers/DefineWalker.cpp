@@ -29,9 +29,10 @@ std::any DefineWalker::visitDeclaration(
   const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
       ctx->getName(), ctx->getQualifier());
   varSymbol->setDef(ctx);
-
-  if (ctx->getType()->getNodeType() == NodeType::TupleType) {
-    visit(ctx->getType());
+  if (ctx->getType()) {
+    if (ctx->getType()->getNodeType() == NodeType::TupleType) {
+      visit(ctx->getType());
+    }
   }
 
   symTab->getCurrentScope()->defineSymbol(varSymbol);

@@ -56,10 +56,11 @@ std::any ResolveWalker::visitDeclaration(
   if (ctx->getExpr()) {
     visit(ctx->getExpr());
   }
-
-  const auto varSymb =
-      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  varSymb->setType(resolvedType(ctx->getType()));
+  if (ctx->getType()) {
+    const auto varSymb =
+        std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+    varSymb->setType(resolvedType(ctx->getType()));
+  }
   return {};
 }
 std::any

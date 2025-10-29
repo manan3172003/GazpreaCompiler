@@ -410,12 +410,15 @@ std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
       declAst->setQualifier(Qualifier::Var);
   } else
     declAst->setQualifier(Qualifier::Const);
-
-  if (ctx->type()->tuple_type()) {
-    declAst->setType(std::any_cast<std::shared_ptr<types::TupleTypeAst>>(
-        visit(ctx->type()->tuple_type())));
+  if (ctx->type()) {
+    if (ctx->type()->tuple_type()) {
+      declAst->setType(std::any_cast<std::shared_ptr<types::TupleTypeAst>>(
+          visit(ctx->type()->tuple_type())));
+    } else {
+      declAst->setType(makeType(ctx->type(), ctx->getStart()));
+    }
   } else {
-    declAst->setType(makeType(ctx->type(), ctx->getStart()));
+    declAst->setType(nullptr);
   }
 
   declAst->setName(ctx->ID()->getText());

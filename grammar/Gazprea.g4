@@ -81,7 +81,7 @@ assign_stat
     ;
 
 dec_stat
-    : qualifier? type ID (EQUAL expr)? SC
+    : ((qualifier? type) | (qualifier type?)) ID (EQUAL expr)? SC
     ;
 
 tuple_dec_stat
