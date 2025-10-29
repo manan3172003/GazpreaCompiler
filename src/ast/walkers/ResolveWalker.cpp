@@ -110,7 +110,7 @@ std::any ResolveWalker::visitProcedureParams(
     std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
   const auto varSym =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  varSym->setType(resolvedType(ctx->getType());
+  varSym->setType(resolvedType(ctx->getParamType()));
   return {};
 }
 std::any ResolveWalker::visitProcedureCall(
@@ -160,7 +160,7 @@ std::any ResolveWalker::visitFunctionParam(
     std::shared_ptr<prototypes::FunctionParamAst> ctx) {
   const auto varSym =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  varSym->setType(resolvedType(ctx->getType()));
+  varSym->setType(resolvedType(ctx->getParamType()));
   return {};
 }
 std::any
@@ -170,8 +170,8 @@ ResolveWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
   }
   const auto methodSym =
       std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
-  if (ctx->getType() != nullptr) { // void procedures can have empty type
-    methodSym->setReturnType(resolvedType(ctx->getType()));
+  if (ctx->getReturnType() != nullptr) { // void procedures can have empty type
+    methodSym->setReturnType(resolvedType(ctx->getReturnType()));
   }
   return {};
 }
