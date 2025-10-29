@@ -10,7 +10,7 @@ public:
   explicit ReturnAst(antlr4::Token *token)
       : StatementAst(token), expr(nullptr) {}
   void setExpr(std::shared_ptr<expressions::ExpressionAst> expression) {
-    expr = std::move(expression);
+    expr = expression;
   }
   std::shared_ptr<expressions::ExpressionAst> getExpr() const { return expr; }
   NodeType getNodeType() const override;
