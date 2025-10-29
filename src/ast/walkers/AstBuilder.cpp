@@ -102,7 +102,7 @@ AstBuilder::visitProcedure_stat(GazpreaParser::Procedure_statContext *ctx) {
         visit(ctx->procedure_params())));
   }
   if (ctx->type())
-    protoAst->setType(ctx->type()->getText());
+    protoAst->setReturnType(makeType(ctx->type(), ctx->getStart()));
 
   const auto procAst =
       std::make_shared<prototypes::ProcedureAst>(ctx->getStart());
@@ -134,7 +134,7 @@ AstBuilder::visitProcedure_param(GazpreaParser::Procedure_paramContext *ctx) {
   } else {
     paramAst->setQualifier(Qualifier::Const); // Default qualifier
   }
-  paramAst->setType(ctx->type()->getText());
+  paramAst->setParamType(makeType(ctx->type(), ctx->getStart()));
   if (ctx->ID()) {
     paramAst->setName(ctx->ID()->getText());
   }
@@ -165,7 +165,7 @@ AstBuilder::visitFunction_stat(GazpreaParser::Function_statContext *ctx) {
     protoAst->setParams(std::any_cast<std::vector<std::shared_ptr<Ast>>>(
         visit(ctx->function_params())));
   }
-  protoAst->setType(ctx->type()->getText());
+  protoAst->setReturnType(makeType(ctx->type(), ctx->getStart()));
 
   const auto functionAst =
       std::make_shared<prototypes::FunctionAst>(ctx->getStart());
@@ -209,7 +209,7 @@ AstBuilder::visitFunction_param(GazpreaParser::Function_paramContext *ctx) {
   const auto paramAst =
       std::make_shared<prototypes::FunctionParamAst>(ctx->getStart());
   paramAst->setQualifier(Qualifier::Const);
-  paramAst->setType(ctx->type()->getText());
+  paramAst->setParamType(makeType(ctx->type(), ctx->getStart()));
   if (ctx->ID()) {
     paramAst->setName(ctx->ID()->getText());
   }
@@ -679,6 +679,10 @@ AstBuilder::makeType(GazpreaParser::TypeContext *typeContext,
     auto aliasType = std::make_shared<types::AliasTypeAst>(token);
     aliasType->setAlias(typeContext->ID()->getText());
     return aliasType;
+  }
+  if (typeContext->tuple_type()) {
+    return std::any_cast<std::shared_ptr<types::TupleTypeAst>>(
+        visit(typeContext->tuple_type()));
   }
   return nullptr;
 }

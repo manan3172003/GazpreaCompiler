@@ -17,7 +17,9 @@ std::string FunctionAst::toStringTree(std::string prefix) const {
   }
 
   ss << ")";
-  ss << " Returns: " << proto->getType();
+  if (proto->getReturnType()) {
+    ss << " Returns: " << proto->getReturnType()->toStringTree("");
+  }
   if (scope) {
     ss << " (Scope: " << scope->toString() << ")";
   }

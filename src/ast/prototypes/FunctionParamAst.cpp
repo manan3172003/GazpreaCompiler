@@ -6,7 +6,9 @@ NodeType FunctionParamAst::getNodeType() const {
 }
 std::string FunctionParamAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << type;
+  if (paramType) {
+    ss << paramType->toStringTree("");
+  }
   if (!name.empty()) {
     ss << " " << name;
   }

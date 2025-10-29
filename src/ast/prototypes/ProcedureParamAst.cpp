@@ -6,7 +6,10 @@ NodeType ProcedureParamAst::getNodeType() const {
 }
 std::string ProcedureParamAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << qualifierToString(qualifier) << " " << type;
+  ss << qualifierToString(qualifier) << " ";
+  if (paramType) {
+    ss << paramType->toStringTree("");
+  }
   if (!name.empty()) {
     ss << " " << name;
   }

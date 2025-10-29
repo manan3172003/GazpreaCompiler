@@ -105,6 +105,9 @@ std::any DefineWalker::visitProcedureParams(
       ctx->getName(), ctx->getQualifier());
   ctx->setScope(symTab->getCurrentScope());
   symTab->getCurrentScope()->defineSymbol(varSymbol);
+  if (ctx->getParamType()->getNodeType() == NodeType::TupleType) {
+    visit(ctx->getParamType());
+  }
   ctx->setSymbol(varSymbol);
   varSymbol->setDef(ctx);
   return {};
@@ -194,6 +197,11 @@ std::any DefineWalker::visitFunctionParam(
       ctx->getName(), ctx->getQualifier());
   ctx->setScope(symTab->getCurrentScope());
   symTab->getCurrentScope()->defineSymbol(varSymbol);
+
+  if (ctx->getParamType()->getNodeType() == NodeType::TupleType) {
+    visit(ctx->getParamType());
+  }
+
   ctx->setSymbol(varSymbol);
   varSymbol->setDef(ctx);
   return {};
@@ -203,6 +211,10 @@ DefineWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   for (const auto &param : ctx->getParams()) {
     visit(param);
+  }
+  if (ctx->getReturnType() &&
+      ctx->getReturnType()->getNodeType() == NodeType::TupleType) {
+    visit(ctx->getReturnType());
   }
   return {};
 }

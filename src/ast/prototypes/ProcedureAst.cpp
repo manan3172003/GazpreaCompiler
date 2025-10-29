@@ -16,8 +16,8 @@ std::string ProcedureAst::toStringTree(std::string prefix) const {
     ss << args[i]->toStringTree("");
   }
   ss << ")";
-  if (!proto->getType().empty()) {
-    ss << " Returns: " << proto->getType();
+  if (proto->getReturnType()) {
+    ss << " Returns: " << proto->getReturnType()->toStringTree("");
   }
   if (proto->getSymbol()) {
     ss << " (Symbol: " << proto->getSymbol()->toString() << " "
