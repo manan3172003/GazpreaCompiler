@@ -59,12 +59,15 @@ TypeWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
 }
 std::any
 TypeWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
+  visit(ctx->getExpr());
   if (ctx->getType()) {
+    // setting inferred type here
     // Promoting type here
+
   } else {
-    visit(ctx->getExpr());
     std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())
         ->setType(ctx->getExpr()->getInferredSymbolType());
+    ctx->setType(ctx->getExpr()->getInferredDataType());
     // TODO: Check type
   }
 
@@ -173,11 +176,11 @@ std::any
 TypeWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
   auto dataTypeSymbol =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  ctx->setInferredDataType(
-      std::dynamic_pointer_cast<statements::DeclarationAst>(
-          dataTypeSymbol->getDef())
-          ->getType());
-  ctx->setInferredSymbolType(dataTypeSymbol->getType());
+  auto dataType = std::dynamic_pointer_cast<statements::DeclarationAst>(
+                      dataTypeSymbol->getDef())
+                      ->getType();
+  ctx->setInferredDataType(dataType);
+  ctx->setInferredSymbolType(resolvedInferredType(dataType));
   return {};
 }
 std::any TypeWalker::visitIdentifierLeft(
