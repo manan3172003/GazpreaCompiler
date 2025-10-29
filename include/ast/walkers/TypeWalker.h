@@ -1,10 +1,12 @@
 #pragma once
 #include "AstWalker.h"
+#include "symTable/SymTable.h"
 
 namespace gazprea::ast::walkers {
 class TypeWalker final : public AstWalker {
+  std::shared_ptr<symTable::SymbolTable> symTab;
 public:
-  TypeWalker() = default;
+  explicit TypeWalker(std::shared_ptr<symTable::SymbolTable> symTab) : symTab(symTab) {};
   ~TypeWalker() override = default;
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
   std::any

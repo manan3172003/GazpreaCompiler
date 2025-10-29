@@ -1,8 +1,14 @@
+#include "ast/types/BooleanTypeAst.h"
+#include "ast/types/CharacterTypeAst.h"
+
 #include <ast/walkers/TypeWalker.h>
 
 namespace gazprea::ast::walkers {
 std::any TypeWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
-  return AstWalker::visitRoot(ctx);
+  for (const auto& child: ctx->children) {
+    visit(child);
+  }
+  return {};
 }
 std::any
 TypeWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
@@ -10,7 +16,14 @@ TypeWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
 }
 std::any
 TypeWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
-  return AstWalker::visitDeclaration(ctx);
+  if (ctx->getType()) {
+    // Promoting type here
+  } else {
+    visit(ctx->getExpr());
+    // TODO: Check type
+  }
+
+  return {};
 }
 std::any TypeWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   return AstWalker::visitBlock(ctx);
@@ -90,18 +103,22 @@ std::any TypeWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
 }
 std::any
 TypeWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
-  return AstWalker::visitBool(ctx);
+  ctx->setInferredType(std::make_shared<types::BooleanTypeAst>(ctx->token));
+  ctx->getSymbol()
+  return {};
 }
 std::any TypeWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   return AstWalker::visitCast(ctx);
 }
 std::any
 TypeWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
-  return AstWalker::visitChar(ctx);
+  ctx->setInferredType(std::make_shared<types::CharacterTypeAst>(ctx->token));
+  return {};
 }
 std::any
 TypeWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
-  return AstWalker::visitIdentifier(ctx);
+  ctx->setInferredType(ctx->getInferredType());
+  return {};
 }
 std::any TypeWalker::visitIdentifierLeft(
     std::shared_ptr<statements::IdentifierLeftAst> ctx) {

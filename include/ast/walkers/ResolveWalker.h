@@ -10,7 +10,7 @@ class ResolveWalker final : public AstWalker {
 
 public:
   explicit ResolveWalker(std::shared_ptr<symTable::SymbolTable> symTab)
-      : symTab(std::move(symTab)) {};
+      : symTab(symTab) {};
   ~ResolveWalker() override = default;
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
   std::any

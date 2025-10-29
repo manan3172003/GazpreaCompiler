@@ -12,6 +12,7 @@
 #include "ast/walkers/AstBuilder.h"
 #include "ast/walkers/DefineWalker.h"
 #include "ast/walkers/ResolveWalker.h"
+#include "ast/walkers/TypeWalker.h"
 
 #include <fstream>
 #include <iostream>
@@ -48,6 +49,9 @@ int main(int argc, char **argv) {
   resolveWalker.visit(rootAst);
 
   std::cout << rootAst->toStringTree("") << std::endl;
+
+  gazprea::ast::walkers::TypeWalker typeInferPromoWalker(symTab);
+  typeInferPromoWalker.visit(rootAst);
 
   std::ofstream os(argv[2]);
   // BackEnd backend;

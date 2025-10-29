@@ -61,13 +61,13 @@ enum class Qualifier {
 
 class Ast {
 protected:
-  antlr4::Token *token;
   std::shared_ptr<symTable::Scope> scope;
   std::shared_ptr<symTable::Symbol> sym;
   Location location;
 
 public:
   std::string indent = ". . ";
+  antlr4::Token *token;
 
   explicit Ast(antlr4::Token *token) : token(token) {
     location.columnNumber = static_cast<int>(token->getStartIndex());
