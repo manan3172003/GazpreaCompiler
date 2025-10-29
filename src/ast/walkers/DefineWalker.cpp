@@ -234,6 +234,10 @@ DefineWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
   return AstWalker::visitBool(ctx);
 }
 std::any DefineWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
+  if (ctx->getTargetType() &&
+      ctx->getTargetType()->getNodeType() == NodeType::TupleType) {
+    visit(ctx->getTargetType());
+  }
   visit(ctx->getExpression());
   return {};
 }

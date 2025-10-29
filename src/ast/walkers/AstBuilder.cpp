@@ -452,7 +452,7 @@ std::any AstBuilder::visitPowerExpr(GazpreaParser::PowerExprContext *ctx) {
 }
 std::any AstBuilder::visitCastExpr(GazpreaParser::CastExprContext *ctx) {
   const auto castAst = std::make_shared<expressions::CastAst>(ctx->getStart());
-  castAst->setType(ctx->type()->getText());
+  castAst->setType(makeType(ctx->type(), ctx->getStart()));
   castAst->setExpression(
       std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
           visit(ctx->expr())));

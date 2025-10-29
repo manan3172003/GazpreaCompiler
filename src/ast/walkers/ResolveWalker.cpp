@@ -193,7 +193,7 @@ ResolveWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
 }
 std::any ResolveWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   visit(ctx->getExpression());
-  ctx->setResolvedTargetType(resolveType(ctx->getType()));
+  ctx->setResolvedTargetType(resolvedType(ctx->getTargetType()));
   return {};
 }
 std::any
