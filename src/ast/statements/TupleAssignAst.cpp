@@ -7,7 +7,7 @@ NodeType TupleAssignAst::getNodeType() const { return NodeType::TupleAssign; }
 
 std::string TupleAssignAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << prefix << "Tuple Field: " << tupleName << "." << fieldIndex << '\n';
+  ss << prefix << "Tuple Field: " << tupleName << "." << fieldIndex << scopeToString() << '\n';
   return ss.str();
 }
 

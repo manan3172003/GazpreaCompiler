@@ -47,8 +47,8 @@ std::any ResolveWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
 }
 std::any
 ResolveWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
-  visit(ctx->getLVal());
   visit(ctx->getExpr());
+  visit(ctx->getLVal());
   return {};
 }
 std::any ResolveWalker::visitDeclaration(
@@ -123,7 +123,8 @@ ResolveWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
 }
 std::any ResolveWalker::visitTupleAssign(
     std::shared_ptr<statements::TupleAssignAst> ctx) {
-  return AstWalker::visitTupleAssign(ctx);
+  ctx->setSymbol(ctx->getScope()->resolveSymbol(ctx->getTupleName()));
+  return {};
 }
 std::any ResolveWalker::visitTupleAccess(
     std::shared_ptr<expressions::TupleAccessAst> ctx) {
@@ -132,7 +133,10 @@ std::any ResolveWalker::visitTupleAccess(
 }
 std::any
 ResolveWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
-  return AstWalker::visitTuple(ctx);
+  for (const auto &element : ctx->getElements()) {
+    visit(element);
+  }
+  return {};
 }
 std::any
 ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
@@ -200,7 +204,8 @@ std::any ResolveWalker::visitIdentifier(
 }
 std::any ResolveWalker::visitIdentifierLeft(
     std::shared_ptr<statements::IdentifierLeftAst> ctx) {
-  return AstWalker::visitIdentifierLeft(ctx);
+  ctx->setSymbol(ctx->getScope()->resolveSymbol(ctx->getName()));
+  return {};
 }
 std::any ResolveWalker::visitInteger(
     std::shared_ptr<expressions::IntegerLiteralAst> ctx) {

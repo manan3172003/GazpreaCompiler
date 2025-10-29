@@ -16,8 +16,9 @@ std::any DefineWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
 }
 std::any
 DefineWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
-  visit(ctx->getLVal());
   visit(ctx->getExpr());
+  visit(ctx->getLVal());
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefineWalker::visitDeclaration(
@@ -28,7 +29,6 @@ std::any DefineWalker::visitDeclaration(
   const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
       ctx->getName(), ctx->getQualifier());
   varSymbol->setDef(ctx);
-  // TODO: Start from here tomorrow
 
   if (ctx->getType()->getNodeType() == NodeType::TupleType) {
     visit(ctx->getType());
@@ -122,7 +122,8 @@ std::any DefineWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
 }
 std::any DefineWalker::visitTupleAssign(
     std::shared_ptr<statements::TupleAssignAst> ctx) {
-  return AstWalker::visitTupleAssign(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefineWalker::visitTupleAccess(
     std::shared_ptr<expressions::TupleAccessAst> ctx) {
@@ -131,7 +132,10 @@ std::any DefineWalker::visitTupleAccess(
 }
 std::any
 DefineWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
-  return AstWalker::visitTuple(ctx);
+  for (const auto &element : ctx->getElements()) {
+    visit(element);
+  }
+  return {};
 }
 std::any
 DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
@@ -243,7 +247,8 @@ DefineWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
 }
 std::any DefineWalker::visitIdentifierLeft(
     std::shared_ptr<statements::IdentifierLeftAst> ctx) {
-  return AstWalker::visitIdentifierLeft(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefineWalker::visitInteger(
     std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
