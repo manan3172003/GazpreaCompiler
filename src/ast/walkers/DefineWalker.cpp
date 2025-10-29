@@ -16,7 +16,9 @@ std::any DefineWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
 }
 std::any
 DefineWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
-  return AstWalker::visitAssignment(ctx);
+  visit(ctx->getLhs());
+  visit(ctx->getExpr());
+  return {};
 }
 std::any DefineWalker::visitDeclaration(
     std::shared_ptr<statements::DeclarationAst> ctx) {
@@ -240,7 +242,8 @@ DefineWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
   return AstWalker::visitReal(ctx);
 }
 std::any DefineWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
-  return AstWalker::visitUnary(ctx);
+  visit(ctx->getExpression());
+  return {};
 }
 std::any DefineWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
   if (ctx->getCondition())
