@@ -119,7 +119,7 @@ std::any ResolveWalker::visitProcedureCall(
     visit(args);
   }
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
-      ctx->getScope()->resolve(ctx->getName()));
+      ctx->getScope()->resolveSymbol(ctx->getName()));
   ctx->setSymbol(methodSymbol);
   return {};
 }
@@ -192,7 +192,7 @@ std::any ResolveWalker::visitFuncProcCall(
     visit(args);
   }
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
-      ctx->getScope()->resolve(ctx->getName()));
+      ctx->getScope()->resolveSymbol(ctx->getName()));
   ctx->setSymbol(methodSymbol);
   return {};
 }
