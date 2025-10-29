@@ -70,7 +70,8 @@ std::any DefineWalker::visitConditional(
   return {};
 }
 std::any DefineWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
-  return AstWalker::visitInput(ctx);
+  visit(ctx->getLVal());
+  return {};
 }
 std::any DefineWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
   visit(ctx->getExpression());
@@ -120,7 +121,8 @@ std::any DefineWalker::visitTupleAssign(
 }
 std::any DefineWalker::visitTupleAccess(
     std::shared_ptr<expressions::TupleAccessAst> ctx) {
-  return AstWalker::visitTupleAccess(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any
 DefineWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {

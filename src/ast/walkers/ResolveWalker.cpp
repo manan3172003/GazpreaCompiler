@@ -104,7 +104,8 @@ std::any ResolveWalker::visitConditional(
 }
 
 std::any ResolveWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
-  return AstWalker::visitInput(ctx);
+  visit(ctx->getLVal());
+  return {};
 }
 std::any
 ResolveWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
@@ -139,7 +140,8 @@ std::any ResolveWalker::visitTupleAssign(
 }
 std::any ResolveWalker::visitTupleAccess(
     std::shared_ptr<expressions::TupleAccessAst> ctx) {
-  return AstWalker::visitTupleAccess(ctx);
+  ctx->setSymbol(ctx->getScope()->resolve(ctx->getTupleName()));
+  return {};
 }
 std::any
 ResolveWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
