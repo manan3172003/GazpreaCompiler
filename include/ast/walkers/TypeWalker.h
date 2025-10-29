@@ -5,8 +5,13 @@
 namespace gazprea::ast::walkers {
 class TypeWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
+
 public:
-  explicit TypeWalker(std::shared_ptr<symTable::SymbolTable> symTab) : symTab(symTab) {};
+  std::shared_ptr<symTable::Type>
+  resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
+
+  explicit TypeWalker(std::shared_ptr<symTable::SymbolTable> symTab)
+      : symTab(symTab) {};
   ~TypeWalker() override = default;
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
   std::any

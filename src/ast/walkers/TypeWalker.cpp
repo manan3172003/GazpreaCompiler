@@ -1,11 +1,54 @@
+#include "ast/types/AliasTypeAst.h"
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
+#include "ast/types/RealTypeAst.h"
+#include "symTable/TupleTypeSymbol.h"
+#include "symTable/VariableSymbol.h"
 
 #include <ast/walkers/TypeWalker.h>
 
 namespace gazprea::ast::walkers {
+
+std::shared_ptr<symTable::Type> TypeWalker::resolvedInferredType(
+    const std::shared_ptr<types::DataTypeAst> &dataType) {
+  auto globalScope = symTab->getGlobalScope();
+  switch (dataType->getNodeType()) {
+  case NodeType::IntegerType:
+    return std::dynamic_pointer_cast<symTable::Type>(
+        globalScope->resolveType("integer"));
+  case NodeType::RealType:
+    return std::dynamic_pointer_cast<symTable::Type>(
+        globalScope->resolveType("real"));
+  case NodeType::CharType:
+    return std::dynamic_pointer_cast<symTable::Type>(
+        globalScope->resolveType("character"));
+  case NodeType::BoolType:
+    return std::dynamic_pointer_cast<symTable::Type>(
+        globalScope->resolveType("boolean"));
+  case NodeType::AliasType: {
+    const auto aliasTypeNode =
+        std::dynamic_pointer_cast<types::AliasTypeAst>(dataType);
+    const auto aliasSymType =
+        globalScope->resolveType(aliasTypeNode->getAlias());
+    return std::dynamic_pointer_cast<symTable::Type>(aliasSymType);
+  }
+  case NodeType::TupleType: {
+    // visiting the tuple
+    auto tupleTypeSymbol = std::make_shared<symTable::TupleTypeSymbol>("");
+    auto tupleDataType =
+        std::dynamic_pointer_cast<types::TupleTypeAst>(dataType);
+    for (const auto &subType : tupleDataType->getTypes()) {
+      tupleTypeSymbol->addResolvedType(resolvedInferredType(subType));
+    }
+    return std::dynamic_pointer_cast<symTable::Type>(tupleTypeSymbol);
+  }
+  default:
+    return {};
+  }
+}
+
 std::any TypeWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
-  for (const auto& child: ctx->children) {
+  for (const auto &child : ctx->children) {
     visit(child);
   }
   return {};
@@ -20,6 +63,8 @@ TypeWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
     // Promoting type here
   } else {
     visit(ctx->getExpr());
+    std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())
+        ->setType(ctx->getExpr()->getInferredSymbolType());
     // TODO: Check type
   }
 
@@ -73,7 +118,13 @@ TypeWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
 }
 std::any
 TypeWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
-  return AstWalker::visitTuple(ctx);
+  auto tupleType = std::make_shared<types::TupleTypeAst>(ctx->token);
+  for (const auto &element : ctx->getElements()) {
+    visit(element);
+    tupleType->addType(element->getInferredDataType());
+  }
+  ctx->setInferredSymbolType(resolvedInferredType(tupleType));
+  return {};
 }
 std::any TypeWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   return AstWalker::visitTupleType(ctx);
@@ -103,8 +154,9 @@ std::any TypeWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
 }
 std::any
 TypeWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
-  ctx->setInferredType(std::make_shared<types::BooleanTypeAst>(ctx->token));
-  ctx->getSymbol()
+  auto boolType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+  ctx->setInferredDataType(boolType);
+  ctx->setInferredSymbolType(resolvedInferredType(boolType));
   return {};
 }
 std::any TypeWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
@@ -112,12 +164,20 @@ std::any TypeWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
 }
 std::any
 TypeWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
-  ctx->setInferredType(std::make_shared<types::CharacterTypeAst>(ctx->token));
+  auto charType = std::make_shared<types::CharacterTypeAst>(ctx->token);
+  ctx->setInferredDataType(charType);
+  ctx->setInferredSymbolType(resolvedInferredType(charType));
   return {};
 }
 std::any
 TypeWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
-  ctx->setInferredType(ctx->getInferredType());
+  auto dataTypeSymbol =
+      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  ctx->setInferredDataType(
+      std::dynamic_pointer_cast<statements::DeclarationAst>(
+          dataTypeSymbol->getDef())
+          ->getType());
+  ctx->setInferredSymbolType(dataTypeSymbol->getType());
   return {};
 }
 std::any TypeWalker::visitIdentifierLeft(
@@ -126,11 +186,17 @@ std::any TypeWalker::visitIdentifierLeft(
 }
 std::any
 TypeWalker::visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
-  return AstWalker::visitInteger(ctx);
+  auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);
+  ctx->setInferredDataType(intType);
+  ctx->setInferredSymbolType(resolvedInferredType(intType));
+  return {};
 }
 std::any
 TypeWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
-  return AstWalker::visitReal(ctx);
+  auto realType = std::make_shared<types::RealTypeAst>(ctx->token);
+  ctx->setInferredDataType(realType);
+  ctx->setInferredSymbolType(resolvedInferredType(realType));
+  return {};
 }
 std::any TypeWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   return AstWalker::visitUnary(ctx);

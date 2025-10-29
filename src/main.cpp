@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   auto rootAst = std::any_cast<std::shared_ptr<gazprea::ast::RootAst>>(
       astBuilder.visit(tree));
 
-  std::cout << rootAst->toStringTree("") << std::endl;
+  // std::cout << rootAst->toStringTree("") << std::endl;
 
   auto symTab = std::make_shared<gazprea::symTable::SymbolTable>();
   gazprea::ast::walkers::DefineWalker defineWalker(symTab);
@@ -52,6 +52,8 @@ int main(int argc, char **argv) {
 
   gazprea::ast::walkers::TypeWalker typeInferPromoWalker(symTab);
   typeInferPromoWalker.visit(rootAst);
+
+  std::cout << rootAst->toStringTree("") << std::endl;
 
   std::ofstream os(argv[2]);
   // BackEnd backend;

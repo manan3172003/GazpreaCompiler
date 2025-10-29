@@ -5,12 +5,24 @@
 namespace gazprea::ast::expressions {
 
 class ExpressionAst : public Ast {
-  std::shared_ptr<types::DataTypeAst> inferredType;
+  std::shared_ptr<symTable::Type> inferredSymbolType;
+  std::shared_ptr<types::DataTypeAst> inferredDataType;
+
 public:
   ExpressionAst(antlr4::Token *token) : Ast(token) {};
   virtual ~ExpressionAst() = default;
-  void setInferredType(std::shared_ptr<types::DataTypeAst> type_) {inferredType = type_;};
-  std::shared_ptr<types::DataTypeAst> getInferredType() {return inferredType;}
+  void setInferredSymbolType(std::shared_ptr<symTable::Type> type_) {
+    inferredSymbolType = type_;
+  };
+  std::shared_ptr<symTable::Type> getInferredSymbolType() {
+    return inferredSymbolType;
+  }
+  void setInferredDataType(std::shared_ptr<types::DataTypeAst> type_) {
+    inferredDataType = type_;
+  };
+  std::shared_ptr<types::DataTypeAst> getInferredDataType() {
+    return inferredDataType;
+  }
 };
 
 } // namespace gazprea::ast::expressions
