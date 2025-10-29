@@ -7,7 +7,11 @@ NodeType TupleAccessAst::getNodeType() const { return NodeType::TupleAccess; }
 
 std::string TupleAccessAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << prefix << "TupleAccess: " << tupleName << "." << fieldIndex << '\n';
+  ss << prefix << "TupleAccess: " << tupleName << "." << fieldIndex;
+  if (sym) {
+    ss << sym->toString();
+  }
+  ss << "\n";
   return ss.str();
 }
 
