@@ -7,7 +7,7 @@ std::string DeclarationAst::toStringTree(std::string prefix) const {
   ss << prefix << "Declaration " << name << " " << qualifierToString(qualifier)
      << " ";
   if (type)
-    type->toStringTree(prefix + indent);
+    ss << type->toStringTree(prefix + indent);
 
   if (sym) {
     ss << sym->toString();
