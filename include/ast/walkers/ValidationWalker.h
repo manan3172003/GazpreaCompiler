@@ -47,6 +47,16 @@ class ValidationWalker final : public AstWalker {
     }
   }
 
+  static std::shared_ptr<symTable::Scope>
+  getEnclosingFuncProcScope(std::shared_ptr<symTable::Scope> currentScope) {
+    while (currentScope != nullptr &&
+           (currentScope->getScopeType() != symTable::ScopeType::Function &&
+            currentScope->getScopeType() != symTable::ScopeType::Procedure)) {
+      currentScope = currentScope->getEnclosingScope();
+    }
+    return currentScope;
+  }
+
 public:
   std::shared_ptr<symTable::Type>
   resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);

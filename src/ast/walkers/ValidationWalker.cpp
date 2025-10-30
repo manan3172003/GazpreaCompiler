@@ -296,15 +296,24 @@ std::any ValidationWalker::visitPrototype(
 }
 std::any ValidationWalker::visitFuncProcCall(
     std::shared_ptr<expressions::FuncProcCallAst> ctx) {
-  auto methodSymbol =
+  const auto methodSymbol =
       std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+
+  // Indirect way to check if symbol is a procedure
+  if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {
+    // Check if we call a procedure from a function
+    const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
+    if (curScope && curScope->getScopeType() == symTable::ScopeType::Function)
+      throw CallError(ctx->getLineNumber(), "Procedure call inside function");
+  }
+
   if (!methodSymbol->getReturnType())
     throw ReturnError(ctx->getLineNumber(), "Return type is null");
 
-  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
+  const auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
       methodSymbol->getDef());
-  auto params = protoType->getParams();
-  auto args = ctx->getArgs();
+  const auto params = protoType->getParams();
+  const auto args = ctx->getArgs();
 
   for (size_t i = 0; i < args.size(); i++) {
     const auto &arg = args[i];
