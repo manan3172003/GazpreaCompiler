@@ -127,7 +127,7 @@ ValidationWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
     else {
       if (visitedAllDeclarations)
         throw StatementError(
-            ctx->getLineNumber(),
+            child->getLineNumber(),
             "Declarations are only allowed on the top of the block");
     }
     visit(child);
