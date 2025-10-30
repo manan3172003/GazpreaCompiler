@@ -9,6 +9,7 @@ std::string Ast::qualifierToString(Qualifier qualifier) {
   case Qualifier::Const:
     return "const";
   }
+  return "";
 }
 std::string Ast::scopeToString() const {
   std::stringstream ss;
