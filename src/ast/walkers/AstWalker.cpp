@@ -1,6 +1,3 @@
-#include "ast/expressions/BinaryAst.h"
-#include "ast/statements/ProcedureCallAst.h"
-
 #include <ast/walkers/AstWalker.h>
 
 namespace gazprea::ast::walkers {
@@ -84,9 +81,12 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::Typealias:
     return visitTypealias(
         std::static_pointer_cast<statements::TypealiasAst>(ast));
-  case NodeType::TupleAssign:
-    return visitTupleAssign(
-        std::static_pointer_cast<statements::TupleAssignAst>(ast));
+  case NodeType::TupleElementAssign:
+    return visitTupleElementAssign(
+        std::static_pointer_cast<statements::TupleElementAssignAst>(ast));
+  case NodeType::TupleUnpackAssign:
+    return visitTupleUnpackAssign(
+        std::static_pointer_cast<statements::TupleUnpackAssignAst>(ast));
   case NodeType::UnaryExpression:
     return visitUnary(std::static_pointer_cast<expressions::UnaryAst>(ast));
   case NodeType::Loop:

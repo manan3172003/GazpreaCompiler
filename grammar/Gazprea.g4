@@ -53,10 +53,7 @@ args: expr (COMMA expr)*;
 
 output_stat: expr '->' STD_OUTPUT SC;
 
-input_stat
-    : ID '<-' STD_INPUT SC #idInput
-    | TUPLE_ACCESS '<-' STD_INPUT SC #tupleElementInput
-    ;
+input_stat: assign_left '<-' STD_INPUT SC;
 
 return_stat: RETURN expr? SC;
 
@@ -75,10 +72,15 @@ loop_stat
 
 block_stat: LBRACE stat+ RBRACE;
 
-// TODO: tuple assignment
 assign_stat
-    : qualifier? ID EQUAL expr SC #idAssign
-    | TUPLE_ACCESS EQUAL expr SC #tupleElementAssign
+    : assign_left EQUAL expr SC #singularAssign
+    | assign_left (COMMA assign_left)+ EQUAL expr SC #tupleUnpackAssign
+    ;
+
+// TODO: For part 2, when new assignments and inputs are introduced, insert them here
+assign_left
+    : ID #idLVal
+    | TUPLE_ACCESS #tupleElementLVal
     ;
 
 dec_stat

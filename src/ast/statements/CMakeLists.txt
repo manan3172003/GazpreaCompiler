@@ -13,7 +13,8 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/ContinueAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ConditionalAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/IdentifierLeftAst.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/TupleAssignAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/TupleElementAssignAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/TupleUnpackAssignAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ProcedureCallAst.cpp"
 )
 

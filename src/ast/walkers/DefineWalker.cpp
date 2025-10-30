@@ -124,9 +124,16 @@ std::any DefineWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
-std::any DefineWalker::visitTupleAssign(
-    std::shared_ptr<statements::TupleAssignAst> ctx) {
+std::any DefineWalker::visitTupleElementAssign(
+    std::shared_ptr<statements::TupleElementAssignAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefineWalker::visitTupleUnpackAssign(
+    std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
+  for (const auto &lVal : ctx->getLVals()) {
+    visit(lVal);
+  }
   return {};
 }
 std::any DefineWalker::visitTupleAccess(

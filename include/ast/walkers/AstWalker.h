@@ -30,7 +30,8 @@
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/ProcedureCallAst.h"
 #include "ast/statements/ReturnAst.h"
-#include "ast/statements/TupleAssignAst.h"
+#include "ast/statements/TupleElementAssignAst.h"
+#include "ast/statements/TupleUnpackAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
 #include "ast/types/TupleTypeAst.h"
 
@@ -88,8 +89,12 @@ public:
   virtual std::any visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
     return {};
   }
-  virtual std::any
-  visitTupleAssign(std::shared_ptr<statements::TupleAssignAst> ctx) {
+  virtual std::any visitTupleElementAssign(
+      std::shared_ptr<statements::TupleElementAssignAst> ctx) {
+    return {};
+  }
+  virtual std::any visitTupleUnpackAssign(
+      std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
     return {};
   }
   virtual std::any

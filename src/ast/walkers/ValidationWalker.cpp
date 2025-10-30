@@ -250,9 +250,13 @@ ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   }
   return {};
 }
-std::any ValidationWalker::visitTupleAssign(
-    std::shared_ptr<statements::TupleAssignAst> ctx) {
-  return AstWalker::visitTupleAssign(ctx);
+std::any ValidationWalker::visitTupleElementAssign(
+    std::shared_ptr<statements::TupleElementAssignAst> ctx) {
+  return AstWalker::visitTupleElementAssign(ctx);
+}
+std::any ValidationWalker::visitTupleUnpackAssign(
+    std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
+  return AstWalker::visitTupleUnpackAssign(ctx);
 }
 std::any ValidationWalker::visitTupleAccess(
     std::shared_ptr<expressions::TupleAccessAst> ctx) {

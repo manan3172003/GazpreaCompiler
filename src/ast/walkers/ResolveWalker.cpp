@@ -129,9 +129,16 @@ ResolveWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   visit(ctx->getExpr());
   return {};
 }
-std::any ResolveWalker::visitTupleAssign(
-    std::shared_ptr<statements::TupleAssignAst> ctx) {
+std::any ResolveWalker::visitTupleElementAssign(
+    std::shared_ptr<statements::TupleElementAssignAst> ctx) {
   ctx->setSymbol(ctx->getScope()->resolveSymbol(ctx->getTupleName()));
+  return {};
+}
+std::any ResolveWalker::visitTupleUnpackAssign(
+    std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
+  for (const auto &lVal : ctx->getLVals()) {
+    visit(lVal);
+  }
   return {};
 }
 std::any ResolveWalker::visitTupleAccess(

@@ -47,9 +47,10 @@ enum class NodeType {
   Return,
   Root,
   TupleAccess,
-  TupleAssign,
+  TupleElementAssign,
   TupleLiteral,
   TupleType,
+  TupleUnpackAssign,
   Typealias,
   UnaryExpression
 };

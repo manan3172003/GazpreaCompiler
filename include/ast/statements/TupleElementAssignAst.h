@@ -3,13 +3,13 @@
 
 namespace gazprea::ast::statements {
 
-class TupleAssignAst : public AssignLeftAst {
+class TupleElementAssignAst final : public AssignLeftAst {
 private:
   std::string tupleName;
   int32_t fieldIndex;
 
 public:
-  explicit TupleAssignAst(antlr4::Token *token)
+  explicit TupleElementAssignAst(antlr4::Token *token)
       : AssignLeftAst(token), tupleName(), fieldIndex() {}
 
   void setTupleName(std::string name) { tupleName = std::move(name); }

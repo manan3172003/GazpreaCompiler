@@ -30,8 +30,10 @@ public:
   std::any visitProcedureCall(
       std::shared_ptr<statements::ProcedureCallAst> ctx) override;
   std::any visitReturn(std::shared_ptr<statements::ReturnAst> ctx) override;
-  std::any
-  visitTupleAssign(std::shared_ptr<statements::TupleAssignAst> ctx) override;
+  std::any visitTupleElementAssign(
+      std::shared_ptr<statements::TupleElementAssignAst> ctx) override;
+  std::any visitTupleUnpackAssign(
+      std::shared_ptr<statements::TupleUnpackAssignAst> ctx) override;
   std::any
   visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) override;
   std::any
