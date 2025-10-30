@@ -14,7 +14,7 @@ void ResolveWalker::throwIfUndeclaredSymbol(
     throw SymbolError(lineNumber, "Use of undeclared symbol");
 }
 std::shared_ptr<symTable::Type> ResolveWalker::resolvedType(
-    const std::shared_ptr<types::DataTypeAst> &dataType) {
+    int lineNumber, const std::shared_ptr<types::DataTypeAst> &dataType) {
   std::shared_ptr<symTable::Type> type;
   auto globalScope = symTab->getGlobalScope();
   switch (dataType->getNodeType()) {
@@ -52,7 +52,7 @@ std::shared_ptr<symTable::Type> ResolveWalker::resolvedType(
     break;
   }
   if (!type)
-    throw TypeError(0, "Undeclared type used");
+    throw TypeError(lineNumber, "Undeclared type used");
   return type;
 }
 std::any ResolveWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
@@ -75,7 +75,7 @@ std::any ResolveWalker::visitDeclaration(
   if (ctx->getType()) {
     const auto varSymb =
         std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-    varSymb->setType(resolvedType(ctx->getType()));
+    varSymb->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   }
   return {};
 }
@@ -127,7 +127,7 @@ std::any ResolveWalker::visitProcedureParams(
     std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
   const auto varSym =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  varSym->setType(resolvedType(ctx->getParamType()));
+  varSym->setType(resolvedType(ctx->getLineNumber(), ctx->getParamType()));
   return {};
 }
 std::any ResolveWalker::visitProcedureCall(
@@ -179,7 +179,8 @@ ResolveWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   auto tupleTypeSymbol =
       std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getSymbol());
   for (const auto &subType : ctx->getTypes()) {
-    tupleTypeSymbol->addResolvedType(resolvedType(subType));
+    tupleTypeSymbol->addResolvedType(
+        resolvedType(ctx->getLineNumber(), subType));
   }
   return {};
 }
@@ -187,7 +188,7 @@ std::any
 ResolveWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   auto typealiasSymbol =
       std::dynamic_pointer_cast<symTable::TypealiasSymbol>(ctx->getSymbol());
-  typealiasSymbol->setType(resolvedType(ctx->getType()));
+  typealiasSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   return {};
 }
 std::any
@@ -200,7 +201,7 @@ std::any ResolveWalker::visitFunctionParam(
     std::shared_ptr<prototypes::FunctionParamAst> ctx) {
   const auto varSym =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  varSym->setType(resolvedType(ctx->getParamType()));
+  varSym->setType(resolvedType(ctx->getLineNumber(), ctx->getParamType()));
   return {};
 }
 std::any
@@ -211,7 +212,8 @@ ResolveWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
   const auto methodSym =
       std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   if (ctx->getReturnType() != nullptr) { // void procedures can have empty type
-    methodSym->setReturnType(resolvedType(ctx->getReturnType()));
+    methodSym->setReturnType(
+        resolvedType(ctx->getLineNumber(), ctx->getReturnType()));
   }
   return {};
 }
@@ -236,7 +238,8 @@ ResolveWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
 }
 std::any ResolveWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   visit(ctx->getExpression());
-  ctx->setResolvedTargetType(resolvedType(ctx->getTargetType()));
+  ctx->setResolvedTargetType(
+      resolvedType(ctx->getLineNumber(), ctx->getTargetType()));
   return {};
 }
 std::any
