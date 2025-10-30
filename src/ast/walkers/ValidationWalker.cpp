@@ -129,8 +129,8 @@ std::any
 ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
   auto leftExpr = ctx->getLeft();
   auto rightExpr = ctx->getRight();
-  visit(leftExpr);
-  visit(rightExpr);
+  visitExpression(leftExpr);
+  visitExpression(rightExpr);
 
   // Type promote Integer to Real if either of the operands is a real
   if (isOfSymbolType(leftExpr->getInferredSymbolType(), "integer") &&
@@ -333,6 +333,10 @@ std::any ValidationWalker::visitFuncProcCall(
 
   if (!methodSymbol->getReturnType())
     throw ReturnError(ctx->getLineNumber(), "Return type is null");
+  if (inBinaryOp &&
+      methodSymbol->getScopeType() == symTable::ScopeType::Procedure)
+    throw CallError(ctx->getLineNumber(),
+                    "Procedure cannot be called in a binary expression");
 
   const auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
       methodSymbol->getDef());
