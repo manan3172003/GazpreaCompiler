@@ -112,8 +112,8 @@ std::any TypeWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
     ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
     ctx->setInferredDataType(leftExpr->getInferredDataType());
   } else {
-    if (leftExpr->getInferredDataType()->getNodeType() !=
-        rightExpr->getInferredDataType()->getNodeType()) {
+    if (leftExpr->getInferredSymbolType()->getName() !=
+        rightExpr->getInferredSymbolType()->getName()) {
       throw TypeError(ctx->getLineNumber(), "Binary operation: Type mismatch");
     }
   }
@@ -185,6 +185,7 @@ TypeWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
     tupleType->addType(element->getInferredDataType());
   }
   ctx->setInferredSymbolType(resolvedInferredType(tupleType));
+  ctx->setInferredDataType(tupleType);
   return {};
 }
 std::any TypeWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
