@@ -192,9 +192,9 @@ std::any ValidationWalker::visitProcedure(
   auto proto = ctx->getProto();
   if (proto->getName() == "main") {
     if (!proto->getParams().empty())
-      throw MainError(ctx->getLineNumber(), "Main cannot have any arguements");
+      throw MainError(ctx->getLineNumber(), "Main cannot have any arguments");
     if (proto->getReturnType() &&
-        proto->getReturnType()->getNodeType() != NodeType::IntegerType)
+        resolvedInferredType(proto->getReturnType())->getName() != "integer")
       throw MainError(ctx->getLineNumber(), "Main needs to return an integer");
   }
   visit(ctx->getBody());
