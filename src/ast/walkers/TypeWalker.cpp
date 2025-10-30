@@ -12,11 +12,11 @@
 namespace gazprea::ast::walkers {
 // DO NOT USE FOR BINARY OP COMPARISONS
 void TypeWalker::validateTuple(
-    std::shared_ptr<symTable::TupleTypeSymbol> promoteFrom,
-    std::shared_ptr<symTable::TupleTypeSymbol> promoteTo) {
-  auto promoteFromResolvedTypes = promoteFrom->getResolvedTypes();
-  auto promoteToResolvedTypes = promoteTo->getResolvedTypes();
-  auto ctx = promoteFrom->getDef();
+    std::shared_ptr<Ast> ctx,
+    const std::shared_ptr<symTable::TupleTypeSymbol> &promoteFrom,
+    const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo) {
+  const auto promoteFromResolvedTypes = promoteFrom->getResolvedTypes();
+  const auto promoteToResolvedTypes = promoteTo->getResolvedTypes();
 
   if (promoteFromResolvedTypes.size() != promoteToResolvedTypes.size())
     throw SizeError(ctx->getLineNumber(), "Tuple sizes do not match");
@@ -213,11 +213,6 @@ std::any TypeWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
 
   promoteIfNeeded(ctx->getExpr(), ctx->getExpr()->getInferredSymbolType(),
                   methodSymbol->getReturnType(), protoType->getReturnType());
-  // if (ctx->getExpr()->getInferredSymbolType()->getName() == "integer" &&
-  //     methodSymbol->getReturnType()->getName() == "real") {
-  //   ctx->getExpr()->setInferredSymbolType(methodSymbol->getReturnType());
-  //   ctx->getExpr()->setInferredDataType(protoType->getReturnType());
-  // }
 
   if (ctx->getExpr()->getInferredSymbolType()->getName() !=
       methodSymbol->getReturnType()->getName())
@@ -228,7 +223,7 @@ std::any TypeWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
         ctx->getExpr()->getInferredSymbolType());
     auto expectedTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
         methodSymbol->getReturnType());
-    validateTuple(returnExprTuple, expectedTuple);
+    validateTuple(ctx, returnExprTuple, expectedTuple);
   }
   return {};
 }
@@ -336,7 +331,7 @@ std::any TypeWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
 }
 std::any
 TypeWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
-  auto boolType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+  const auto boolType = std::make_shared<types::BooleanTypeAst>(ctx->token);
   ctx->setInferredDataType(boolType);
   ctx->setInferredSymbolType(resolvedInferredType(boolType));
   return {};
@@ -346,20 +341,37 @@ std::any TypeWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
 }
 std::any
 TypeWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
-  auto charType = std::make_shared<types::CharacterTypeAst>(ctx->token);
+  const auto charType = std::make_shared<types::CharacterTypeAst>(ctx->token);
   ctx->setInferredDataType(charType);
   ctx->setInferredSymbolType(resolvedInferredType(charType));
   return {};
 }
 std::any
 TypeWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
-  auto dataTypeSymbol =
+  const auto dataTypeSymbol =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  auto dataType = std::dynamic_pointer_cast<statements::DeclarationAst>(
-                      dataTypeSymbol->getDef())
-                      ->getType();
-  ctx->setInferredDataType(dataType);
-  ctx->setInferredSymbolType(resolvedInferredType(dataType));
+  auto astNode = dataTypeSymbol->getDef();
+
+  if (astNode->getNodeType() == NodeType::Declaration) {
+    auto dataType =
+        std::dynamic_pointer_cast<statements::DeclarationAst>(astNode)
+            ->getType();
+    ctx->setInferredDataType(dataType);
+    ctx->setInferredSymbolType(resolvedInferredType(dataType));
+  } else if (astNode->getNodeType() == NodeType::FunctionParam) {
+    auto dataType =
+        std::dynamic_pointer_cast<prototypes::FunctionParamAst>(astNode)
+            ->getParamType();
+    ctx->setInferredDataType(dataType);
+    ctx->setInferredSymbolType(resolvedInferredType(dataType));
+  } else if (astNode->getNodeType() == NodeType::ProcedureParam) {
+    auto dataType =
+        std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(astNode)
+            ->getParamType();
+    ctx->setInferredDataType(dataType);
+    ctx->setInferredSymbolType(resolvedInferredType(dataType));
+  }
+
   return {};
 }
 std::any TypeWalker::visitIdentifierLeft(

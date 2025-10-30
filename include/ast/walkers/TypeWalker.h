@@ -1,6 +1,7 @@
 #pragma once
 #include "AstWalker.h"
 #include "symTable/SymTable.h"
+#include "symTable/TupleTypeSymbol.h"
 
 namespace gazprea::ast::walkers {
 class TypeWalker final : public AstWalker {
@@ -49,8 +50,10 @@ class TypeWalker final : public AstWalker {
 public:
   std::shared_ptr<symTable::Type>
   resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
-  void validateTuple(std::shared_ptr<symTable::TupleTypeSymbol> promoteFrom,
-                     std::shared_ptr<symTable::TupleTypeSymbol> promoteTo);
+  void
+  validateTuple(std::shared_ptr<Ast> ctx,
+                const std::shared_ptr<symTable::TupleTypeSymbol> &promoteFrom,
+                const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo);
   static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
                              const std::string &typeName);
 
