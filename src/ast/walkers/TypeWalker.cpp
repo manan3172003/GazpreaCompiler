@@ -3,12 +3,37 @@
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/RealTypeAst.h"
+#include "symTable/MethodSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 
 #include <ast/walkers/TypeWalker.h>
 
 namespace gazprea::ast::walkers {
+// DO NOT USE FOR BINARY OP COMPARISONS
+void TypeWalker::validateTuple(
+    std::shared_ptr<symTable::TupleTypeSymbol> promoteFrom,
+    std::shared_ptr<symTable::TupleTypeSymbol> promoteTo) {
+  auto promoteFromResolvedTypes = promoteFrom->getResolvedTypes();
+  auto promoteToResolvedTypes = promoteTo->getResolvedTypes();
+  auto ctx = promoteFrom->getDef();
+
+  if (promoteFromResolvedTypes.size() != promoteToResolvedTypes.size())
+    throw SizeError(ctx->getLineNumber(), "Tuple sizes do not match");
+
+  for (size_t i = 0; i < promoteFromResolvedTypes.size(); i++) {
+    if (promoteFromResolvedTypes[i]->getName() ==
+        promoteToResolvedTypes[i]->getName())
+      continue;
+    if (promoteFromResolvedTypes[i]->getName() == "integer" &&
+        promoteToResolvedTypes[i]->getName() == "real")
+      continue;
+    if (promoteFromResolvedTypes[i]->getName() !=
+        promoteToResolvedTypes[i]->getName())
+      throw TypeError(ctx->getLineNumber(), "Type mismatch");
+  }
+}
+
 bool TypeWalker::isOfSymbolType(
     const std::shared_ptr<symTable::Type> &symbolType,
     const std::string &typeName) {
@@ -16,9 +41,6 @@ bool TypeWalker::isOfSymbolType(
     throw std::runtime_error("SymbolType should not be null");
 
   return symbolType->getName() == typeName;
-}
-template <typename T> T TypeWalker::dPointerCast(symTable::Symbol symbol) {
-  return std::dynamic_pointer_cast<T>(symbol);
 }
 
 std::shared_ptr<symTable::Type> TypeWalker::resolvedInferredType(
@@ -86,7 +108,10 @@ TypeWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
   return {};
 }
 std::any TypeWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
-  return AstWalker::visitBlock(ctx);
+  for (const auto &child : ctx->getChildren()) {
+    visit(child);
+  }
+  return {};
 }
 std::any TypeWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
   auto leftExpr = ctx->getLeft();
@@ -156,7 +181,8 @@ std::any TypeWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
 }
 std::any
 TypeWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
-  return AstWalker::visitProcedure(ctx);
+  visit(ctx->getBody());
+  return {};
 }
 std::any TypeWalker::visitProcedureParams(
     std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
@@ -167,7 +193,44 @@ std::any TypeWalker::visitProcedureCall(
   return AstWalker::visitProcedureCall(ctx);
 }
 std::any TypeWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
-  return AstWalker::visitReturn(ctx);
+  visit(ctx->getExpr());
+  auto curScope = ctx->getScope();
+
+  // Recurse up till we reach MethodSymbol scope
+  while (!std::dynamic_pointer_cast<symTable::MethodSymbol>(curScope)) {
+    if (curScope->getScopeType() == symTable::ScopeType::Global) {
+      throw StatementError(ctx->getLineNumber(), "Invalid return");
+    }
+    curScope = curScope->getEnclosingScope();
+  }
+
+  auto methodSymbol =
+      std::dynamic_pointer_cast<symTable::MethodSymbol>(curScope);
+  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
+      methodSymbol->getDef());
+
+  // promote if return statement type is integer and method return type is real
+
+  promoteIfNeeded(ctx->getExpr(), ctx->getExpr()->getInferredSymbolType(),
+                  methodSymbol->getReturnType(), protoType->getReturnType());
+  // if (ctx->getExpr()->getInferredSymbolType()->getName() == "integer" &&
+  //     methodSymbol->getReturnType()->getName() == "real") {
+  //   ctx->getExpr()->setInferredSymbolType(methodSymbol->getReturnType());
+  //   ctx->getExpr()->setInferredDataType(protoType->getReturnType());
+  // }
+
+  if (ctx->getExpr()->getInferredSymbolType()->getName() !=
+      methodSymbol->getReturnType()->getName())
+    throw TypeError(ctx->getLineNumber(), "Invalid return type");
+
+  if (ctx->getExpr()->getInferredSymbolType()->getName() == "tuple") {
+    auto returnExprTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
+        ctx->getExpr()->getInferredSymbolType());
+    auto expectedTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
+        methodSymbol->getReturnType());
+    validateTuple(returnExprTuple, expectedTuple);
+  }
+  return {};
 }
 std::any
 TypeWalker::visitTupleAssign(std::shared_ptr<statements::TupleAssignAst> ctx) {
@@ -197,7 +260,8 @@ TypeWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
 }
 std::any
 TypeWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
-  return AstWalker::visitFunction(ctx);
+  visit(ctx->getBody());
+  return {};
 }
 std::any TypeWalker::visitFunctionParam(
     std::shared_ptr<prototypes::FunctionParamAst> ctx) {
@@ -209,10 +273,66 @@ TypeWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
 }
 std::any TypeWalker::visitFuncProcCall(
     std::shared_ptr<expressions::FuncProcCallAst> ctx) {
-  return AstWalker::visitFuncProcCall(ctx);
+  auto methodSymbol =
+      std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  if (!methodSymbol->getReturnType())
+    throw ReturnError(ctx->getLineNumber(), "Return type is null");
+
+  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
+      methodSymbol->getDef());
+  auto params = protoType->getParams();
+  auto args = ctx->getArgs();
+
+  for (size_t i = 0; i < args.size(); i++) {
+    const auto &arg = args[i];
+    visit(arg);
+
+    // TODO: Promote args if arg is int and param is real
+
+    if (methodSymbol->getScopeType() == symTable::ScopeType::Function) {
+      const auto &param =
+          std::dynamic_pointer_cast<prototypes::FunctionParamAst>(params[i]);
+      const auto &paramVarSymbol =
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(
+              param->getSymbol());
+
+      if (paramVarSymbol->getType()->getName() == "real" &&
+          arg->getInferredSymbolType()->getName() == "integer") {
+        arg->setInferredSymbolType(paramVarSymbol->getType());
+        arg->setInferredDataType(param->getParamType());
+      }
+
+      if (arg->getInferredSymbolType()->getName() !=
+          paramVarSymbol->getType()->getName())
+        throw TypeError(ctx->getLineNumber(), "Argument type mismatch");
+    } else if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {
+      const auto &param =
+          std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
+      const auto &paramVarSymbol =
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(
+              param->getSymbol());
+
+      if (paramVarSymbol->getType()->getName() == "real" &&
+          arg->getInferredSymbolType()->getName() == "integer") {
+        arg->setInferredSymbolType(paramVarSymbol->getType());
+        arg->setInferredDataType(param->getParamType());
+      }
+
+      if (arg->getInferredSymbolType()->getName() !=
+          paramVarSymbol->getType()->getName())
+        throw TypeError(ctx->getLineNumber(), "Argument type mismatch");
+    }
+  }
+
+  ctx->setInferredSymbolType(methodSymbol->getReturnType());
+  ctx->setInferredDataType(protoType->getReturnType());
+  return {};
 }
 std::any TypeWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
-  return AstWalker::visitArg(ctx);
+  visit(ctx->getExpr());
+  ctx->setInferredSymbolType(ctx->getExpr()->getInferredSymbolType());
+  ctx->setInferredDataType(ctx->getExpr()->getInferredDataType());
+  return {};
 }
 std::any
 TypeWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {

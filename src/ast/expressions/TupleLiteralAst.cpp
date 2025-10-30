@@ -2,7 +2,7 @@
 namespace gazprea::ast::expressions {
 
 void TupleLiteralAst::addElement(std::shared_ptr<ExpressionAst> element) {
-  elements.push_back(std::move(element));
+  elements.push_back(element);
 }
 
 NodeType TupleLiteralAst::getNodeType() const { return NodeType::TupleLiteral; }

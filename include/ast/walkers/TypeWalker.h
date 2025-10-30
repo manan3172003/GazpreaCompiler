@@ -14,7 +14,7 @@ class TypeWalker final : public AstWalker {
       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Tuple
   };
 
-  int nodeTypeToIndex(const std::string &typeName) {
+  static int nodeTypeToIndex(const std::string &typeName) {
     if (typeName == "integer")
       return 0;
     if (typeName == "real")
@@ -29,18 +29,30 @@ class TypeWalker final : public AstWalker {
   }
 
   bool isValidOp(const std::string &typeName,
-                 expressions::BinaryOpType opType) {
+                 expressions::BinaryOpType opType) const {
     if (nodeTypeToIndex(typeName) == -1)
       throw std::runtime_error("Invalid data type");
     return opTable[nodeTypeToIndex(typeName)][static_cast<int>(opType)];
   }
 
+  void promoteIfNeeded(std::shared_ptr<expressions::ExpressionAst> ctx,
+                       std::shared_ptr<symTable::Type> promoteFrom,
+                       std::shared_ptr<symTable::Type> promoteTo,
+                       std::shared_ptr<types::DataTypeAst> promoteToDataType) {
+    if (promoteFrom->getName() == "integer" && promoteTo->getName() == "real") {
+      ctx->setInferredSymbolType(promoteTo);
+      ctx->setInferredDataType(promoteToDataType);
+      return;
+    }
+  }
+
 public:
   std::shared_ptr<symTable::Type>
   resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
-  bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
-                      const std::string &typeName);
-  template <typename T> T dPointerCast(symTable::Symbol symbol);
+  void validateTuple(std::shared_ptr<symTable::TupleTypeSymbol> promoteFrom,
+                     std::shared_ptr<symTable::TupleTypeSymbol> promoteTo);
+  static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
+                             const std::string &typeName);
 
   explicit TypeWalker(std::shared_ptr<symTable::SymbolTable> symTab)
       : symTab(symTab) {};

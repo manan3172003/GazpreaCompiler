@@ -10,7 +10,7 @@ std::string OutputAst::toStringTree(std::string prefix) const {
 }
 void OutputAst::setExpression(
     std::shared_ptr<expressions::ExpressionAst> expr) {
-  this->expr = std::move(expr);
+  this->expr = expr;
 }
 std::shared_ptr<expressions::ExpressionAst> OutputAst::getExpression() const {
   return this->expr;

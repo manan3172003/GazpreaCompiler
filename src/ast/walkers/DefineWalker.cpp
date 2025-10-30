@@ -121,6 +121,7 @@ std::any DefineWalker::visitProcedureCall(
 }
 std::any DefineWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   visit(ctx->getExpr());
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefineWalker::visitTupleAssign(

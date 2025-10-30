@@ -12,12 +12,10 @@ class FunctionAst final : public Ast {
 public:
   explicit FunctionAst(antlr4::Token *token) : Ast(token) {};
 
-  void setProto(std::shared_ptr<PrototypeAst> proto_) {
-    proto = std::move(proto_);
-  }
+  void setProto(std::shared_ptr<PrototypeAst> proto_) { proto = proto_; }
   std::shared_ptr<PrototypeAst> getProto() const { return proto; }
   void setBody(std::shared_ptr<statements::StatementAst> body_) {
-    body = std::move(body_);
+    body = body_;
   }
   std::shared_ptr<statements::StatementAst> getBody() const { return body; }
 
