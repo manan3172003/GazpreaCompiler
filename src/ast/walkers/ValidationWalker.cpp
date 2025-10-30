@@ -82,9 +82,17 @@ std::shared_ptr<symTable::Type> ValidationWalker::resolvedInferredType(
 }
 
 std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
+  bool visitedMain = false;
   for (const auto &child : ctx->children) {
+    if (child->getNodeType() == NodeType::Procedure &&
+        std::dynamic_pointer_cast<prototypes::ProcedureAst>(child)
+                ->getProto()
+                ->getName() == "main")
+      visitedMain = true;
     visit(child);
   }
+  if (not visitedMain)
+    throw MainError(ctx->getLineNumber(), "Main symbol not found");
   return {};
 }
 std::any ValidationWalker::visitAssignment(
