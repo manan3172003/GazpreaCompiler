@@ -103,15 +103,19 @@ std::any ValidationWalker::visitDeclaration(
     std::shared_ptr<statements::DeclarationAst> ctx) {
   if (ctx->getExpr())
     visit(ctx->getExpr());
+  auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   if (ctx->getType()) {
     // Promoting type here
 
   } else {
     // setting inferred type here
-    std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())
+    variableSymbol
         ->setType(ctx->getExpr()->getInferredSymbolType());
     ctx->setType(ctx->getExpr()->getInferredDataType());
-    // TODO: Check type
+  }
+  // type check
+  if (variableSymbol->getType()->getName() != ctx->getExpr()->getInferredSymbolType()->getName()) {
+    throw TypeError(ctx->getLineNumber(), "Variable type does not match expression type");
   }
 
   return {};
@@ -395,7 +399,10 @@ ValidationWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
 }
 std::any
 ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
-  return AstWalker::visitCast(ctx);
+  visit(ctx->getExpression());
+  ctx->setInferredSymbolType(ctx->getExpression()->getInferredSymbolType());
+  ctx->setInferredDataType(ctx->getExpression()->getInferredDataType());
+  return {};
 }
 std::any
 ValidationWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
