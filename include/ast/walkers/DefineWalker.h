@@ -10,6 +10,11 @@ public:
   explicit DefineWalker(std::shared_ptr<symTable::SymbolTable> symTab)
       : symTab(symTab) {};
   ~DefineWalker() override = default;
+  void throwGlobalError(std::shared_ptr<Ast> ctx);
+  void throwDuplicateSymbolError(std::shared_ptr<Ast> ctx,
+                                 const std::string &name,
+                                 std::shared_ptr<symTable::Scope> curScope,
+                                 bool isType);
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
   std::any
   visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) override;

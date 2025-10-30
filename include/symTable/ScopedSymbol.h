@@ -29,5 +29,7 @@ public:
   getTypeSymbols() const {
     return symbols;
   }
+  std::shared_ptr<Symbol> getSymbol(const std::string &name) override;
+  std::shared_ptr<Symbol> getTypeSymbol(const std::string &name) override;
 };
 } // namespace gazprea::symTable

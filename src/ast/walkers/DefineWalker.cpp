@@ -1,3 +1,4 @@
+#include "CompileTimeExceptions.h"
 #include "ast/types/AliasTypeAst.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
@@ -7,6 +8,24 @@
 #include <symTable/MethodSymbol.h>
 
 namespace gazprea::ast::walkers {
+void DefineWalker::throwGlobalError(std::shared_ptr<Ast> ctx) {
+  auto curScope = symTab->getCurrentScope();
+  if (curScope->getScopeType() != symTable::ScopeType::Global)
+    throw GlobalError(ctx->getLineNumber(),
+                      "Symbol can only be defined in Global");
+}
+
+void DefineWalker::throwDuplicateSymbolError(
+    std::shared_ptr<Ast> ctx, const std::string &name,
+    std::shared_ptr<symTable::Scope> curScope, bool isType) {
+  if (isType) {
+    if (curScope->getTypeSymbol(name))
+      throw SymbolError(ctx->getLineNumber(), "Duplicate symbol");
+  } else {
+    if (curScope->getSymbol(name))
+      throw SymbolError(ctx->getLineNumber(), "Duplicate symbol");
+  }
+}
 std::any DefineWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   ctx->setScope(symTab->getGlobalScope());
   for (const auto &child : ctx->children) {
@@ -26,6 +45,8 @@ std::any DefineWalker::visitDeclaration(
   if (ctx->getExpr()) {
     visit(ctx->getExpr());
   }
+  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(),
+                            false);
   const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
       ctx->getName(), ctx->getQualifier());
   varSymbol->setDef(ctx);
@@ -82,6 +103,9 @@ std::any DefineWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
 }
 std::any
 DefineWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
+  throwGlobalError(ctx);
+  throwDuplicateSymbolError(ctx, ctx->getProto()->getName(),
+                            symTab->getCurrentScope(), false);
   const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
       ctx->getProto()->getName(), ctx->getProto()->getProtoType());
 
@@ -104,6 +128,8 @@ std::any DefineWalker::visitProcedureParams(
     std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
   const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
       ctx->getName(), ctx->getQualifier());
+  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(),
+                            false);
   ctx->setScope(symTab->getCurrentScope());
   symTab->getCurrentScope()->defineSymbol(varSymbol);
   if (ctx->getParamType()->getNodeType() == NodeType::TupleType) {
@@ -183,6 +209,8 @@ DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
 }
 std::any
 DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
+  throwDuplicateSymbolError(ctx, ctx->getAlias(), symTab->getGlobalScope(),
+                            true);
   auto typealiasSymbol =
       std::make_shared<symTable::TypealiasSymbol>(ctx->getAlias());
   typealiasSymbol->setDef(ctx);
@@ -195,6 +223,9 @@ DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
 }
 std::any
 DefineWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
+  throwGlobalError(ctx);
+  throwDuplicateSymbolError(ctx, ctx->getProto()->getName(),
+                            symTab->getCurrentScope(), false);
   const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
       ctx->getProto()->getName(), ctx->getProto()->getProtoType());
   ctx->getProto()->setSymbol(methodSymbol);
@@ -212,6 +243,8 @@ std::any DefineWalker::visitFunctionParam(
     std::shared_ptr<prototypes::FunctionParamAst> ctx) {
   const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
       ctx->getName(), ctx->getQualifier());
+  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(),
+                            false);
   ctx->setScope(symTab->getCurrentScope());
   symTab->getCurrentScope()->defineSymbol(varSymbol);
 

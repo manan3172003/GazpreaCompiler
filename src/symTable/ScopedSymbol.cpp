@@ -9,6 +9,21 @@ void ScopedSymbol::setEnclosingScope(std::shared_ptr<Scope> scope) {
 std::shared_ptr<Scope> ScopedSymbol::getEnclosingScope() {
   return enclosingScope.lock();
 }
+std::shared_ptr<Symbol> ScopedSymbol::getSymbol(const std::string &name) {
+  for (const auto &[_name, symbol] : symbols) {
+    if (name == _name)
+      return symbol;
+  }
+  return nullptr;
+}
+std::shared_ptr<Symbol> ScopedSymbol::getTypeSymbol(const std::string &name) {
+  for (const auto &[_name, symbol] : symbols) {
+    if (_name == name)
+      return symbol;
+  }
+  return nullptr;
+}
+
 void ScopedSymbol::defineSymbol(std::shared_ptr<Symbol> sym) {
   symbols.emplace_back(sym->getName(), sym);
   sym->setScope(shared_from_this());

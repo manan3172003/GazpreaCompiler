@@ -5,6 +5,19 @@
 
 namespace gazprea::symTable {
 Scope::~Scope() = default;
+
+std::shared_ptr<Symbol> BaseScope::getSymbol(const std::string &name) {
+  if (symbols.find(name) == symbols.end()) {
+    return nullptr;
+  }
+  return symbols[name];
+}
+std::shared_ptr<Symbol> BaseScope::getTypeSymbol(const std::string &name) {
+  if (typeSymbols.find(name) == typeSymbols.end()) {
+    return nullptr;
+  }
+  return typeSymbols[name];
+}
 void BaseScope::setEnclosingScope(std::shared_ptr<Scope> scope) {
   enclosingScope = scope;
 }
