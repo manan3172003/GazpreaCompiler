@@ -189,6 +189,14 @@ ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
 }
 std::any ValidationWalker::visitProcedure(
     std::shared_ptr<prototypes::ProcedureAst> ctx) {
+  auto proto = ctx->getProto();
+  if (proto->getName() == "main") {
+    if (!proto->getParams().empty())
+      throw MainError(ctx->getLineNumber(), "Main cannot have any arguements");
+    if (proto->getReturnType() &&
+        proto->getReturnType()->getNodeType() != NodeType::IntegerType)
+      throw MainError(ctx->getLineNumber(), "Main needs to return an integer");
+  }
   visit(ctx->getBody());
   return {};
 }
