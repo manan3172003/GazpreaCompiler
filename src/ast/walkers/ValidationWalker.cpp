@@ -224,7 +224,13 @@ std::any ValidationWalker::visitProcedureParams(
 }
 std::any ValidationWalker::visitProcedureCall(
     std::shared_ptr<statements::ProcedureCallAst> ctx) {
-  return AstWalker::visitProcedureCall(ctx);
+  const auto methodSymbol =
+      std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  if (methodSymbol->getScopeType() == symTable::ScopeType::Function) {
+    throw CallError(ctx->getLineNumber(),
+                    "Call statement used on non-procedure type");
+  }
+  return {};
 }
 std::any
 ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
