@@ -186,22 +186,12 @@ ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
 
   // if left expr and right expr in cond is real or int then if the operation is
   // <,>,<=,>= then set expression type to boolean
-  if (ctx->getBinaryOpType() == expressions::BinaryOpType::LESS_THAN ||
-      ctx->getBinaryOpType() == expressions::BinaryOpType::GREATER_THAN ||
-      ctx->getBinaryOpType() == expressions::BinaryOpType::LESS_EQUAL ||
-      ctx->getBinaryOpType() == expressions::BinaryOpType::GREATER_EQUAL ||
-      ctx->getBinaryOpType() == expressions::BinaryOpType::EQUAL ||
-      ctx->getBinaryOpType() == expressions::BinaryOpType::NOT_EQUAL) {
-    // Only set boolean for integer/real comparisons
-    if ((isOfSymbolType(ctx->getLeft()->getInferredSymbolType(), "real") ||
-         isOfSymbolType(ctx->getLeft()->getInferredSymbolType(), "integer")) &&
-        (isOfSymbolType(ctx->getRight()->getInferredSymbolType(), "real") ||
-         isOfSymbolType(ctx->getRight()->getInferredSymbolType(), "integer"))) {
-      auto booleanDataType =
-          std::make_shared<types::BooleanTypeAst>(ctx->token);
-      auto booleanTypeSymbol = resolvedInferredType(booleanDataType);
-      ctx->setInferredSymbolType(booleanTypeSymbol);
-    }
+  if (isComparisonOperator(ctx->getBinaryOpType()) &&
+      areBothNumeric(leftExpr, rightExpr)) {
+    auto booleanDataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+    auto booleanTypeSymbol = resolvedInferredType(booleanDataType);
+    ctx->setInferredSymbolType(booleanTypeSymbol);
+    ctx->setInferredDataType(booleanDataType);
   }
 
   return {};
