@@ -93,7 +93,8 @@ TypeWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
 }
 std::any
 TypeWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
-  visit(ctx->getExpr());
+  if (ctx->getExpr())
+    visit(ctx->getExpr());
   if (ctx->getType()) {
     // Promoting type here
 
