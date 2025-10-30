@@ -58,8 +58,26 @@ class ValidationWalker final : public AstWalker {
            (currentScope->getScopeType() != symTable::ScopeType::Function &&
             currentScope->getScopeType() != symTable::ScopeType::Procedure)) {
       currentScope = currentScope->getEnclosingScope();
-    }
+            }
     return currentScope;
+  }
+
+  static bool
+  hasReturnInFunction(const std::shared_ptr<statements::BlockAst> &block) {
+    for (const auto &stat : block->getChildren()) {
+      if (stat->getNodeType() == NodeType::Return) {
+        return true;
+      }
+      // Recursively check nested blocks
+      if (stat->getNodeType() == NodeType::Block) {
+        auto nestedBlock =
+            std::dynamic_pointer_cast<statements::BlockAst>(stat);
+        if (hasReturnInFunction(nestedBlock)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
 public:

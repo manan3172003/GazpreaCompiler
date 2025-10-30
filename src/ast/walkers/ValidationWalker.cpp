@@ -232,7 +232,18 @@ std::any ValidationWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> c
 std::any ValidationWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   return AstWalker::visitTypealias(ctx);
 }
-std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
+std::any
+ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
+  if (!ctx->getProto()->getReturnType()) {
+    throw ReturnError(ctx->getLineNumber(), "Function must have a return type");
+  }
+  const auto blockAst =
+      std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
+  if (!hasReturnInFunction(blockAst)) {
+    throw ReturnError(ctx->getLineNumber(),
+                      "Function must have a return statement");
+  }
+
   visit(ctx->getBody());
   return {};
 }

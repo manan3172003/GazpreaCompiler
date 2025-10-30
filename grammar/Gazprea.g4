@@ -70,7 +70,7 @@ loop_stat
     | LOOP stat #infiniteLoop
     ;
 
-block_stat: LBRACE stat+ RBRACE;
+block_stat: LBRACE stat* RBRACE;
 
 assign_stat
     : assign_left EQUAL expr SC #singularAssign
