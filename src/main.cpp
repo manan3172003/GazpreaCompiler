@@ -1,6 +1,7 @@
 #include "ANTLRFileStream.h"
 #include "BackEnd.h"
 #include "CommonTokenStream.h"
+#include "ErrorListener.h"
 #include "GazpreaLexer.h"
 #include "GazpreaParser.h"
 #include "ast/RootAst.h"
@@ -24,9 +25,12 @@ int main(int argc, char **argv) {
   afs.loadFromFile(argv[1]);
   gazprea::GazpreaLexer lexer(&afs);
   antlr4::CommonTokenStream tokens(&lexer);
-  gazprea::GazpreaParser parser(&tokens);
 
   try {
+    gazprea::GazpreaParser parser(&tokens);
+    parser.removeErrorListeners();
+    parser.addErrorListener(new gazprea::ErrorListener());
+
     antlr4::tree::ParseTree *tree = parser.file();
 
     gazprea::ast::walkers::AstBuilder astBuilder;

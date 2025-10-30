@@ -1,8 +1,9 @@
 # Gather our source files in this directory.
 set(
   gazprea_src_files
-    "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/BackEnd.cpp"
+    	"${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+    	"${CMAKE_CURRENT_SOURCE_DIR}/BackEnd.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/ErrorListener.cpp"
 )
 
 # Build our executable from the source files.
