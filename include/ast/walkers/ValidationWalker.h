@@ -4,7 +4,7 @@
 #include "symTable/TupleTypeSymbol.h"
 
 namespace gazprea::ast::walkers {
-class TypeWalker final : public AstWalker {
+class ValidationWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
   int opTable[5][15] = {
       //  ^  *  /  %  +  -  <  > <= >= == !=  & or xor
@@ -57,9 +57,9 @@ public:
   static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
                              const std::string &typeName);
 
-  explicit TypeWalker(std::shared_ptr<symTable::SymbolTable> symTab)
+  explicit ValidationWalker(std::shared_ptr<symTable::SymbolTable> symTab)
       : symTab(symTab) {};
-  ~TypeWalker() override = default;
+  ~ValidationWalker() override = default;
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
   std::any
   visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) override;

@@ -7,7 +7,7 @@
 #include "ast/walkers/AstBuilder.h"
 #include "ast/walkers/DefineWalker.h"
 #include "ast/walkers/ResolveWalker.h"
-#include "ast/walkers/TypeWalker.h"
+#include "ast/walkers/ValidationWalker.h"
 #include "tree/ParseTree.h"
 #include <fstream>
 #include <iostream>
@@ -46,8 +46,8 @@ int main(int argc, char **argv) {
 
     // std::cout << rootAst->toStringTree("") << std::endl;
 
-    gazprea::ast::walkers::TypeWalker typeInferPromoWalker(symTab);
-    typeInferPromoWalker.visit(rootAst);
+    gazprea::ast::walkers::ValidationWalker validationWalker(symTab);
+    validationWalker.visit(rootAst);
 
     std::cout << rootAst->toStringTree("") << std::endl;
 

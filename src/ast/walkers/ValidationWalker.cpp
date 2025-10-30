@@ -7,11 +7,11 @@
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 
-#include <ast/walkers/TypeWalker.h>
+#include <ast/walkers/ValidationWalker.h>
 
 namespace gazprea::ast::walkers {
 // DO NOT USE FOR BINARY OP COMPARISONS
-void TypeWalker::validateTuple(
+void ValidationWalker::validateTuple(
     std::shared_ptr<Ast> ctx,
     const std::shared_ptr<symTable::TupleTypeSymbol> &promoteFrom,
     const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo) {
@@ -34,7 +34,7 @@ void TypeWalker::validateTuple(
   }
 }
 
-bool TypeWalker::isOfSymbolType(
+bool ValidationWalker::isOfSymbolType(
     const std::shared_ptr<symTable::Type> &symbolType,
     const std::string &typeName) {
   if (!symbolType)
@@ -43,7 +43,7 @@ bool TypeWalker::isOfSymbolType(
   return symbolType->getName() == typeName;
 }
 
-std::shared_ptr<symTable::Type> TypeWalker::resolvedInferredType(
+std::shared_ptr<symTable::Type> ValidationWalker::resolvedInferredType(
     const std::shared_ptr<types::DataTypeAst> &dataType) {
   auto globalScope = symTab->getGlobalScope();
   switch (dataType->getNodeType()) {
@@ -81,18 +81,18 @@ std::shared_ptr<symTable::Type> TypeWalker::resolvedInferredType(
   }
 }
 
-std::any TypeWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
+std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   for (const auto &child : ctx->children) {
     visit(child);
   }
   return {};
 }
-std::any
-TypeWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
+std::any ValidationWalker::visitAssignment(
+    std::shared_ptr<statements::AssignmentAst> ctx) {
   return AstWalker::visitAssignment(ctx);
 }
-std::any
-TypeWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
+std::any ValidationWalker::visitDeclaration(
+    std::shared_ptr<statements::DeclarationAst> ctx) {
   if (ctx->getExpr())
     visit(ctx->getExpr());
   if (ctx->getType()) {
@@ -108,13 +108,15 @@ TypeWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
 
   return {};
 }
-std::any TypeWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
+std::any
+ValidationWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   for (const auto &child : ctx->getChildren()) {
     visit(child);
   }
   return {};
 }
-std::any TypeWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
+std::any
+ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
   auto leftExpr = ctx->getLeft();
   auto rightExpr = ctx->getRight();
   visit(leftExpr);
@@ -165,37 +167,41 @@ std::any TypeWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
 
   return {};
 }
-std::any TypeWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
+std::any
+ValidationWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
   return AstWalker::visitBreak(ctx);
 }
 std::any
-TypeWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) {
+ValidationWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) {
   return AstWalker::visitContinue(ctx);
 }
-std::any
-TypeWalker::visitConditional(std::shared_ptr<statements::ConditionalAst> ctx) {
+std::any ValidationWalker::visitConditional(
+    std::shared_ptr<statements::ConditionalAst> ctx) {
   return AstWalker::visitConditional(ctx);
 }
-std::any TypeWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
+std::any
+ValidationWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
   return AstWalker::visitInput(ctx);
 }
-std::any TypeWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
+std::any
+ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
   return AstWalker::visitOutput(ctx);
 }
-std::any
-TypeWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
+std::any ValidationWalker::visitProcedure(
+    std::shared_ptr<prototypes::ProcedureAst> ctx) {
   visit(ctx->getBody());
   return {};
 }
-std::any TypeWalker::visitProcedureParams(
+std::any ValidationWalker::visitProcedureParams(
     std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
   return AstWalker::visitProcedureParams(ctx);
 }
-std::any TypeWalker::visitProcedureCall(
+std::any ValidationWalker::visitProcedureCall(
     std::shared_ptr<statements::ProcedureCallAst> ctx) {
   return AstWalker::visitProcedureCall(ctx);
 }
-std::any TypeWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
+std::any
+ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   visit(ctx->getExpr());
   auto curScope = ctx->getScope();
 
@@ -228,16 +234,16 @@ std::any TypeWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   }
   return {};
 }
-std::any
-TypeWalker::visitTupleAssign(std::shared_ptr<statements::TupleAssignAst> ctx) {
+std::any ValidationWalker::visitTupleAssign(
+    std::shared_ptr<statements::TupleAssignAst> ctx) {
   return AstWalker::visitTupleAssign(ctx);
 }
-std::any
-TypeWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
+std::any ValidationWalker::visitTupleAccess(
+    std::shared_ptr<expressions::TupleAccessAst> ctx) {
   return AstWalker::visitTupleAccess(ctx);
 }
-std::any
-TypeWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
+std::any ValidationWalker::visitTuple(
+    std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   auto tupleType = std::make_shared<types::TupleTypeAst>(ctx->token);
   for (const auto &element : ctx->getElements()) {
     visit(element);
@@ -247,27 +253,28 @@ TypeWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   ctx->setInferredDataType(tupleType);
   return {};
 }
-std::any TypeWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
+std::any
+ValidationWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   return AstWalker::visitTupleType(ctx);
 }
-std::any
-TypeWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
+std::any ValidationWalker::visitTypealias(
+    std::shared_ptr<statements::TypealiasAst> ctx) {
   return AstWalker::visitTypealias(ctx);
 }
 std::any
-TypeWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
+ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   visit(ctx->getBody());
   return {};
 }
-std::any TypeWalker::visitFunctionParam(
+std::any ValidationWalker::visitFunctionParam(
     std::shared_ptr<prototypes::FunctionParamAst> ctx) {
   return AstWalker::visitFunctionParam(ctx);
 }
-std::any
-TypeWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
+std::any ValidationWalker::visitPrototype(
+    std::shared_ptr<prototypes::PrototypeAst> ctx) {
   return AstWalker::visitPrototype(ctx);
 }
-std::any TypeWalker::visitFuncProcCall(
+std::any ValidationWalker::visitFuncProcCall(
     std::shared_ptr<expressions::FuncProcCallAst> ctx) {
   auto methodSymbol =
       std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
@@ -317,31 +324,32 @@ std::any TypeWalker::visitFuncProcCall(
   ctx->setInferredDataType(protoType->getReturnType());
   return {};
 }
-std::any TypeWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
+std::any ValidationWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
   visit(ctx->getExpr());
   ctx->setInferredSymbolType(ctx->getExpr()->getInferredSymbolType());
   ctx->setInferredDataType(ctx->getExpr()->getInferredDataType());
   return {};
 }
 std::any
-TypeWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
+ValidationWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
   const auto boolType = std::make_shared<types::BooleanTypeAst>(ctx->token);
   ctx->setInferredDataType(boolType);
   ctx->setInferredSymbolType(resolvedInferredType(boolType));
   return {};
 }
-std::any TypeWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
+std::any
+ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   return AstWalker::visitCast(ctx);
 }
 std::any
-TypeWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
+ValidationWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
   const auto charType = std::make_shared<types::CharacterTypeAst>(ctx->token);
   ctx->setInferredDataType(charType);
   ctx->setInferredSymbolType(resolvedInferredType(charType));
   return {};
 }
-std::any
-TypeWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
+std::any ValidationWalker::visitIdentifier(
+    std::shared_ptr<expressions::IdentifierAst> ctx) {
   const auto dataTypeSymbol =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   auto astNode = dataTypeSymbol->getDef();
@@ -368,34 +376,35 @@ TypeWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
 
   return {};
 }
-std::any TypeWalker::visitIdentifierLeft(
+std::any ValidationWalker::visitIdentifierLeft(
     std::shared_ptr<statements::IdentifierLeftAst> ctx) {
   return AstWalker::visitIdentifierLeft(ctx);
 }
-std::any
-TypeWalker::visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
+std::any ValidationWalker::visitInteger(
+    std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
   auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);
   ctx->setInferredDataType(intType);
   ctx->setInferredSymbolType(resolvedInferredType(intType));
   return {};
 }
 std::any
-TypeWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
+ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
   auto realType = std::make_shared<types::RealTypeAst>(ctx->token);
   ctx->setInferredDataType(realType);
   ctx->setInferredSymbolType(resolvedInferredType(realType));
   return {};
 }
-std::any TypeWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
+std::any
+ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   visit(ctx->getExpression());
   ctx->setInferredSymbolType(ctx->getExpression()->getInferredSymbolType());
   ctx->setInferredDataType(ctx->getExpression()->getInferredDataType());
   return {};
 }
-std::any TypeWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
+std::any ValidationWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
   return AstWalker::visitLoop(ctx);
 }
-std::any TypeWalker::visitIteratorLoop(
+std::any ValidationWalker::visitIteratorLoop(
     std::shared_ptr<statements::IteratorLoopAst> ctx) {
   return AstWalker::visitIteratorLoop(ctx);
 }
