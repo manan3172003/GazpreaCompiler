@@ -82,6 +82,29 @@ std::shared_ptr<symTable::Type> ValidationWalker::resolvedInferredType(
   }
 }
 
+// Check if type is integer or real
+bool ValidationWalker::isNumericType(
+    const std::shared_ptr<symTable::Type> &type) const {
+  return isOfSymbolType(type, "integer") || isOfSymbolType(type, "real");
+}
+
+// Check if operator is a comparison operator
+bool ValidationWalker::isComparisonOperator(
+    expressions::BinaryOpType opType) const {
+  return opType == expressions::BinaryOpType::LESS_THAN ||
+         opType == expressions::BinaryOpType::GREATER_THAN ||
+         opType == expressions::BinaryOpType::LESS_EQUAL ||
+         opType == expressions::BinaryOpType::GREATER_EQUAL;
+}
+
+// check if left and right are real or integer
+bool ValidationWalker::areBothNumeric(
+    const std::shared_ptr<expressions::ExpressionAst> &left,
+    const std::shared_ptr<expressions::ExpressionAst> &right) const {
+  return isNumericType(left->getInferredSymbolType()) &&
+         isNumericType(right->getInferredSymbolType());
+}
+
 std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   bool visitedMain = false;
   for (const auto &child : ctx->children) {

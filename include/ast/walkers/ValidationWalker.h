@@ -72,6 +72,11 @@ public:
                 const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo);
   static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
                              const std::string &typeName);
+  bool isNumericType(const std::shared_ptr<symTable::Type> &type) const;
+  bool isComparisonOperator(expressions::BinaryOpType opType) const;
+  bool areBothNumeric(
+      const std::shared_ptr<expressions::ExpressionAst> &left,
+      const std::shared_ptr<expressions::ExpressionAst> &right) const;
 
   explicit ValidationWalker(std::shared_ptr<symTable::SymbolTable> symTab)
       : symTab(symTab) {};
