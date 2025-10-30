@@ -426,6 +426,10 @@ std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
   if (ctx->expr()) {
     declAst->setExpr(std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(
         visit(ctx->expr())));
+  } else {
+    // TODO: Set everything to base (false, '\0', 0, 0.0)
+    // normal primitives (boolean, character, integer, real)
+    // tuples
   }
 
   return std::static_pointer_cast<statements::StatementAst>(declAst);

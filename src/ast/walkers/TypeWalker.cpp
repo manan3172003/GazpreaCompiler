@@ -127,12 +127,14 @@ std::any TypeWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
     ctx->setInferredDataType(leftExpr->getInferredDataType());
   } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "integer") &&
              isOfSymbolType(rightExpr->getInferredSymbolType(), "real")) {
-    ctx->setInferredSymbolType(rightExpr->getInferredSymbolType());
-    ctx->setInferredDataType(rightExpr->getInferredDataType());
+    promoteIfNeeded(ctx, leftExpr->getInferredSymbolType(),
+                    rightExpr->getInferredSymbolType(),
+                    rightExpr->getInferredDataType());
   } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "real") &&
              isOfSymbolType(rightExpr->getInferredSymbolType(), "integer")) {
-    ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
-    ctx->setInferredDataType(leftExpr->getInferredDataType());
+    promoteIfNeeded(ctx, rightExpr->getInferredSymbolType(),
+                    leftExpr->getInferredSymbolType(),
+                    leftExpr->getInferredDataType());
   } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "real") &&
              isOfSymbolType(rightExpr->getInferredSymbolType(), "real")) {
     ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
@@ -210,14 +212,12 @@ std::any TypeWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
       methodSymbol->getDef());
 
-  // promote if return statement type is integer and method return type is real
-
-  promoteIfNeeded(ctx->getExpr(), ctx->getExpr()->getInferredSymbolType(),
-                  methodSymbol->getReturnType(), protoType->getReturnType());
-
   if (ctx->getExpr()->getInferredSymbolType()->getName() !=
-      methodSymbol->getReturnType()->getName())
-    throw TypeError(ctx->getLineNumber(), "Invalid return type");
+      methodSymbol->getReturnType()->getName()) {
+    if (not(ctx->getExpr()->getInferredSymbolType()->getName() == "integer" &&
+            methodSymbol->getReturnType()->getName() == "real"))
+      throw TypeError(ctx->getLineNumber(), "Invalid return type");
+  }
 
   if (ctx->getExpr()->getInferredSymbolType()->getName() == "tuple") {
     auto returnExprTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
@@ -292,11 +292,8 @@ std::any TypeWalker::visitFuncProcCall(
           std::dynamic_pointer_cast<symTable::VariableSymbol>(
               param->getSymbol());
 
-      if (paramVarSymbol->getType()->getName() == "real" &&
-          arg->getInferredSymbolType()->getName() == "integer") {
-        arg->setInferredSymbolType(paramVarSymbol->getType());
-        arg->setInferredDataType(param->getParamType());
-      }
+      promoteIfNeeded(arg, arg->getInferredSymbolType(),
+                      paramVarSymbol->getType(), param->getParamType());
 
       if (arg->getInferredSymbolType()->getName() !=
           paramVarSymbol->getType()->getName())
@@ -307,12 +304,8 @@ std::any TypeWalker::visitFuncProcCall(
       const auto &paramVarSymbol =
           std::dynamic_pointer_cast<symTable::VariableSymbol>(
               param->getSymbol());
-
-      if (paramVarSymbol->getType()->getName() == "real" &&
-          arg->getInferredSymbolType()->getName() == "integer") {
-        arg->setInferredSymbolType(paramVarSymbol->getType());
-        arg->setInferredDataType(param->getParamType());
-      }
+      promoteIfNeeded(arg, arg->getInferredSymbolType(),
+                      paramVarSymbol->getType(), param->getParamType());
 
       if (arg->getInferredSymbolType()->getName() !=
           paramVarSymbol->getType()->getName())

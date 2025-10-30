@@ -8,6 +8,7 @@ global_stat
     | typealias_stat
     | function_stat
     | procedure_stat
+    | block_stat
     ;
 
 typealias_stat: TYPEALIAS type ID SC;
