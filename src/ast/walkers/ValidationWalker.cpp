@@ -120,7 +120,16 @@ std::any ValidationWalker::visitDeclaration(
 }
 std::any
 ValidationWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
+  bool visitedAllDeclarations = false;
   for (const auto &child : ctx->getChildren()) {
+    if (!std::dynamic_pointer_cast<statements::DeclarationAst>(child))
+      visitedAllDeclarations = true;
+    else {
+      if (visitedAllDeclarations)
+        throw StatementError(
+            ctx->getLineNumber(),
+            "Declarations are only allowed on the top of the block");
+    }
     visit(child);
   }
   return {};
