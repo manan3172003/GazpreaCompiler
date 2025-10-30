@@ -312,6 +312,11 @@ std::any ValidationWalker::visitFuncProcCall(
 
   const auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
       methodSymbol->getDef());
+
+  if (protoType->getName() == "main") {
+    throw CallError(ctx->getLineNumber(), "Cannot call main function");
+  }
+
   const auto params = protoType->getParams();
   const auto args = ctx->getArgs();
 
