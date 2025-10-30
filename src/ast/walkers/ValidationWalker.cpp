@@ -184,16 +184,24 @@ ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
     ctx->setInferredDataType(booleanDataType);
   }
 
-  // if the operations is <, >, <=, >= then set expression type to boolean.
+  // if left expr and right expr in cond is real or int then if the operation is
+  // <,>,<=,>= then set expression type to boolean
   if (ctx->getBinaryOpType() == expressions::BinaryOpType::LESS_THAN ||
       ctx->getBinaryOpType() == expressions::BinaryOpType::GREATER_THAN ||
       ctx->getBinaryOpType() == expressions::BinaryOpType::LESS_EQUAL ||
       ctx->getBinaryOpType() == expressions::BinaryOpType::GREATER_EQUAL ||
-      isOfSymbolType(ctx->getLeft()->getInferredSymbolType(), "boolean")) {
-    auto booleanDataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
-    auto booleanTypeSymbol = resolvedInferredType(booleanDataType);
-    ctx->setInferredSymbolType(booleanTypeSymbol);
-    ctx->setInferredDataType(booleanDataType);
+      ctx->getBinaryOpType() == expressions::BinaryOpType::EQUAL ||
+      ctx->getBinaryOpType() == expressions::BinaryOpType::NOT_EQUAL) {
+    // Only set boolean for integer/real comparisons
+    if ((isOfSymbolType(ctx->getLeft()->getInferredSymbolType(), "real") ||
+         isOfSymbolType(ctx->getLeft()->getInferredSymbolType(), "integer")) &&
+        (isOfSymbolType(ctx->getRight()->getInferredSymbolType(), "real") ||
+         isOfSymbolType(ctx->getRight()->getInferredSymbolType(), "integer"))) {
+      auto booleanDataType =
+          std::make_shared<types::BooleanTypeAst>(ctx->token);
+      auto booleanTypeSymbol = resolvedInferredType(booleanDataType);
+      ctx->setInferredSymbolType(booleanTypeSymbol);
+    }
   }
 
   return {};
@@ -213,7 +221,7 @@ std::any ValidationWalker::visitConditional(
   if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(),
                       "boolean")) {
     throw TypeError(ctx->getLineNumber(),
-                    "Conditonal expression must be of type boolean");
+                    "If statement condition must be of type boolean");
   }
   visit(ctx->getThenBody());
   if (ctx->getElseBody()) {
@@ -519,7 +527,18 @@ ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   return {};
 }
 std::any ValidationWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
-  return AstWalker::visitLoop(ctx);
+
+  if (ctx->getCondition()) {
+    visit(ctx->getCondition());
+    if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(),
+                        "boolean")) {
+      throw TypeError(ctx->getLineNumber(),
+                      "Loop condition must be of type boolean");
+    }
+  }
+
+  visit(ctx->getBody());
+  return {};
 }
 std::any ValidationWalker::visitIteratorLoop(
     std::shared_ptr<statements::IteratorLoopAst> ctx) {
