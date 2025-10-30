@@ -92,7 +92,7 @@ std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
     visit(child);
   }
   if (not visitedMain)
-    throw MainError(ctx->getLineNumber(), "Main symbol not found");
+    throw MainError(ctx->getLineNumber(), "Main procedure not found");
   return {};
 }
 std::any ValidationWalker::visitAssignment(
