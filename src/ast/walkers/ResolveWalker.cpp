@@ -1,3 +1,4 @@
+#include "CompileTimeExceptions.h"
 #include "ast/types/AliasTypeAst.h"
 #include "symTable/MethodSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
@@ -7,37 +8,52 @@
 #include <ast/walkers/ResolveWalker.h>
 
 namespace gazprea::ast::walkers {
+void ResolveWalker::throwIfUndeclaredSymbol(
+    int lineNumber, std::shared_ptr<symTable::Symbol> sym) {
+  if (!sym)
+    throw SymbolError(lineNumber, "Use of undeclared symbol");
+}
 std::shared_ptr<symTable::Type> ResolveWalker::resolvedType(
     const std::shared_ptr<types::DataTypeAst> &dataType) {
+  std::shared_ptr<symTable::Type> type;
   auto globalScope = symTab->getGlobalScope();
   switch (dataType->getNodeType()) {
   case NodeType::IntegerType:
-    return std::dynamic_pointer_cast<symTable::Type>(
+    type = std::dynamic_pointer_cast<symTable::Type>(
         globalScope->resolveType("integer"));
+    break;
   case NodeType::RealType:
-    return std::dynamic_pointer_cast<symTable::Type>(
+    type = std::dynamic_pointer_cast<symTable::Type>(
         globalScope->resolveType("real"));
+    break;
   case NodeType::CharType:
-    return std::dynamic_pointer_cast<symTable::Type>(
+    type = std::dynamic_pointer_cast<symTable::Type>(
         globalScope->resolveType("character"));
+    break;
   case NodeType::BoolType:
-    return std::dynamic_pointer_cast<symTable::Type>(
+    type = std::dynamic_pointer_cast<symTable::Type>(
         globalScope->resolveType("boolean"));
+    break;
   case NodeType::AliasType: {
     const auto aliasTypeNode =
         std::dynamic_pointer_cast<types::AliasTypeAst>(dataType);
     const auto aliasSymType =
         globalScope->resolveType(aliasTypeNode->getAlias());
-    return std::dynamic_pointer_cast<symTable::Type>(aliasSymType);
+    type = std::dynamic_pointer_cast<symTable::Type>(aliasSymType);
+    break;
   }
   case NodeType::TupleType: {
     // visiting the tuple
     visit(dataType);
-    return std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
+    type = std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
+    break;
   }
   default:
-    return {};
+    break;
   }
+  if (!type)
+    throw TypeError(0, "Undeclared type used");
+  return type;
 }
 std::any ResolveWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   for (const auto &child : ctx->children) {
@@ -121,6 +137,7 @@ std::any ResolveWalker::visitProcedureCall(
   }
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
       ctx->getScope()->resolveSymbol(ctx->getName()));
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
   ctx->setSymbol(methodSymbol);
   return {};
 }
@@ -131,7 +148,9 @@ ResolveWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
 }
 std::any ResolveWalker::visitTupleElementAssign(
     std::shared_ptr<statements::TupleElementAssignAst> ctx) {
-  ctx->setSymbol(ctx->getScope()->resolveSymbol(ctx->getTupleName()));
+  auto symbol = ctx->getScope()->resolveSymbol(ctx->getTupleName());
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
+  ctx->setSymbol(symbol);
   return {};
 }
 std::any ResolveWalker::visitTupleUnpackAssign(
@@ -143,7 +162,9 @@ std::any ResolveWalker::visitTupleUnpackAssign(
 }
 std::any ResolveWalker::visitTupleAccess(
     std::shared_ptr<expressions::TupleAccessAst> ctx) {
-  ctx->setSymbol(ctx->getScope()->resolveSymbol(ctx->getTupleName()));
+  auto symbol = ctx->getScope()->resolveSymbol(ctx->getTupleName());
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
+  ctx->setSymbol(symbol);
   return {};
 }
 std::any
@@ -201,6 +222,7 @@ std::any ResolveWalker::visitFuncProcCall(
   }
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
       ctx->getScope()->resolveSymbol(ctx->getName()));
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
   ctx->setSymbol(methodSymbol);
   return {};
 }
@@ -223,12 +245,16 @@ ResolveWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
 }
 std::any ResolveWalker::visitIdentifier(
     std::shared_ptr<expressions::IdentifierAst> ctx) {
-  ctx->setSymbol(ctx->getScope()->resolveSymbol(ctx->getName()));
+  auto symbol = ctx->getScope()->resolveSymbol(ctx->getName());
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
+  ctx->setSymbol(symbol);
   return {};
 }
 std::any ResolveWalker::visitIdentifierLeft(
     std::shared_ptr<statements::IdentifierLeftAst> ctx) {
-  ctx->setSymbol(ctx->getScope()->resolveSymbol(ctx->getName()));
+  auto symbol = ctx->getScope()->resolveSymbol(ctx->getName());
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
+  ctx->setSymbol(symbol);
   return {};
 }
 std::any ResolveWalker::visitInteger(

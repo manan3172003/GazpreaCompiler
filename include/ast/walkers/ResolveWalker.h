@@ -7,6 +7,8 @@ class ResolveWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
   std::shared_ptr<symTable::Type>
   resolvedType(const std::shared_ptr<types::DataTypeAst> &dataType);
+  static void throwIfUndeclaredSymbol(int lineNumber,
+                                      std::shared_ptr<symTable::Symbol> sym);
 
 public:
   explicit ResolveWalker(std::shared_ptr<symTable::SymbolTable> symTab)
