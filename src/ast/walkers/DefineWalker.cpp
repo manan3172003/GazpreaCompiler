@@ -71,10 +71,12 @@ std::any DefineWalker::visitConditional(
   return {};
 }
 std::any DefineWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   visit(ctx->getLVal());
   return {};
 }
 std::any DefineWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   visit(ctx->getExpression());
   return {};
 }

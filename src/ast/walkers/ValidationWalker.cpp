@@ -189,11 +189,21 @@ std::any ValidationWalker::visitConditional(
 }
 std::any
 ValidationWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
-  return AstWalker::visitInput(ctx);
+  const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
+  if (curScope && curScope->getScopeType() == symTable::ScopeType::Function) {
+    throw StatementError(ctx->getLineNumber(),
+                         "Input statement not allowed in functions");
+  }
+  return {};
 }
 std::any
 ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
-  return AstWalker::visitOutput(ctx);
+  const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
+  if (curScope && curScope->getScopeType() == symTable::ScopeType::Function) {
+    throw StatementError(ctx->getLineNumber(),
+                         "Output statement not allowed in functions");
+  }
+  return {};
 }
 std::any ValidationWalker::visitProcedure(
     std::shared_ptr<prototypes::ProcedureAst> ctx) {
