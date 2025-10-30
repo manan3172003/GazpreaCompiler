@@ -63,7 +63,7 @@ class ValidationWalker final : public AstWalker {
   }
 
   static bool
-  hasReturnInFunction(const std::shared_ptr<statements::BlockAst> &block) {
+  hasReturnInMethod(const std::shared_ptr<statements::BlockAst> &block) {
     for (const auto &stat : block->getChildren()) {
       if (stat->getNodeType() == NodeType::Return) {
         return true;
@@ -72,7 +72,7 @@ class ValidationWalker final : public AstWalker {
       if (stat->getNodeType() == NodeType::Block) {
         auto nestedBlock =
             std::dynamic_pointer_cast<statements::BlockAst>(stat);
-        if (hasReturnInFunction(nestedBlock)) {
+        if (hasReturnInMethod(nestedBlock)) {
           return true;
         }
       }

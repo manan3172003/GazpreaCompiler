@@ -154,6 +154,16 @@ std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureA
         resolvedInferredType(proto->getReturnType())->getName() != "integer")
       throw MainError(ctx->getLineNumber(), "Main needs to return an integer");
   }
+
+  if (ctx->getProto()->getReturnType()) {
+    // If procedure has a return type, check that we reach a return statement
+    const auto blockAst =
+        std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
+    if (!hasReturnInMethod(blockAst)) {
+      throw ReturnError(ctx->getLineNumber(),
+                        "Function must have a return statement");
+    }
+  }
   visit(ctx->getBody());
   return {};
 }
@@ -239,7 +249,7 @@ ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   }
   const auto blockAst =
       std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
-  if (!hasReturnInFunction(blockAst)) {
+  if (!hasReturnInMethod(blockAst)) {
     throw ReturnError(ctx->getLineNumber(),
                       "Function must have a return statement");
   }
