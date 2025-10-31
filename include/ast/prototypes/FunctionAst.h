@@ -10,7 +10,7 @@ class FunctionAst final : public Ast {
   std::shared_ptr<statements::StatementAst> body;
 
 public:
-  explicit FunctionAst(antlr4::Token *token) : Ast(token){};
+  explicit FunctionAst(antlr4::Token *token) : Ast(token) {};
 
   void setProto(std::shared_ptr<PrototypeAst> proto_) { proto = proto_; }
   std::shared_ptr<PrototypeAst> getProto() const { return proto; }

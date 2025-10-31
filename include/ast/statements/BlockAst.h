@@ -6,7 +6,7 @@ class BlockAst final : public StatementAst {
   std::vector<std::shared_ptr<Ast>> children;
 
 public:
-  explicit BlockAst(antlr4::Token *token) : StatementAst(token){};
+  explicit BlockAst(antlr4::Token *token) : StatementAst(token) {};
 
   std::vector<std::shared_ptr<Ast>> getChildren() const;
   void addChildren(std::shared_ptr<Ast> child);

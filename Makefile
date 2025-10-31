@@ -1,9 +1,15 @@
-.PHONY: build format emit-llvm compile run-llvm test run
+.PHONY: build format format-kunal kunal emit-llvm compile run-llvm test run
 build: format
 	cd build/ && cmake .. && make -j 8 && cd -
 
 format:
 	find src include -type f \( -name "*.cpp" -o -name "*.h" \) -exec clang-format -i {} +
+
+format-kunal:
+	find src include -type f \( -name "*.cpp" -o -name "*.h" \) -exec clang-format-21 -i {} +
+
+kunal: format-kunal
+	cd build/ && cmake .. && make -j 8 && cd -
 
 emit-llvm:
 	clang++ -O0 -S -emit-llvm runtime-tests/$(filename) -o runtime-tests/$(filename).ll

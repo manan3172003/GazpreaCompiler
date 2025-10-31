@@ -5,7 +5,7 @@ namespace gazprea::ast {
 class RootAst : public Ast {
 public:
   std::vector<std::shared_ptr<Ast>> children;
-  explicit RootAst(antlr4::Token *token) : Ast(token){};
+  explicit RootAst(antlr4::Token *token) : Ast(token) {};
   void addChild(std::shared_ptr<Ast> child);
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
