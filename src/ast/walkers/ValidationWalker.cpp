@@ -18,23 +18,30 @@ void ValidationWalker::checkVarArgs(const std::shared_ptr<prototypes::PrototypeA
   // unordered map to track vars
   std::unordered_map<std::string, bool> seenVarMap;
   for (size_t i = 0; i < args.size(); i++) {
-    // check if argument is an identifier
-    if (args[i]->getExpr()->getNodeType() != NodeType::Identifier)
-      continue;
-    // get the identifier and parameter
-    auto identifier = std::dynamic_pointer_cast<expressions::IdentifierAst>(args[i]->getExpr());
     auto param = std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
-    std::string varName = identifier->getName();
     bool isVar = (param->getQualifier() == Qualifier::Var);
-    // if variable seen before and in map then throw aliasing error
-    if (seenVarMap.find(varName) != seenVarMap.end()) {
-      if (seenVarMap[varName] || isVar) {
+    std::string varIdentifier;
+    if (args[i]->getExpr()->getNodeType() == NodeType::Identifier) {
+      auto identifier = std::dynamic_pointer_cast<expressions::IdentifierAst>(args[i]->getExpr());
+      varIdentifier = identifier->getName();
+    } else if (args[i]->getExpr()->getNodeType() == NodeType::TupleAccess) {
+      // Tuple access: t[0] - build identifier as "tuple_name[index]"
+      auto tupleAccess = std::dynamic_pointer_cast<expressions::TupleAccessAst>(args[i]->getExpr());
+      varIdentifier =
+          tupleAccess->getTupleName() + "[" + std::to_string(tupleAccess->getFieldIndex()) + "]";
+    } else {
+      // TODO: Handle array slices in future
+      continue;
+    }
+    // Check if this identifier was already seen
+    if (seenVarMap.find(varIdentifier) != seenVarMap.end()) {
+      if (seenVarMap[varIdentifier] || isVar) {
         throw AliasingError(lineNumber, "Variable aliasing error: var parameter cannot share "
                                         "a variable with another parameter");
       }
     } else {
-      // variable seen first time add to map
-      seenVarMap[varName] = isVar;
+      // First time seeing this identifier
+      seenVarMap[varIdentifier] = isVar;
     }
   }
 }
@@ -342,6 +349,11 @@ std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncPr
       if (arg->getInferredSymbolType()->getName() != paramVarSymbol->getType()->getName())
         throw TypeError(ctx->getLineNumber(), "Argument type mismatch");
     }
+  }
+
+  // Check for var parameter aliasing if this is a procedure
+  if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {
+    checkVarArgs(protoType, args, ctx->getLineNumber());
   }
 
   ctx->setInferredSymbolType(methodSymbol->getReturnType());
