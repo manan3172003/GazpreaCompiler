@@ -1,9 +1,7 @@
 #include "ast/statements/TupleUnpackAssignAst.h"
 namespace gazprea::ast::statements {
 
-NodeType TupleUnpackAssignAst::getNodeType() const {
-  return NodeType::TupleUnpackAssign;
-}
+NodeType TupleUnpackAssignAst::getNodeType() const { return NodeType::TupleUnpackAssign; }
 void TupleUnpackAssignAst::addSubLVal(std::shared_ptr<AssignLeftAst> lVal) {
   lVals.push_back(lVal);
 }

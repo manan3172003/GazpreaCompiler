@@ -13,8 +13,7 @@ private:
   static std::string getOperator(UnaryOpType opType);
 
 public:
-  explicit UnaryAst(antlr4::Token *token)
-      : ExpressionAst(token), unaryOpType() {}
+  explicit UnaryAst(antlr4::Token *token) : ExpressionAst(token), unaryOpType() {}
 
   void setUnaryOpType(UnaryOpType unaryOp);
   void setExpression(std::shared_ptr<ExpressionAst> expr);

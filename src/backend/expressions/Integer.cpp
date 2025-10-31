@@ -2,8 +2,7 @@
 
 namespace gazprea::backend {
 
-std::any Backend::visitInteger(
-    std::shared_ptr<ast::expressions::IntegerLiteralAst> ctx) {
+std::any Backend::visitInteger(std::shared_ptr<ast::expressions::IntegerLiteralAst> ctx) {
   return {};
 }
 

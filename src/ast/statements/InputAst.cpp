@@ -13,7 +13,5 @@ std::string InputAst::toStringTree(std::string prefix) const {
   return ss.str();
 }
 std::shared_ptr<AssignLeftAst> InputAst::getLVal() const { return lVal; }
-void InputAst::setLVal(std::shared_ptr<AssignLeftAst> lVal_) {
-  this->lVal = lVal_;
-}
+void InputAst::setLVal(std::shared_ptr<AssignLeftAst> lVal_) { this->lVal = lVal_; }
 } // namespace gazprea::ast::statements

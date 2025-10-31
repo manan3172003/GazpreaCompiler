@@ -15,14 +15,10 @@ public:
   explicit CastAst(antlr4::Token *token) : ExpressionAst(token) {};
 
   std::shared_ptr<types::DataTypeAst> getTargetType() { return targetType; };
-  void setType(std::shared_ptr<types::DataTypeAst> type_) {
-    targetType = type_;
-  }
+  void setType(std::shared_ptr<types::DataTypeAst> type_) { targetType = type_; }
   std::shared_ptr<ExpressionAst> getExpression() const { return expr; }
   void setExpression(std::shared_ptr<ExpressionAst> expr_) { expr = expr_; }
-  std::shared_ptr<symTable::Type> getResolvedTargetType() const {
-    return resolvedTargetType;
-  }
+  std::shared_ptr<symTable::Type> getResolvedTargetType() const { return resolvedTargetType; }
   void setResolvedTargetType(std::shared_ptr<symTable::Type> resolvedType_) {
     resolvedTargetType = resolvedType_;
   }

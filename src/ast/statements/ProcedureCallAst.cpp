@@ -1,9 +1,7 @@
 #include <ast/statements/ProcedureCallAst.h>
 
 namespace gazprea::ast::statements {
-NodeType ProcedureCallAst::getNodeType() const {
-  return NodeType::ProcedureCall;
-}
+NodeType ProcedureCallAst::getNodeType() const { return NodeType::ProcedureCall; }
 std::string ProcedureCallAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << "ProcedureCall: " << getName() << "\n";

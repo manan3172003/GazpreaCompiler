@@ -2,9 +2,6 @@
 
 namespace gazprea::backend {
 
-std::any
-Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> ctx) {
-  return {};
-}
+std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> ctx) { return {}; }
 
 } // namespace gazprea::backend

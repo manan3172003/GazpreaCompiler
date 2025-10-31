@@ -2,25 +2,15 @@
 
 namespace gazprea::ast::statements {
 
-void ConditionalAst::setCondition(
-    std::shared_ptr<expressions::ExpressionAst> condition) {
+void ConditionalAst::setCondition(std::shared_ptr<expressions::ExpressionAst> condition) {
   this->condition = condition;
 }
-void ConditionalAst::setThenBody(std::shared_ptr<BlockAst> thenBody) {
-  this->thenBody = thenBody;
-}
-void ConditionalAst::setElseBody(std::shared_ptr<BlockAst> elseBody) {
-  this->elseBody = elseBody;
-}
+void ConditionalAst::setThenBody(std::shared_ptr<BlockAst> thenBody) { this->thenBody = thenBody; }
+void ConditionalAst::setElseBody(std::shared_ptr<BlockAst> elseBody) { this->elseBody = elseBody; }
 
-std::shared_ptr<BlockAst> ConditionalAst::getThenBody() const {
-  return this->thenBody;
-}
-std::shared_ptr<BlockAst> ConditionalAst::getElseBody() const {
-  return this->elseBody;
-}
-std::shared_ptr<expressions::ExpressionAst>
-ConditionalAst::getCondition() const {
+std::shared_ptr<BlockAst> ConditionalAst::getThenBody() const { return this->thenBody; }
+std::shared_ptr<BlockAst> ConditionalAst::getElseBody() const { return this->elseBody; }
+std::shared_ptr<expressions::ExpressionAst> ConditionalAst::getCondition() const {
   return this->condition;
 }
 

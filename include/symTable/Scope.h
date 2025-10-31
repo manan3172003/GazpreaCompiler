@@ -46,12 +46,8 @@ public:
   std::shared_ptr<Symbol> resolveType(const std::string &name) override;
   std::shared_ptr<Symbol> resolveSymbol(const std::string &name) override;
   std::string toString() override;
-  std::unordered_map<std::string, std::shared_ptr<Symbol>> &getSymbols() {
-    return symbols;
-  }
-  std::unordered_map<std::string, std::shared_ptr<Symbol>> &getTypeSymbols() {
-    return typeSymbols;
-  }
+  std::unordered_map<std::string, std::shared_ptr<Symbol>> &getSymbols() { return symbols; }
+  std::unordered_map<std::string, std::shared_ptr<Symbol>> &getTypeSymbols() { return typeSymbols; }
   std::shared_ptr<Symbol> getSymbol(const std::string &name) override;
   std::shared_ptr<Symbol> getTypeSymbol(const std::string &name) override;
 };

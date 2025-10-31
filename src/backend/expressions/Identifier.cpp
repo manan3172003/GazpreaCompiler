@@ -2,8 +2,7 @@
 
 namespace gazprea::backend {
 
-std::any
-Backend::visitIdentifier(std::shared_ptr<ast::expressions::IdentifierAst> ctx) {
+std::any Backend::visitIdentifier(std::shared_ptr<ast::expressions::IdentifierAst> ctx) {
   return {};
 }
 

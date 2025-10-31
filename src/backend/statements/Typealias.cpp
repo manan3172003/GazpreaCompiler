@@ -2,9 +2,6 @@
 
 namespace gazprea::backend {
 
-std::any
-Backend::visitTypealias(std::shared_ptr<ast::statements::TypealiasAst> ctx) {
-  return {};
-}
+std::any Backend::visitTypealias(std::shared_ptr<ast::statements::TypealiasAst> ctx) { return {}; }
 
 } // namespace gazprea::backend

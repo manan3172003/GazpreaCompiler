@@ -11,13 +11,12 @@ namespace gazprea::ast::walkers {
 void DefineWalker::throwGlobalError(std::shared_ptr<Ast> ctx) {
   auto curScope = symTab->getCurrentScope();
   if (curScope->getScopeType() != symTable::ScopeType::Global)
-    throw GlobalError(ctx->getLineNumber(),
-                      "Symbol can only be defined in Global");
+    throw GlobalError(ctx->getLineNumber(), "Symbol can only be defined in Global");
 }
 
-void DefineWalker::throwDuplicateSymbolError(
-    std::shared_ptr<Ast> ctx, const std::string &name,
-    std::shared_ptr<symTable::Scope> curScope, bool isType) {
+void DefineWalker::throwDuplicateSymbolError(std::shared_ptr<Ast> ctx, const std::string &name,
+                                             std::shared_ptr<symTable::Scope> curScope,
+                                             bool isType) {
   if (isType) {
     if (curScope->getTypeSymbol(name))
       throw SymbolError(ctx->getLineNumber(), "Duplicate symbol");
@@ -33,22 +32,19 @@ std::any DefineWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   }
   return {};
 }
-std::any
-DefineWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
+std::any DefineWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
   visit(ctx->getExpr());
   visit(ctx->getLVal());
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
-std::any DefineWalker::visitDeclaration(
-    std::shared_ptr<statements::DeclarationAst> ctx) {
+std::any DefineWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
   if (ctx->getExpr()) {
     visit(ctx->getExpr());
   }
-  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(),
-                            false);
-  const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
-      ctx->getName(), ctx->getQualifier());
+  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(), false);
+  const auto varSymbol =
+      std::make_shared<symTable::VariableSymbol>(ctx->getName(), ctx->getQualifier());
   varSymbol->setDef(ctx);
   if (ctx->getType() && ctx->getType()->getNodeType() == NodeType::TupleType) {
     visit(ctx->getType());
@@ -59,8 +55,7 @@ std::any DefineWalker::visitDeclaration(
   ctx->setSymbol(varSymbol);
   return {};
 }
-std::any
-DefineWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
+std::any DefineWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
   visit(ctx->getLeft());
   visit(ctx->getRight());
   return {};
@@ -75,15 +70,9 @@ std::any DefineWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   symTab->popScope();
   return {};
 }
-std::any DefineWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
-  return {};
-}
-std::any
-DefineWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) {
-  return {};
-}
-std::any DefineWalker::visitConditional(
-    std::shared_ptr<statements::ConditionalAst> ctx) {
+std::any DefineWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) { return {}; }
+std::any DefineWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) { return {}; }
+std::any DefineWalker::visitConditional(std::shared_ptr<statements::ConditionalAst> ctx) {
   visit(ctx->getCondition());
   visit(ctx->getThenBody());
   if (ctx->getElseBody()) {
@@ -101,11 +90,9 @@ std::any DefineWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
   visit(ctx->getExpression());
   return {};
 }
-std::any
-DefineWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
+std::any DefineWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
   throwGlobalError(ctx);
-  throwDuplicateSymbolError(ctx, ctx->getProto()->getName(),
-                            symTab->getCurrentScope(), false);
+  throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
   const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
       ctx->getProto()->getName(), ctx->getProto()->getProtoType());
 
@@ -124,12 +111,10 @@ DefineWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
   symTab->popScope();
   return {};
 }
-std::any DefineWalker::visitProcedureParams(
-    std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
-  const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
-      ctx->getName(), ctx->getQualifier());
-  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(),
-                            false);
+std::any DefineWalker::visitProcedureParams(std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
+  const auto varSymbol =
+      std::make_shared<symTable::VariableSymbol>(ctx->getName(), ctx->getQualifier());
+  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(), false);
   ctx->setScope(symTab->getCurrentScope());
   symTab->getCurrentScope()->defineSymbol(varSymbol);
   if (ctx->getParamType()->getNodeType() == NodeType::TupleType) {
@@ -139,8 +124,7 @@ std::any DefineWalker::visitProcedureParams(
   varSymbol->setDef(ctx);
   return {};
 }
-std::any DefineWalker::visitProcedureCall(
-    std::shared_ptr<statements::ProcedureCallAst> ctx) {
+std::any DefineWalker::visitProcedureCall(std::shared_ptr<statements::ProcedureCallAst> ctx) {
   for (const auto &args : ctx->getArgs()) {
     visit(args);
   }
@@ -152,32 +136,29 @@ std::any DefineWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
-std::any DefineWalker::visitTupleElementAssign(
-    std::shared_ptr<statements::TupleElementAssignAst> ctx) {
+std::any
+DefineWalker::visitTupleElementAssign(std::shared_ptr<statements::TupleElementAssignAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
-std::any DefineWalker::visitTupleUnpackAssign(
-    std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
+std::any
+DefineWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
   for (const auto &lVal : ctx->getLVals()) {
     visit(lVal);
   }
   return {};
 }
-std::any DefineWalker::visitTupleAccess(
-    std::shared_ptr<expressions::TupleAccessAst> ctx) {
+std::any DefineWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
-std::any
-DefineWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
+std::any DefineWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   for (const auto &element : ctx->getElements()) {
     visit(element);
   }
   return {};
 }
-std::any
-DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
+std::any DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   auto tupTypeSymbol = std::make_shared<symTable::TupleTypeSymbol>("");
   tupTypeSymbol->setDef(ctx);
   for (const auto &typeAst : ctx->getTypes()) {
@@ -195,8 +176,7 @@ DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
       tupTypeSymbol->addUnresolvedType("boolean");
       break;
     case NodeType::AliasType: {
-      const auto aliasTypeNode =
-          std::dynamic_pointer_cast<types::AliasTypeAst>(typeAst);
+      const auto aliasTypeNode = std::dynamic_pointer_cast<types::AliasTypeAst>(typeAst);
       tupTypeSymbol->addUnresolvedType(aliasTypeNode->getAlias());
       break;
     }
@@ -207,12 +187,9 @@ DefineWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   ctx->setSymbol(tupTypeSymbol);
   return {};
 }
-std::any
-DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
-  throwDuplicateSymbolError(ctx, ctx->getAlias(), symTab->getGlobalScope(),
-                            true);
-  auto typealiasSymbol =
-      std::make_shared<symTable::TypealiasSymbol>(ctx->getAlias());
+std::any DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
+  throwDuplicateSymbolError(ctx, ctx->getAlias(), symTab->getGlobalScope(), true);
+  auto typealiasSymbol = std::make_shared<symTable::TypealiasSymbol>(ctx->getAlias());
   typealiasSymbol->setDef(ctx);
   symTab->getGlobalScope()->defineTypeSymbol(typealiasSymbol);
   if (ctx->getType()->getNodeType() == NodeType::TupleType)
@@ -221,11 +198,9 @@ DefineWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
-std::any
-DefineWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
+std::any DefineWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   throwGlobalError(ctx);
-  throwDuplicateSymbolError(ctx, ctx->getProto()->getName(),
-                            symTab->getCurrentScope(), false);
+  throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
   const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
       ctx->getProto()->getName(), ctx->getProto()->getProtoType());
   ctx->getProto()->setSymbol(methodSymbol);
@@ -239,12 +214,10 @@ DefineWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   symTab->popScope();
   return {};
 }
-std::any DefineWalker::visitFunctionParam(
-    std::shared_ptr<prototypes::FunctionParamAst> ctx) {
-  const auto varSymbol = std::make_shared<symTable::VariableSymbol>(
-      ctx->getName(), ctx->getQualifier());
-  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(),
-                            false);
+std::any DefineWalker::visitFunctionParam(std::shared_ptr<prototypes::FunctionParamAst> ctx) {
+  const auto varSymbol =
+      std::make_shared<symTable::VariableSymbol>(ctx->getName(), ctx->getQualifier());
+  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(), false);
   ctx->setScope(symTab->getCurrentScope());
   symTab->getCurrentScope()->defineSymbol(varSymbol);
 
@@ -256,20 +229,17 @@ std::any DefineWalker::visitFunctionParam(
   varSymbol->setDef(ctx);
   return {};
 }
-std::any
-DefineWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
+std::any DefineWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   for (const auto &param : ctx->getParams()) {
     visit(param);
   }
-  if (ctx->getReturnType() &&
-      ctx->getReturnType()->getNodeType() == NodeType::TupleType) {
+  if (ctx->getReturnType() && ctx->getReturnType()->getNodeType() == NodeType::TupleType) {
     visit(ctx->getReturnType());
   }
   return {};
 }
-std::any DefineWalker::visitFuncProcCall(
-    std::shared_ptr<expressions::FuncProcCallAst> ctx) {
+std::any DefineWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCallAst> ctx) {
   for (const auto &args : ctx->getArgs()) {
     visit(args);
   }
@@ -280,38 +250,31 @@ std::any DefineWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
   visit(ctx->getExpr());
   return {};
 }
-std::any
-DefineWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
+std::any DefineWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
   return AstWalker::visitBool(ctx);
 }
 std::any DefineWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
-  if (ctx->getTargetType() &&
-      ctx->getTargetType()->getNodeType() == NodeType::TupleType) {
+  if (ctx->getTargetType() && ctx->getTargetType()->getNodeType() == NodeType::TupleType) {
     visit(ctx->getTargetType());
   }
   visit(ctx->getExpression());
   return {};
 }
-std::any
-DefineWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
+std::any DefineWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
   return AstWalker::visitChar(ctx);
 }
-std::any
-DefineWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
+std::any DefineWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
-std::any DefineWalker::visitIdentifierLeft(
-    std::shared_ptr<statements::IdentifierLeftAst> ctx) {
+std::any DefineWalker::visitIdentifierLeft(std::shared_ptr<statements::IdentifierLeftAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
-std::any DefineWalker::visitInteger(
-    std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
+std::any DefineWalker::visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
   return AstWalker::visitInteger(ctx);
 }
-std::any
-DefineWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
+std::any DefineWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
   return AstWalker::visitReal(ctx);
 }
 std::any DefineWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
@@ -324,8 +287,7 @@ std::any DefineWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
   visit(ctx->getBody());
   return {};
 }
-std::any DefineWalker::visitIteratorLoop(
-    std::shared_ptr<statements::IteratorLoopAst> ctx) {
+std::any DefineWalker::visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {
   return AstWalker::visitIteratorLoop(ctx);
 }
 } // namespace gazprea::ast::walkers

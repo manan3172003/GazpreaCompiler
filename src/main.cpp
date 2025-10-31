@@ -34,8 +34,7 @@ int main(int argc, char **argv) {
     antlr4::tree::ParseTree *tree = parser.file();
 
     gazprea::ast::walkers::AstBuilder astBuilder;
-    auto rootAst = std::any_cast<std::shared_ptr<gazprea::ast::RootAst>>(
-        astBuilder.visit(tree));
+    auto rootAst = std::any_cast<std::shared_ptr<gazprea::ast::RootAst>>(astBuilder.visit(tree));
 
     // std::cout << rootAst->toStringTree("") << std::endl;
 

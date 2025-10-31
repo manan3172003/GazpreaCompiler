@@ -2,8 +2,7 @@
 
 namespace gazprea::backend {
 
-std::any Backend::visitFuncProcCall(
-    std::shared_ptr<ast::expressions::FuncProcCallAst> ctx) {
+std::any Backend::visitFuncProcCall(std::shared_ptr<ast::expressions::FuncProcCallAst> ctx) {
   return {};
 }
 

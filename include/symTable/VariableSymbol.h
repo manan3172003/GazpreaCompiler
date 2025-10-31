@@ -8,8 +8,7 @@ class VariableSymbol final : public Symbol {
   std::shared_ptr<Type> type;
 
 public:
-  explicit VariableSymbol(const std::string &name,
-                          const ast::Qualifier qualifier)
+  explicit VariableSymbol(const std::string &name, const ast::Qualifier qualifier)
       : Symbol(name), qualifier(qualifier) {};
 
   ast::Qualifier getQualifier() const { return qualifier; }

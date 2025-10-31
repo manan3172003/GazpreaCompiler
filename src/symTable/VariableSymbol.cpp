@@ -16,11 +16,9 @@ std::string VariableSymbol::toString() {
     // methods
     if (auto tupleType = std::dynamic_pointer_cast<TupleTypeSymbol>(type)) {
       ss << tupleType->toString();
-    } else if (auto aliasType =
-                   std::dynamic_pointer_cast<TypealiasSymbol>(type)) {
+    } else if (auto aliasType = std::dynamic_pointer_cast<TypealiasSymbol>(type)) {
       ss << KGRN << aliasType->getName() << RST;
-    } else if (auto builtInType =
-                   std::dynamic_pointer_cast<BuiltInTypeSymbol>(type)) {
+    } else if (auto builtInType = std::dynamic_pointer_cast<BuiltInTypeSymbol>(type)) {
       ss << KGRN << builtInType->getName() << RST;
     } else {
       // Fallback to getName for other types, shown as resolved

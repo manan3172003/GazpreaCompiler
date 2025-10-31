@@ -3,12 +3,8 @@
 
 namespace gazprea::symTable {
 std::string ScopedSymbol::getScopeName() { return "ScopedSymbol"; }
-void ScopedSymbol::setEnclosingScope(std::shared_ptr<Scope> scope) {
-  enclosingScope = scope;
-}
-std::shared_ptr<Scope> ScopedSymbol::getEnclosingScope() {
-  return enclosingScope.lock();
-}
+void ScopedSymbol::setEnclosingScope(std::shared_ptr<Scope> scope) { enclosingScope = scope; }
+std::shared_ptr<Scope> ScopedSymbol::getEnclosingScope() { return enclosingScope.lock(); }
 std::shared_ptr<Symbol> ScopedSymbol::getSymbol(const std::string &name) {
   for (const auto &[_name, symbol] : symbols) {
     if (name == _name)

@@ -18,12 +18,8 @@ std::shared_ptr<Symbol> BaseScope::getTypeSymbol(const std::string &name) {
   }
   return typeSymbols[name];
 }
-void BaseScope::setEnclosingScope(std::shared_ptr<Scope> scope) {
-  enclosingScope = scope;
-}
-std::shared_ptr<Scope> BaseScope::getEnclosingScope() {
-  return enclosingScope.lock();
-}
+void BaseScope::setEnclosingScope(std::shared_ptr<Scope> scope) { enclosingScope = scope; }
+std::shared_ptr<Scope> BaseScope::getEnclosingScope() { return enclosingScope.lock(); }
 void BaseScope::defineSymbol(std::shared_ptr<Symbol> sym) {
   if (std::dynamic_pointer_cast<Type>(sym)) {
     throw std::runtime_error("Cannot define type symbols here");
@@ -50,8 +46,7 @@ std::shared_ptr<Symbol> BaseScope::resolveType(const std::string &type) {
   return nullptr;
 }
 std::shared_ptr<Symbol> GlobalScope::resolveType(const std::string &type) {
-  if (type == "integer" || type == "real" || type == "character" ||
-      type == "boolean") {
+  if (type == "integer" || type == "real" || type == "character" || type == "boolean") {
     return getTypeSymbols().at(type);
   }
 
@@ -60,13 +55,11 @@ std::shared_ptr<Symbol> GlobalScope::resolveType(const std::string &type) {
   }
 
   // TODO: Error handling check if the symbol exists
-  auto typeSym =
-      std::dynamic_pointer_cast<TypealiasSymbol>(getTypeSymbols().at(type));
+  auto typeSym = std::dynamic_pointer_cast<TypealiasSymbol>(getTypeSymbols().at(type));
 
   // TODO: do the same thing for structs
   if (typeSym->getType()->getName() == "tuple") {
-    auto tupleTypeSym =
-        std::dynamic_pointer_cast<TupleTypeSymbol>(typeSym->getType());
+    auto tupleTypeSym = std::dynamic_pointer_cast<TupleTypeSymbol>(typeSym->getType());
     return tupleTypeSym;
   }
 

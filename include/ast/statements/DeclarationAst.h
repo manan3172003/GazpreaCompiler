@@ -14,8 +14,7 @@ private:
   std::shared_ptr<expressions::ExpressionAst> expr;
 
 public:
-  explicit DeclarationAst(antlr4::Token *token)
-      : StatementAst(token), qualifier(), type() {}
+  explicit DeclarationAst(antlr4::Token *token) : StatementAst(token), qualifier(), type() {}
 
   std::string getName() const { return name; }
   std::shared_ptr<expressions::ExpressionAst> getExpr() const { return expr; }
@@ -24,12 +23,8 @@ public:
 
   void setName(std::string name_) { this->name = std::move(name_); }
   void setQualifier(Qualifier qualifier_) { this->qualifier = qualifier_; }
-  void setType(std::shared_ptr<types::DataTypeAst> type_) {
-    this->type = type_;
-  }
-  void setExpr(std::shared_ptr<expressions::ExpressionAst> expr_) {
-    this->expr = expr_;
-  }
+  void setType(std::shared_ptr<types::DataTypeAst> type_) { this->type = type_; }
+  void setExpr(std::shared_ptr<expressions::ExpressionAst> expr_) { this->expr = expr_; }
 
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;

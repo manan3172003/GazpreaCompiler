@@ -2,8 +2,7 @@
 
 namespace gazprea::backend {
 
-std::any Backend::visitIteratorLoop(
-    std::shared_ptr<ast::statements::IteratorLoopAst> ctx) {
+std::any Backend::visitIteratorLoop(std::shared_ptr<ast::statements::IteratorLoopAst> ctx) {
   return {};
 }
 

@@ -3,14 +3,11 @@
 
 namespace gazprea::ast::statements {
 
-NodeType TupleElementAssignAst::getNodeType() const {
-  return NodeType::TupleElementAssign;
-}
+NodeType TupleElementAssignAst::getNodeType() const { return NodeType::TupleElementAssign; }
 
 std::string TupleElementAssignAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << prefix << "Tuple Field: " << tupleName << "." << fieldIndex
-     << scopeToString();
+  ss << prefix << "Tuple Field: " << tupleName << "." << fieldIndex << scopeToString();
   if (sym) {
     ss << sym->toString();
   }

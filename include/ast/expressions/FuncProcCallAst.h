@@ -13,9 +13,7 @@ public:
 
   void setName(const std::string &name_) { name = name_; }
   std::string getName() const { return name; }
-  void setArgs(const std::vector<std::shared_ptr<ArgAst>> &args_) {
-    args = args_;
-  }
+  void setArgs(const std::vector<std::shared_ptr<ArgAst>> &args_) { args = args_; }
   std::vector<std::shared_ptr<ArgAst>> getArgs() const { return args; }
 
   NodeType getNodeType() const override;

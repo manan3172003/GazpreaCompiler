@@ -11,18 +11,10 @@ class ExpressionAst : public Ast {
 public:
   ExpressionAst(antlr4::Token *token) : Ast(token) {};
   virtual ~ExpressionAst() = default;
-  void setInferredSymbolType(std::shared_ptr<symTable::Type> type_) {
-    inferredSymbolType = type_;
-  };
-  std::shared_ptr<symTable::Type> getInferredSymbolType() {
-    return inferredSymbolType;
-  }
-  void setInferredDataType(std::shared_ptr<types::DataTypeAst> type_) {
-    inferredDataType = type_;
-  };
-  std::shared_ptr<types::DataTypeAst> getInferredDataType() {
-    return inferredDataType;
-  }
+  void setInferredSymbolType(std::shared_ptr<symTable::Type> type_) { inferredSymbolType = type_; };
+  std::shared_ptr<symTable::Type> getInferredSymbolType() { return inferredSymbolType; }
+  void setInferredDataType(std::shared_ptr<types::DataTypeAst> type_) { inferredDataType = type_; };
+  std::shared_ptr<types::DataTypeAst> getInferredDataType() { return inferredDataType; }
 };
 
 } // namespace gazprea::ast::expressions

@@ -11,8 +11,7 @@ class ScopedSymbol : public Symbol, public Scope {
   std::vector<std::pair<std::string, std::shared_ptr<Symbol>>> typeSymbols;
 
 public:
-  ScopedSymbol(const std::string &name, const ScopeType scType)
-      : Symbol(name), Scope(scType) {};
+  ScopedSymbol(const std::string &name, const ScopeType scType) : Symbol(name), Scope(scType) {};
   std::string getScopeName() override;
   void setEnclosingScope(std::shared_ptr<Scope> scope) override;
   std::shared_ptr<Scope> getEnclosingScope() override;
@@ -21,12 +20,10 @@ public:
   std::shared_ptr<Symbol> resolveType(const std::string &name) override;
   std::shared_ptr<Symbol> resolveSymbol(const std::string &name) override;
   std::string toString() override;
-  const std::vector<std::pair<std::string, std::shared_ptr<Symbol>>> &
-  getSymbols() const {
+  const std::vector<std::pair<std::string, std::shared_ptr<Symbol>>> &getSymbols() const {
     return symbols;
   }
-  const std::vector<std::pair<std::string, std::shared_ptr<Symbol>>> &
-  getTypeSymbols() const {
+  const std::vector<std::pair<std::string, std::shared_ptr<Symbol>>> &getTypeSymbols() const {
     return symbols;
   }
   std::shared_ptr<Symbol> getSymbol(const std::string &name) override;

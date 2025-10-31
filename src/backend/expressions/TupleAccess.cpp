@@ -2,8 +2,7 @@
 
 namespace gazprea::backend {
 
-std::any Backend::visitTupleAccess(
-    std::shared_ptr<ast::expressions::TupleAccessAst> ctx) {
+std::any Backend::visitTupleAccess(std::shared_ptr<ast::expressions::TupleAccessAst> ctx) {
   return {};
 }
 

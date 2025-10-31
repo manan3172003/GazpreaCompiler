@@ -2,16 +2,12 @@
 
 namespace gazprea::ast::statements {
 
-void LoopAst::setBody(std::shared_ptr<BlockAst> bodyBlock) {
-  this->body = bodyBlock;
-}
+void LoopAst::setBody(std::shared_ptr<BlockAst> bodyBlock) { this->body = bodyBlock; }
 
 void LoopAst::setCondition(std::shared_ptr<expressions::ExpressionAst> cond) {
   this->condition = cond;
 }
-void LoopAst::setIsPostPredicated(bool isPost) {
-  this->isPostPredicated = isPost;
-}
+void LoopAst::setIsPostPredicated(bool isPost) { this->isPostPredicated = isPost; }
 
 std::shared_ptr<BlockAst> LoopAst::getBody() const { return this->body; }
 

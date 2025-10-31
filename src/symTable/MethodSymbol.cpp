@@ -20,14 +20,11 @@ std::string MethodSymbol::toString() {
   ss << ") -> ";
 
   if (returnType) {
-    if (const auto tupleType =
-            std::dynamic_pointer_cast<TupleTypeSymbol>(returnType)) {
+    if (const auto tupleType = std::dynamic_pointer_cast<TupleTypeSymbol>(returnType)) {
       ss << tupleType->toString();
-    } else if (const auto aliasType =
-                   std::dynamic_pointer_cast<TypealiasSymbol>(returnType)) {
+    } else if (const auto aliasType = std::dynamic_pointer_cast<TypealiasSymbol>(returnType)) {
       ss << KGRN << aliasType->getName() << RST;
-    } else if (const auto builtInType =
-                   std::dynamic_pointer_cast<BuiltInTypeSymbol>(returnType)) {
+    } else if (const auto builtInType = std::dynamic_pointer_cast<BuiltInTypeSymbol>(returnType)) {
       ss << KGRN << builtInType->getName() << RST;
     } else {
       ss << KGRN << returnType->getName() << RST;

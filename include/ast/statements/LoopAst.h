@@ -13,8 +13,7 @@ private:
   bool isPostPredicated;
 
 public:
-  explicit LoopAst(antlr4::Token *token)
-      : StatementAst(token), isPostPredicated(false) {}
+  explicit LoopAst(antlr4::Token *token) : StatementAst(token), isPostPredicated(false) {}
 
   void setBody(std::shared_ptr<BlockAst> bodyBlock);
   void setCondition(std::shared_ptr<expressions::ExpressionAst> cond);

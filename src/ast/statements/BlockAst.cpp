@@ -12,10 +12,6 @@ std::string BlockAst::toStringTree(std::string prefix) const {
   }
   return ss.str();
 }
-std::vector<std::shared_ptr<Ast>> BlockAst::getChildren() const {
-  return children;
-}
-void BlockAst::addChildren(std::shared_ptr<Ast> child) {
-  children.push_back(child);
-}
+std::vector<std::shared_ptr<Ast>> BlockAst::getChildren() const { return children; }
+void BlockAst::addChildren(std::shared_ptr<Ast> child) { children.push_back(child); }
 } // namespace gazprea::ast::statements

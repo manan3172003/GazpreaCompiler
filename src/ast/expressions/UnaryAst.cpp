@@ -2,19 +2,13 @@
 
 namespace gazprea::ast::expressions {
 
-void UnaryAst::setUnaryOpType(UnaryOpType unaryOp) {
-  this->unaryOpType = unaryOp;
-}
+void UnaryAst::setUnaryOpType(UnaryOpType unaryOp) { this->unaryOpType = unaryOp; }
 
-void UnaryAst::setExpression(std::shared_ptr<ExpressionAst> expr) {
-  this->expression = expr;
-}
+void UnaryAst::setExpression(std::shared_ptr<ExpressionAst> expr) { this->expression = expr; }
 
 UnaryOpType UnaryAst::getUnaryOpType() const { return this->unaryOpType; }
 
-std::shared_ptr<ExpressionAst> UnaryAst::getExpression() const {
-  return this->expression;
-}
+std::shared_ptr<ExpressionAst> UnaryAst::getExpression() const { return this->expression; }
 
 NodeType UnaryAst::getNodeType() const { return NodeType::UnaryExpression; }
 

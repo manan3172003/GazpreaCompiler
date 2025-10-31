@@ -9,9 +9,7 @@ class TupleUnpackAssignAst final : public AssignLeftAst {
 public:
   explicit TupleUnpackAssignAst(antlr4::Token *token) : AssignLeftAst(token) {}
 
-  const std::vector<std::shared_ptr<AssignLeftAst>> &getLVals() const {
-    return lVals;
-  }
+  const std::vector<std::shared_ptr<AssignLeftAst>> &getLVals() const { return lVals; }
   void addSubLVal(std::shared_ptr<AssignLeftAst> lVal);
 
   NodeType getNodeType() const override;

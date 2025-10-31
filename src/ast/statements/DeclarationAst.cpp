@@ -4,8 +4,7 @@ namespace gazprea::ast::statements {
 NodeType DeclarationAst::getNodeType() const { return NodeType::Declaration; }
 std::string DeclarationAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << prefix << "Declaration " << name << " " << qualifierToString(qualifier)
-     << " ";
+  ss << prefix << "Declaration " << name << " " << qualifierToString(qualifier) << " ";
   if (type)
     ss << type->toStringTree(prefix + indent);
 

@@ -17,17 +17,11 @@ public:
   std::string &getName() { return name; }
   void setName(const std::string &name_) { name = name_; }
   std::vector<std::shared_ptr<Ast>> &getParams() { return params; }
-  void setParams(const std::vector<std::shared_ptr<Ast>> &params_) {
-    params = params_;
-  }
+  void setParams(const std::vector<std::shared_ptr<Ast>> &params_) { params = params_; }
   std::shared_ptr<types::DataTypeAst> getReturnType() { return returnType; }
-  void setReturnType(std::shared_ptr<types::DataTypeAst> type) {
-    returnType = type;
-  }
+  void setReturnType(std::shared_ptr<types::DataTypeAst> type) { returnType = type; }
   symTable::ScopeType getProtoType() const { return protoType; }
-  void setProtoType(const symTable::ScopeType protoType_) {
-    protoType = protoType_;
-  }
+  void setProtoType(const symTable::ScopeType protoType_) { protoType = protoType_; }
 
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;

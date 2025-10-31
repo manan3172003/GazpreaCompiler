@@ -2,8 +2,7 @@
 
 namespace gazprea::backend {
 
-std::any
-Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst> ctx) {
+std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst> ctx) {
   return {};
 }
 

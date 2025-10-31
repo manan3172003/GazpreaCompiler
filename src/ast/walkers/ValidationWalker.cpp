@@ -12,10 +12,9 @@
 
 namespace gazprea::ast::walkers {
 // DO NOT USE FOR BINARY OP COMPARISONS
-void ValidationWalker::validateTuple(
-    std::shared_ptr<Ast> ctx,
-    const std::shared_ptr<symTable::TupleTypeSymbol> &promoteFrom,
-    const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo) {
+void ValidationWalker::validateTuple(std::shared_ptr<Ast> ctx,
+                                     const std::shared_ptr<symTable::TupleTypeSymbol> &promoteFrom,
+                                     const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo) {
   const auto promoteFromResolvedTypes = promoteFrom->getResolvedTypes();
   const auto promoteToResolvedTypes = promoteTo->getResolvedTypes();
 
@@ -23,55 +22,45 @@ void ValidationWalker::validateTuple(
     throw SizeError(ctx->getLineNumber(), "Tuple sizes do not match");
 
   for (size_t i = 0; i < promoteFromResolvedTypes.size(); i++) {
-    if (promoteFromResolvedTypes[i]->getName() ==
-        promoteToResolvedTypes[i]->getName())
+    if (promoteFromResolvedTypes[i]->getName() == promoteToResolvedTypes[i]->getName())
       continue;
     if (promoteFromResolvedTypes[i]->getName() == "integer" &&
         promoteToResolvedTypes[i]->getName() == "real")
       continue;
-    if (promoteFromResolvedTypes[i]->getName() !=
-        promoteToResolvedTypes[i]->getName())
+    if (promoteFromResolvedTypes[i]->getName() != promoteToResolvedTypes[i]->getName())
       throw TypeError(ctx->getLineNumber(), "Type mismatch");
   }
 }
 
-bool ValidationWalker::isOfSymbolType(
-    const std::shared_ptr<symTable::Type> &symbolType,
-    const std::string &typeName) {
+bool ValidationWalker::isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
+                                      const std::string &typeName) {
   if (!symbolType)
     throw std::runtime_error("SymbolType should not be null");
 
   return symbolType->getName() == typeName;
 }
 
-std::shared_ptr<symTable::Type> ValidationWalker::resolvedInferredType(
-    const std::shared_ptr<types::DataTypeAst> &dataType) {
+std::shared_ptr<symTable::Type>
+ValidationWalker::resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType) {
   auto globalScope = symTab->getGlobalScope();
   switch (dataType->getNodeType()) {
   case NodeType::IntegerType:
-    return std::dynamic_pointer_cast<symTable::Type>(
-        globalScope->resolveType("integer"));
+    return std::dynamic_pointer_cast<symTable::Type>(globalScope->resolveType("integer"));
   case NodeType::RealType:
-    return std::dynamic_pointer_cast<symTable::Type>(
-        globalScope->resolveType("real"));
+    return std::dynamic_pointer_cast<symTable::Type>(globalScope->resolveType("real"));
   case NodeType::CharType:
-    return std::dynamic_pointer_cast<symTable::Type>(
-        globalScope->resolveType("character"));
+    return std::dynamic_pointer_cast<symTable::Type>(globalScope->resolveType("character"));
   case NodeType::BoolType:
-    return std::dynamic_pointer_cast<symTable::Type>(
-        globalScope->resolveType("boolean"));
+    return std::dynamic_pointer_cast<symTable::Type>(globalScope->resolveType("boolean"));
   case NodeType::AliasType: {
-    const auto aliasTypeNode =
-        std::dynamic_pointer_cast<types::AliasTypeAst>(dataType);
-    const auto aliasSymType =
-        globalScope->resolveType(aliasTypeNode->getAlias());
+    const auto aliasTypeNode = std::dynamic_pointer_cast<types::AliasTypeAst>(dataType);
+    const auto aliasSymType = globalScope->resolveType(aliasTypeNode->getAlias());
     return std::dynamic_pointer_cast<symTable::Type>(aliasSymType);
   }
   case NodeType::TupleType: {
     // visiting the tuple
     auto tupleTypeSymbol = std::make_shared<symTable::TupleTypeSymbol>("");
-    auto tupleDataType =
-        std::dynamic_pointer_cast<types::TupleTypeAst>(dataType);
+    auto tupleDataType = std::dynamic_pointer_cast<types::TupleTypeAst>(dataType);
     for (const auto &subType : tupleDataType->getTypes()) {
       tupleTypeSymbol->addResolvedType(resolvedInferredType(subType));
     }
@@ -83,14 +72,12 @@ std::shared_ptr<symTable::Type> ValidationWalker::resolvedInferredType(
 }
 
 // Check if type is integer or real
-bool ValidationWalker::isNumericType(
-    const std::shared_ptr<symTable::Type> &type) const {
+bool ValidationWalker::isNumericType(const std::shared_ptr<symTable::Type> &type) const {
   return isOfSymbolType(type, "integer") || isOfSymbolType(type, "real");
 }
 
 // Check if operator is a comparison operator
-bool ValidationWalker::isComparisonOperator(
-    expressions::BinaryOpType opType) const {
+bool ValidationWalker::isComparisonOperator(expressions::BinaryOpType opType) const {
   return opType == expressions::BinaryOpType::LESS_THAN ||
          opType == expressions::BinaryOpType::GREATER_THAN ||
          opType == expressions::BinaryOpType::LESS_EQUAL ||
@@ -109,9 +96,7 @@ std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   bool visitedMain = false;
   for (const auto &child : ctx->children) {
     if (child->getNodeType() == NodeType::Procedure &&
-        std::dynamic_pointer_cast<prototypes::ProcedureAst>(child)
-                ->getProto()
-                ->getName() == "main")
+        std::dynamic_pointer_cast<prototypes::ProcedureAst>(child)->getProto()->getName() == "main")
       visitedMain = true;
     visit(child);
   }
@@ -119,16 +104,13 @@ std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
     throw MainError(ctx->getLineNumber(), "Main procedure not found");
   return {};
 }
-std::any ValidationWalker::visitAssignment(
-    std::shared_ptr<statements::AssignmentAst> ctx) {
+std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
   return AstWalker::visitAssignment(ctx);
 }
-std::any ValidationWalker::visitDeclaration(
-    std::shared_ptr<statements::DeclarationAst> ctx) {
+std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
   if (ctx->getExpr())
     visit(ctx->getExpr());
-  auto variableSymbol =
-      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   if (ctx->getType()) {
     // Promoting type here
 
@@ -141,24 +123,21 @@ std::any ValidationWalker::visitDeclaration(
 
   return {};
 }
-std::any
-ValidationWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
+std::any ValidationWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   bool visitedAllDeclarations = false;
   for (const auto &child : ctx->getChildren()) {
     if (!std::dynamic_pointer_cast<statements::DeclarationAst>(child))
       visitedAllDeclarations = true;
     else {
       if (visitedAllDeclarations)
-        throw StatementError(
-            child->getLineNumber(),
-            "Declarations are only allowed on the top of the block");
+        throw StatementError(child->getLineNumber(),
+                             "Declarations are only allowed on the top of the block");
     }
     visit(child);
   }
   return {};
 }
-std::any
-ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
+std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
   auto leftExpr = ctx->getLeft();
   auto rightExpr = ctx->getRight();
   visitExpression(leftExpr);
@@ -171,13 +150,11 @@ ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
     ctx->setInferredDataType(leftExpr->getInferredDataType());
   } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "integer") &&
              isOfSymbolType(rightExpr->getInferredSymbolType(), "real")) {
-    promoteIfNeeded(ctx, leftExpr->getInferredSymbolType(),
-                    rightExpr->getInferredSymbolType(),
+    promoteIfNeeded(ctx, leftExpr->getInferredSymbolType(), rightExpr->getInferredSymbolType(),
                     rightExpr->getInferredDataType());
   } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "real") &&
              isOfSymbolType(rightExpr->getInferredSymbolType(), "integer")) {
-    promoteIfNeeded(ctx, rightExpr->getInferredSymbolType(),
-                    leftExpr->getInferredSymbolType(),
+    promoteIfNeeded(ctx, rightExpr->getInferredSymbolType(), leftExpr->getInferredSymbolType(),
                     leftExpr->getInferredDataType());
   } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "real") &&
              isOfSymbolType(rightExpr->getInferredSymbolType(), "real")) {
@@ -192,8 +169,7 @@ ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
   // Both left and right expressions from here on will be equal because of the
   // above else statement throwing error
 
-  if (!isValidOp(leftExpr->getInferredSymbolType()->getName(),
-                 ctx->getBinaryOpType()))
+  if (!isValidOp(leftExpr->getInferredSymbolType()->getName(), ctx->getBinaryOpType()))
     throw TypeError(ctx->getLineNumber(), "Invalid binary operation");
 
   // If the operation is == or != or operands are bool set expression type to
@@ -209,8 +185,7 @@ ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
 
   // if left expr and right expr in cond is real or int then if the operation is
   // <,>,<=,>= then set expression type to boolean
-  if (isComparisonOperator(ctx->getBinaryOpType()) &&
-      areBothNumeric(leftExpr, rightExpr)) {
+  if (isComparisonOperator(ctx->getBinaryOpType()) && areBothNumeric(leftExpr, rightExpr)) {
     auto booleanDataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
     auto booleanTypeSymbol = resolvedInferredType(booleanDataType);
     ctx->setInferredSymbolType(booleanTypeSymbol);
@@ -219,22 +194,17 @@ ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
 
   return {};
 }
-std::any
-ValidationWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
+std::any ValidationWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
   return AstWalker::visitBreak(ctx);
 }
-std::any
-ValidationWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) {
+std::any ValidationWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) {
   return AstWalker::visitContinue(ctx);
 }
-std::any ValidationWalker::visitConditional(
-    std::shared_ptr<statements::ConditionalAst> ctx) {
+std::any ValidationWalker::visitConditional(std::shared_ptr<statements::ConditionalAst> ctx) {
   visit(ctx->getCondition());
 
-  if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(),
-                      "boolean")) {
-    throw TypeError(ctx->getLineNumber(),
-                    "If statement condition must be of type boolean");
+  if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(), "boolean")) {
+    throw TypeError(ctx->getLineNumber(), "If statement condition must be of type boolean");
   }
   visit(ctx->getThenBody());
   if (ctx->getElseBody()) {
@@ -243,26 +213,21 @@ std::any ValidationWalker::visitConditional(
 
   return {};
 }
-std::any
-ValidationWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
+std::any ValidationWalker::visitInput(std::shared_ptr<statements::InputAst> ctx) {
   const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
   if (curScope && curScope->getScopeType() == symTable::ScopeType::Function) {
-    throw StatementError(ctx->getLineNumber(),
-                         "Input statement not allowed in functions");
+    throw StatementError(ctx->getLineNumber(), "Input statement not allowed in functions");
   }
   return {};
 }
-std::any
-ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
+std::any ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
   const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
   if (curScope && curScope->getScopeType() == symTable::ScopeType::Function) {
-    throw StatementError(ctx->getLineNumber(),
-                         "Output statement not allowed in functions");
+    throw StatementError(ctx->getLineNumber(), "Output statement not allowed in functions");
   }
   return {};
 }
-std::any ValidationWalker::visitProcedure(
-    std::shared_ptr<prototypes::ProcedureAst> ctx) {
+std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
   auto proto = ctx->getProto();
   if (proto->getName() == "main") {
     if (!proto->getParams().empty())
@@ -274,28 +239,24 @@ std::any ValidationWalker::visitProcedure(
   visit(ctx->getBody());
   return {};
 }
-std::any ValidationWalker::visitProcedureParams(
-    std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
+std::any
+ValidationWalker::visitProcedureParams(std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
   return AstWalker::visitProcedureParams(ctx);
 }
-std::any ValidationWalker::visitProcedureCall(
-    std::shared_ptr<statements::ProcedureCallAst> ctx) {
+std::any ValidationWalker::visitProcedureCall(std::shared_ptr<statements::ProcedureCallAst> ctx) {
 
   const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
   if (curScope && curScope->getScopeType() == symTable::ScopeType::Function) {
     throw CallError(ctx->getLineNumber(), "Procedure call inside function");
   }
 
-  const auto methodSymbol =
-      std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   if (methodSymbol->getScopeType() == symTable::ScopeType::Function) {
-    throw CallError(ctx->getLineNumber(),
-                    "Call statement used on non-procedure type");
+    throw CallError(ctx->getLineNumber(), "Call statement used on non-procedure type");
   }
   return {};
 }
-std::any
-ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
+std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   visit(ctx->getExpr());
   auto curScope = ctx->getScope();
 
@@ -307,10 +268,8 @@ ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
     curScope = curScope->getEnclosingScope();
   }
 
-  auto methodSymbol =
-      std::dynamic_pointer_cast<symTable::MethodSymbol>(curScope);
-  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
-      methodSymbol->getDef());
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(curScope);
+  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(methodSymbol->getDef());
 
   if (ctx->getExpr()->getInferredSymbolType()->getName() !=
       methodSymbol->getReturnType()->getName()) {
@@ -322,26 +281,24 @@ ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
   if (ctx->getExpr()->getInferredSymbolType()->getName() == "tuple") {
     auto returnExprTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
         ctx->getExpr()->getInferredSymbolType());
-    auto expectedTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
-        methodSymbol->getReturnType());
+    auto expectedTuple =
+        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(methodSymbol->getReturnType());
     validateTuple(ctx, returnExprTuple, expectedTuple);
   }
   return {};
 }
-std::any ValidationWalker::visitTupleElementAssign(
-    std::shared_ptr<statements::TupleElementAssignAst> ctx) {
+std::any
+ValidationWalker::visitTupleElementAssign(std::shared_ptr<statements::TupleElementAssignAst> ctx) {
   return AstWalker::visitTupleElementAssign(ctx);
 }
-std::any ValidationWalker::visitTupleUnpackAssign(
-    std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
+std::any
+ValidationWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
   return AstWalker::visitTupleUnpackAssign(ctx);
 }
-std::any ValidationWalker::visitTupleAccess(
-    std::shared_ptr<expressions::TupleAccessAst> ctx) {
+std::any ValidationWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
   return AstWalker::visitTupleAccess(ctx);
 }
-std::any ValidationWalker::visitTuple(
-    std::shared_ptr<expressions::TupleLiteralAst> ctx) {
+std::any ValidationWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   auto tupleType = std::make_shared<types::TupleTypeAst>(ctx->token);
   for (const auto &element : ctx->getElements()) {
     visit(element);
@@ -351,31 +308,24 @@ std::any ValidationWalker::visitTuple(
   ctx->setInferredDataType(tupleType);
   return {};
 }
-std::any
-ValidationWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
+std::any ValidationWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   return AstWalker::visitTupleType(ctx);
 }
-std::any ValidationWalker::visitTypealias(
-    std::shared_ptr<statements::TypealiasAst> ctx) {
+std::any ValidationWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   return AstWalker::visitTypealias(ctx);
 }
-std::any
-ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
+std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   visit(ctx->getBody());
   return {};
 }
-std::any ValidationWalker::visitFunctionParam(
-    std::shared_ptr<prototypes::FunctionParamAst> ctx) {
+std::any ValidationWalker::visitFunctionParam(std::shared_ptr<prototypes::FunctionParamAst> ctx) {
   return AstWalker::visitFunctionParam(ctx);
 }
-std::any ValidationWalker::visitPrototype(
-    std::shared_ptr<prototypes::PrototypeAst> ctx) {
+std::any ValidationWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
   return AstWalker::visitPrototype(ctx);
 }
-std::any ValidationWalker::visitFuncProcCall(
-    std::shared_ptr<expressions::FuncProcCallAst> ctx) {
-  const auto methodSymbol =
-      std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCallAst> ctx) {
+  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
 
   // Indirect way to check if symbol is a procedure
   if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {
@@ -387,13 +337,11 @@ std::any ValidationWalker::visitFuncProcCall(
 
   if (!methodSymbol->getReturnType())
     throw ReturnError(ctx->getLineNumber(), "Return type is null");
-  if (inBinaryOp &&
-      methodSymbol->getScopeType() == symTable::ScopeType::Procedure)
-    throw CallError(ctx->getLineNumber(),
-                    "Procedure cannot be called in a binary expression");
+  if (inBinaryOp && methodSymbol->getScopeType() == symTable::ScopeType::Procedure)
+    throw CallError(ctx->getLineNumber(), "Procedure cannot be called in a binary expression");
 
-  const auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
-      methodSymbol->getDef());
+  const auto protoType =
+      std::dynamic_pointer_cast<prototypes::PrototypeAst>(methodSymbol->getDef());
 
   if (protoType->getName() == "main") {
     throw CallError(ctx->getLineNumber(), "Cannot call main function");
@@ -409,29 +357,23 @@ std::any ValidationWalker::visitFuncProcCall(
     // TODO: Promote args if arg is int and param is real
 
     if (methodSymbol->getScopeType() == symTable::ScopeType::Function) {
-      const auto &param =
-          std::dynamic_pointer_cast<prototypes::FunctionParamAst>(params[i]);
+      const auto &param = std::dynamic_pointer_cast<prototypes::FunctionParamAst>(params[i]);
       const auto &paramVarSymbol =
-          std::dynamic_pointer_cast<symTable::VariableSymbol>(
-              param->getSymbol());
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(param->getSymbol());
 
-      promoteIfNeeded(arg, arg->getInferredSymbolType(),
-                      paramVarSymbol->getType(), param->getParamType());
+      promoteIfNeeded(arg, arg->getInferredSymbolType(), paramVarSymbol->getType(),
+                      param->getParamType());
 
-      if (arg->getInferredSymbolType()->getName() !=
-          paramVarSymbol->getType()->getName())
+      if (arg->getInferredSymbolType()->getName() != paramVarSymbol->getType()->getName())
         throw TypeError(ctx->getLineNumber(), "Argument type mismatch");
     } else if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {
-      const auto &param =
-          std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
+      const auto &param = std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
       const auto &paramVarSymbol =
-          std::dynamic_pointer_cast<symTable::VariableSymbol>(
-              param->getSymbol());
-      promoteIfNeeded(arg, arg->getInferredSymbolType(),
-                      paramVarSymbol->getType(), param->getParamType());
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(param->getSymbol());
+      promoteIfNeeded(arg, arg->getInferredSymbolType(), paramVarSymbol->getType(),
+                      param->getParamType());
 
-      if (arg->getInferredSymbolType()->getName() !=
-          paramVarSymbol->getType()->getName())
+      if (arg->getInferredSymbolType()->getName() != paramVarSymbol->getType()->getName())
         throw TypeError(ctx->getLineNumber(), "Argument type mismatch");
     }
   }
@@ -446,39 +388,32 @@ std::any ValidationWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
   ctx->setInferredDataType(ctx->getExpr()->getInferredDataType());
   return {};
 }
-std::any
-ValidationWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
+std::any ValidationWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
   const auto boolType = std::make_shared<types::BooleanTypeAst>(ctx->token);
   ctx->setInferredDataType(boolType);
   ctx->setInferredSymbolType(resolvedInferredType(boolType));
   return {};
 }
-std::any
-ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
+std::any ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   visit(ctx->getExpression());
-  if (ctx->getExpression()->getInferredDataType()->getNodeType() ==
-      NodeType::TupleType) {
+  if (ctx->getExpression()->getInferredDataType()->getNodeType() == NodeType::TupleType) {
     const auto targetTupleTypeSymbol =
-        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
-            ctx->getResolvedTargetType());
-    const auto curTupleTypeSymbol =
-        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
-            ctx->getExpression()->getInferredSymbolType());
+        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getResolvedTargetType());
+    const auto curTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
+        ctx->getExpression()->getInferredSymbolType());
     const auto targetSubTypes = targetTupleTypeSymbol->getResolvedTypes();
     const auto curSubTypes = curTupleTypeSymbol->getResolvedTypes();
     if (curSubTypes.size() != targetSubTypes.size())
       throw SizeError(ctx->getLineNumber(), "Tuple sizes do not match");
     for (size_t i = 0; i < curSubTypes.size(); i++) {
-      if (!utils::isPromotable(curSubTypes[i]->getName(),
-                               targetSubTypes[i]->getName())) {
+      if (!utils::isPromotable(curSubTypes[i]->getName(), targetSubTypes[i]->getName())) {
         throw TypeError(ctx->getLineNumber(), "Tuple sub type not promotable");
       }
     }
   } else {
     // check scalar is promotable
     const auto promoteTo = ctx->getResolvedTargetType()->getName();
-    const auto promoteFrom =
-        ctx->getExpression()->getInferredSymbolType()->getName();
+    const auto promoteFrom = ctx->getExpression()->getInferredSymbolType()->getName();
     if (!utils::isPromotable(promoteFrom, promoteTo)) {
       throw TypeError(ctx->getLineNumber(), "Type not promotable");
     }
@@ -487,61 +422,50 @@ ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   ctx->setInferredDataType(ctx->getExpression()->getInferredDataType());
   return {};
 }
-std::any
-ValidationWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
+std::any ValidationWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
   const auto charType = std::make_shared<types::CharacterTypeAst>(ctx->token);
   ctx->setInferredDataType(charType);
   ctx->setInferredSymbolType(resolvedInferredType(charType));
   return {};
 }
-std::any ValidationWalker::visitIdentifier(
-    std::shared_ptr<expressions::IdentifierAst> ctx) {
-  const auto dataTypeSymbol =
-      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+std::any ValidationWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
+  const auto dataTypeSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   auto astNode = dataTypeSymbol->getDef();
 
   if (astNode->getNodeType() == NodeType::Declaration) {
-    auto dataType =
-        std::dynamic_pointer_cast<statements::DeclarationAst>(astNode)
-            ->getType();
+    auto dataType = std::dynamic_pointer_cast<statements::DeclarationAst>(astNode)->getType();
     ctx->setInferredDataType(dataType);
     ctx->setInferredSymbolType(resolvedInferredType(dataType));
   } else if (astNode->getNodeType() == NodeType::FunctionParam) {
     auto dataType =
-        std::dynamic_pointer_cast<prototypes::FunctionParamAst>(astNode)
-            ->getParamType();
+        std::dynamic_pointer_cast<prototypes::FunctionParamAst>(astNode)->getParamType();
     ctx->setInferredDataType(dataType);
     ctx->setInferredSymbolType(resolvedInferredType(dataType));
   } else if (astNode->getNodeType() == NodeType::ProcedureParam) {
     auto dataType =
-        std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(astNode)
-            ->getParamType();
+        std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(astNode)->getParamType();
     ctx->setInferredDataType(dataType);
     ctx->setInferredSymbolType(resolvedInferredType(dataType));
   }
 
   return {};
 }
-std::any ValidationWalker::visitIdentifierLeft(
-    std::shared_ptr<statements::IdentifierLeftAst> ctx) {
+std::any ValidationWalker::visitIdentifierLeft(std::shared_ptr<statements::IdentifierLeftAst> ctx) {
   return AstWalker::visitIdentifierLeft(ctx);
 }
-std::any ValidationWalker::visitInteger(
-    std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
+std::any ValidationWalker::visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
   auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);
   ctx->setInferredDataType(intType);
   ctx->setInferredSymbolType(resolvedInferredType(intType));
   return {};
 }
-std::any
-ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
+std::any ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
   auto realType = std::make_shared<types::RealTypeAst>(ctx->token);
   ctx->setInferredDataType(realType);
   ctx->setInferredSymbolType(resolvedInferredType(realType));
   return {};
 }
-std::any
-ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
+std::any ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   visit(ctx->getExpression());
   ctx->setInferredSymbolType(ctx->getExpression()->getInferredSymbolType());
   ctx->setInferredDataType(ctx->getExpression()->getInferredDataType());
@@ -551,18 +475,15 @@ std::any ValidationWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
 
   if (ctx->getCondition()) {
     visit(ctx->getCondition());
-    if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(),
-                        "boolean")) {
-      throw TypeError(ctx->getLineNumber(),
-                      "Loop condition must be of type boolean");
+    if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(), "boolean")) {
+      throw TypeError(ctx->getLineNumber(), "Loop condition must be of type boolean");
     }
   }
 
   visit(ctx->getBody());
   return {};
 }
-std::any ValidationWalker::visitIteratorLoop(
-    std::shared_ptr<statements::IteratorLoopAst> ctx) {
+std::any ValidationWalker::visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {
   return AstWalker::visitIteratorLoop(ctx);
 }
 } // namespace gazprea::ast::walkers

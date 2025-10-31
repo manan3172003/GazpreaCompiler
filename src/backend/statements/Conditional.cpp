@@ -2,8 +2,7 @@
 
 namespace gazprea::backend {
 
-std::any Backend::visitConditional(
-    std::shared_ptr<ast::statements::ConditionalAst> ctx) {
+std::any Backend::visitConditional(std::shared_ptr<ast::statements::ConditionalAst> ctx) {
   return {};
 }
 

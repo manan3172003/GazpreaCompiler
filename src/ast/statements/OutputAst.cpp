@@ -8,11 +8,8 @@ std::string OutputAst::toStringTree(std::string prefix) const {
   ss << expr->toStringTree(prefix + indent);
   return ss.str();
 }
-void OutputAst::setExpression(
-    std::shared_ptr<expressions::ExpressionAst> expr) {
+void OutputAst::setExpression(std::shared_ptr<expressions::ExpressionAst> expr) {
   this->expr = expr;
 }
-std::shared_ptr<expressions::ExpressionAst> OutputAst::getExpression() const {
-  return this->expr;
-}
+std::shared_ptr<expressions::ExpressionAst> OutputAst::getExpression() const { return this->expr; }
 } // namespace gazprea::ast::statements

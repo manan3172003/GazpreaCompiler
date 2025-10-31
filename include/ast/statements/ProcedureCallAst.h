@@ -12,12 +12,8 @@ public:
 
   void setName(const std::string &name_) { name = name_; }
   std::string getName() const { return name; }
-  void setArgs(const std::vector<std::shared_ptr<expressions::ArgAst>> &args_) {
-    args = args_;
-  }
-  std::vector<std::shared_ptr<expressions::ArgAst>> getArgs() const {
-    return args;
-  }
+  void setArgs(const std::vector<std::shared_ptr<expressions::ArgAst>> &args_) { args = args_; }
+  std::vector<std::shared_ptr<expressions::ArgAst>> getArgs() const { return args; }
 
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;

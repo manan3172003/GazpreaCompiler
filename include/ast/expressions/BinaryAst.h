@@ -30,8 +30,7 @@ private:
   static std::string getOperator(BinaryOpType opType);
 
 public:
-  explicit BinaryAst(antlr4::Token *token)
-      : ExpressionAst(token), binaryOpType() {}
+  explicit BinaryAst(antlr4::Token *token) : ExpressionAst(token), binaryOpType() {}
 
   void setBinaryOpType(BinaryOpType binOp);
   void setLeft(std::shared_ptr<ExpressionAst> leftExpr);

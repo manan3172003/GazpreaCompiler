@@ -2,25 +2,17 @@
 
 namespace gazprea::ast::expressions {
 
-void BinaryAst::setBinaryOpType(BinaryOpType binOp) {
-  this->binaryOpType = binOp;
-}
+void BinaryAst::setBinaryOpType(BinaryOpType binOp) { this->binaryOpType = binOp; }
 
-void BinaryAst::setLeft(std::shared_ptr<ExpressionAst> leftExpr) {
-  this->left = leftExpr;
-}
+void BinaryAst::setLeft(std::shared_ptr<ExpressionAst> leftExpr) { this->left = leftExpr; }
 
-void BinaryAst::setRight(std::shared_ptr<ExpressionAst> rightExpr) {
-  this->right = rightExpr;
-}
+void BinaryAst::setRight(std::shared_ptr<ExpressionAst> rightExpr) { this->right = rightExpr; }
 
 BinaryOpType BinaryAst::getBinaryOpType() const { return this->binaryOpType; }
 
 std::shared_ptr<ExpressionAst> BinaryAst::getLeft() const { return this->left; }
 
-std::shared_ptr<ExpressionAst> BinaryAst::getRight() const {
-  return this->right;
-}
+std::shared_ptr<ExpressionAst> BinaryAst::getRight() const { return this->right; }
 
 NodeType BinaryAst::getNodeType() const { return NodeType::BinaryExpression; }
 

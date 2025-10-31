@@ -13,8 +13,7 @@ std::string CastAst::toStringTree(std::string prefix) const {
   }
   if (resolvedTargetType) {
     const auto tupTypeSym =
-        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
-            resolvedTargetType);
+        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(resolvedTargetType);
     if (tupTypeSym) {
       ss << ":" << KGRN << tupTypeSym->toString() << RST;
     } else {

@@ -2,29 +2,19 @@
 
 namespace gazprea::ast::statements {
 
-void IteratorLoopAst::setBody(std::shared_ptr<BlockAst> bodyBlock) {
-  this->body = bodyBlock;
-}
+void IteratorLoopAst::setBody(std::shared_ptr<BlockAst> bodyBlock) { this->body = bodyBlock; }
 
-void IteratorLoopAst::setIteratorName(std::string name) {
-  this->iteratorName = name;
-}
+void IteratorLoopAst::setIteratorName(std::string name) { this->iteratorName = name; }
 
-void IteratorLoopAst::setDomainExpr(
-    std::shared_ptr<expressions::ExpressionAst> expr) {
+void IteratorLoopAst::setDomainExpr(std::shared_ptr<expressions::ExpressionAst> expr) {
   this->domainExpr = expr;
 }
 
-std::shared_ptr<BlockAst> IteratorLoopAst::getBody() const {
-  return this->body;
-}
+std::shared_ptr<BlockAst> IteratorLoopAst::getBody() const { return this->body; }
 
-std::string IteratorLoopAst::getIteratorName() const {
-  return this->iteratorName;
-}
+std::string IteratorLoopAst::getIteratorName() const { return this->iteratorName; }
 
-std::shared_ptr<expressions::ExpressionAst>
-IteratorLoopAst::getDomainExpr() const {
+std::shared_ptr<expressions::ExpressionAst> IteratorLoopAst::getDomainExpr() const {
   return this->domainExpr;
 }
 
