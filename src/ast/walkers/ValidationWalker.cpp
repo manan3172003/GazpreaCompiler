@@ -11,10 +11,9 @@
 namespace gazprea::ast::walkers {
 
 // helper to check for var parameter aliasing
-void ValidationWalker::checkVarArgs(
-    const std::shared_ptr<prototypes::PrototypeAst> &proto,
-    const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
-    int lineNumber) const {
+void ValidationWalker::checkVarArgs(const std::shared_ptr<prototypes::PrototypeAst> &proto,
+                                    const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
+                                    int lineNumber) const {
   auto params = proto->getParams();
   // unordered map to track vars
   std::unordered_map<std::string, bool> seenVarMap;
@@ -23,18 +22,15 @@ void ValidationWalker::checkVarArgs(
     if (args[i]->getExpr()->getNodeType() != NodeType::Identifier)
       continue;
     // get the identifier and parameter
-    auto identifier = std::dynamic_pointer_cast<expressions::IdentifierAst>(
-        args[i]->getExpr());
-    auto param =
-        std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
+    auto identifier = std::dynamic_pointer_cast<expressions::IdentifierAst>(args[i]->getExpr());
+    auto param = std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
     std::string varName = identifier->getName();
     bool isVar = (param->getQualifier() == Qualifier::Var);
     // if variable seen before and in map then throw aliasing error
     if (seenVarMap.find(varName) != seenVarMap.end()) {
       if (seenVarMap[varName] || isVar) {
-        throw AliasingError(
-            lineNumber, "Variable aliasing error: var parameter cannot share "
-                        "a variable with another parameter");
+        throw AliasingError(lineNumber, "Variable aliasing error: var parameter cannot share "
+                                        "a variable with another parameter");
       }
     } else {
       // variable seen first time add to map
@@ -214,8 +210,7 @@ std::any ValidationWalker::visitProcedureCall(std::shared_ptr<statements::Proced
     throw CallError(ctx->getLineNumber(), "Call statement used on non-procedure type");
   }
   // check for var parameter aliasing
-  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
-      methodSymbol->getDef());
+  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(methodSymbol->getDef());
   checkVarArgs(protoType, ctx->getArgs(), ctx->getLineNumber());
   return {};
 }

@@ -8,7 +8,7 @@ private:
   std::string name;
 
 public:
-  explicit IdentifierLeftAst(antlr4::Token *token) : AssignLeftAst(token) {};
+  explicit IdentifierLeftAst(antlr4::Token *token) : AssignLeftAst(token){};
   std::string getName() const { return name; }
   void setName(std::string idName) { this->name = std::move(idName); }
   NodeType getNodeType() const override;

@@ -37,7 +37,7 @@ class BaseScope : public Scope {
   std::unordered_map<std::string, std::shared_ptr<Symbol>> typeSymbols;
 
 public:
-  explicit BaseScope(const ScopeType scType) : Scope(scType) {};
+  explicit BaseScope(const ScopeType scType) : Scope(scType){};
   std::string getScopeName() override;
   void setEnclosingScope(std::shared_ptr<Scope> scope) override;
   std::shared_ptr<Scope> getEnclosingScope() override;
@@ -54,14 +54,14 @@ public:
 
 class GlobalScope final : public BaseScope {
 public:
-  GlobalScope() : BaseScope(ScopeType::Global) {};
+  GlobalScope() : BaseScope(ScopeType::Global){};
   std::string getScopeName() override;
   std::shared_ptr<Symbol> resolveType(const std::string &name) override;
 };
 
 class LocalScope final : public BaseScope {
 public:
-  LocalScope() : BaseScope(ScopeType::Local) {};
+  LocalScope() : BaseScope(ScopeType::Local){};
   std::string getScopeName() override;
 };
 } // namespace gazprea::symTable
