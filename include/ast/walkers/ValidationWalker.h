@@ -140,5 +140,8 @@ public:
   static bool isComparisonOperator(expressions::BinaryOpType opType);
   static bool areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
                              const std::shared_ptr<expressions::ExpressionAst> &right);
+  void checkVarArgs(const std::shared_ptr<prototypes::PrototypeAst> &proto,
+               const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
+               int lineNumber) const;
 };
 } // namespace gazprea::ast::walkers

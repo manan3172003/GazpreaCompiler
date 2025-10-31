@@ -10,6 +10,39 @@
 
 namespace gazprea::ast::walkers {
 
+// helper to check for var parameter aliasing
+void ValidationWalker::checkVarArgs(
+    const std::shared_ptr<prototypes::PrototypeAst> &proto,
+    const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
+    int lineNumber) const {
+  auto params = proto->getParams();
+  // unordered map to track vars
+  std::unordered_map<std::string, bool> varUsedWithVar;
+  for (size_t i = 0; i < args.size(); i++) {
+    // check if argument is an identifier
+    if (args[i]->getExpr()->getNodeType() != NodeType::Identifier)
+      continue;
+    // get the identifier and parameter
+    auto identifier = std::dynamic_pointer_cast<expressions::IdentifierAst>(
+        args[i]->getExpr());
+    auto param =
+        std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
+    std::string varName = identifier->getName();
+    bool isVar = (param->getQualifier() == Qualifier::Var);
+    //if variable seen before and in map then throw aliasing error
+    if (varUsedWithVar.find(varName) != varUsedWithVar.end()) {
+      if (varUsedWithVar[varName] || isVar) {
+        throw AliasingError(
+            lineNumber, "Variable aliasing error: var parameter cannot share "
+                        "a variable with another parameter");
+      }
+    } else {
+      //variable seen first time add to map
+      varUsedWithVar[varName] = isVar;
+    }
+  }
+}
+
 std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   bool visitedMain = false;
   for (const auto &child : ctx->children) {
@@ -180,6 +213,10 @@ std::any ValidationWalker::visitProcedureCall(std::shared_ptr<statements::Proced
   if (methodSymbol->getScopeType() == symTable::ScopeType::Function) {
     throw CallError(ctx->getLineNumber(), "Call statement used on non-procedure type");
   }
+  // check for var parameter aliasing
+  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(
+      methodSymbol->getDef());
+  checkVarArgs(protoType, ctx->getArgs(), ctx->getLineNumber());
   return {};
 }
 std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
