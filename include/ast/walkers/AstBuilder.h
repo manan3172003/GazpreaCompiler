@@ -37,7 +37,6 @@ public:
   std::any visitBlock_stat(GazpreaParser::Block_statContext *ctx) override;
   std::any visitIterativeLoop(GazpreaParser::IterativeLoopContext *ctx) override;
   std::any visitDec_stat(GazpreaParser::Dec_statContext *ctx) override;
-  std::any visitTuple_dec_stat(GazpreaParser::Tuple_dec_statContext *ctx) override;
   std::any visitTuple_type(GazpreaParser::Tuple_typeContext *ctx) override;
   std::any visitType_list(GazpreaParser::Type_listContext *ctx) override;
   std::any visitType(GazpreaParser::TypeContext *ctx) override;

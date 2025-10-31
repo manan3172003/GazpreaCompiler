@@ -84,12 +84,10 @@ assign_left
     ;
 
 dec_stat
-    : ((qualifier? type) | (qualifier type?)) ID (EQUAL expr)? SC
+    : qualifier? type  ID (EQUAL expr)? SC
+    | qualifier type? ID EQUAL expr SC
     ;
 
-tuple_dec_stat
-    : tuple_type ID (EQUAL expr)? SC
-    ;
 
 tuple_type: TUPLE LPAREN type_list RPAREN;
 

@@ -397,9 +397,6 @@ std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
 
   return std::static_pointer_cast<statements::StatementAst>(declAst);
 }
-std::any AstBuilder::visitTuple_dec_stat(GazpreaParser::Tuple_dec_statContext *ctx) {
-  return GazpreaBaseVisitor::visitTuple_dec_stat(ctx);
-}
 std::any AstBuilder::visitTuple_type(GazpreaParser::Tuple_typeContext *ctx) {
   auto tupleType = std::make_shared<types::TupleTypeAst>(ctx->getStart());
   for (auto const type : ctx->type_list()->type()) {
