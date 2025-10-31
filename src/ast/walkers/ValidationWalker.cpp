@@ -6,6 +6,7 @@
 #include "symTable/MethodSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
+#include "utils/ValidationUtils.h"
 
 #include <ast/walkers/ValidationWalker.h>
 
@@ -114,9 +115,6 @@ std::any ValidationWalker::visitDeclaration(
     ctx->setType(ctx->getExpr()->getInferredDataType());
   }
   // type check
-  if (variableSymbol->getType()->getName() != ctx->getExpr()->getInferredSymbolType()->getName()) {
-    throw TypeError(ctx->getLineNumber(), "Variable type does not match expression type");
-  }
 
   return {};
 }
@@ -400,7 +398,26 @@ ValidationWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
 std::any
 ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   visit(ctx->getExpression());
-  ctx->setInferredSymbolType(ctx->getExpression()->getInferredSymbolType());
+  if (ctx->getExpression()->getInferredDataType()->getNodeType() == NodeType::TupleType) {
+    const auto targetTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getResolvedTargetType());
+    const auto curTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getExpression()->getInferredSymbolType());
+    const auto targetSubTypes = targetTupleTypeSymbol->getResolvedTypes();
+    const auto curSubTypes = curTupleTypeSymbol->getResolvedTypes();
+    if (curSubTypes.size() != targetSubTypes.size()) throw SizeError(ctx->getLineNumber(), "Tuple sizes do not match");
+    for (size_t i = 0; i < curSubTypes.size(); i++) {
+      if (!utils::isPromotable(curSubTypes[i]->getName(), targetSubTypes[i]->getName())) {
+        throw TypeError(ctx->getLineNumber(), "Tuple sub type not promotable");
+      }
+    }
+  } else {
+    // check scalar is promotable
+    const auto promoteTo = ctx->getResolvedTargetType()->getName();
+    const auto promoteFrom = ctx->getExpression()->getInferredSymbolType()->getName();
+    if (!utils::isPromotable(promoteFrom, promoteTo)) {
+      throw TypeError(ctx->getLineNumber(), "Type not promotable");
+    }
+  }
+  ctx->setInferredSymbolType(ctx->getResolvedTargetType());
   ctx->setInferredDataType(ctx->getExpression()->getInferredDataType());
   return {};
 }

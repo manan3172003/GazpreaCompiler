@@ -11,6 +11,7 @@ add_executable(gazc ${gazprea_src_files})
 
 add_subdirectory(ast)
 add_subdirectory(symTable)
+add_subdirectory(utils)
 
 target_include_directories(gazc PUBLIC ${ANTLR_GEN_DIR})
 
