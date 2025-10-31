@@ -6,8 +6,7 @@
 #include "GazpreaParser.h"
 #include "ast/RootAst.h"
 #include "ast/walkers/AstBuilder.h"
-#include "ast/walkers/DefineWalker.h"
-#include "ast/walkers/ResolveWalker.h"
+#include "ast/walkers/DefRefWalker.h"
 #include "ast/walkers/ValidationWalker.h"
 #include "tree/ParseTree.h"
 #include <fstream>
@@ -39,15 +38,10 @@ int main(int argc, char **argv) {
     // std::cout << rootAst->toStringTree("") << std::endl;
 
     auto symTab = std::make_shared<gazprea::symTable::SymbolTable>();
-    gazprea::ast::walkers::DefineWalker defineWalker(symTab);
+    gazprea::ast::walkers::DefRefWalker defineWalker(symTab);
     defineWalker.visit(rootAst);
 
-    // std::cout << rootAst->toStringTree("") << std::endl;
-
-    gazprea::ast::walkers::ResolveWalker resolveWalker(symTab);
-    resolveWalker.visit(rootAst);
-
-    // std::cout << rootAst->toStringTree("") << std::endl;
+    std::cout << rootAst->toStringTree("") << std::endl;
 
     gazprea::ast::walkers::ValidationWalker validationWalker(symTab);
     validationWalker.visit(rootAst);

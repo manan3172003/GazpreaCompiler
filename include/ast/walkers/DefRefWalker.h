@@ -3,15 +3,18 @@
 #include "symTable/SymTable.h"
 
 namespace gazprea::ast::walkers {
-class ResolveWalker final : public AstWalker {
+class DefRefWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
   std::shared_ptr<symTable::Type> resolvedType(int lineNumber,
                                                const std::shared_ptr<types::DataTypeAst> &dataType);
-  static void throwIfUndeclaredSymbol(int lineNumber, std::shared_ptr<symTable::Symbol> sym);
 
 public:
-  explicit ResolveWalker(std::shared_ptr<symTable::SymbolTable> symTab) : symTab(symTab) {};
-  ~ResolveWalker() override = default;
+  explicit DefRefWalker(std::shared_ptr<symTable::SymbolTable> symTab) : symTab(symTab) {};
+  ~DefRefWalker() override = default;
+  void throwIfUndeclaredSymbol(int lineNumber, std::shared_ptr<symTable::Symbol> sym);
+  void throwGlobalError(std::shared_ptr<Ast> ctx);
+  void throwDuplicateSymbolError(std::shared_ptr<Ast> ctx, const std::string &name,
+                                 std::shared_ptr<symTable::Scope> curScope, bool isType);
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
   std::any visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) override;
   std::any visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) override;
