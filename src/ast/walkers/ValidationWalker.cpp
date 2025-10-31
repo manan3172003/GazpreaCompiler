@@ -17,7 +17,7 @@ void ValidationWalker::checkVarArgs(
     int lineNumber) const {
   auto params = proto->getParams();
   // unordered map to track vars
-  std::unordered_map<std::string, bool> varUsedWithVar;
+  std::unordered_map<std::string, bool> seenVarMap;
   for (size_t i = 0; i < args.size(); i++) {
     // check if argument is an identifier
     if (args[i]->getExpr()->getNodeType() != NodeType::Identifier)
@@ -29,16 +29,16 @@ void ValidationWalker::checkVarArgs(
         std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
     std::string varName = identifier->getName();
     bool isVar = (param->getQualifier() == Qualifier::Var);
-    //if variable seen before and in map then throw aliasing error
-    if (varUsedWithVar.find(varName) != varUsedWithVar.end()) {
-      if (varUsedWithVar[varName] || isVar) {
+    // if variable seen before and in map then throw aliasing error
+    if (seenVarMap.find(varName) != seenVarMap.end()) {
+      if (seenVarMap[varName] || isVar) {
         throw AliasingError(
             lineNumber, "Variable aliasing error: var parameter cannot share "
                         "a variable with another parameter");
       }
     } else {
-      //variable seen first time add to map
-      varUsedWithVar[varName] = isVar;
+      // variable seen first time add to map
+      seenVarMap[varName] = isVar;
     }
   }
 }
