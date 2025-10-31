@@ -17,7 +17,8 @@ void ErrorListener::syntaxError(antlr4::Recognizer *recognizer,
   case GazpreaLexer::FUNCTION: {
     // Check if function was declared somewhere except global scope
     for (const auto &rule : rule_stack) {
-      if (rule == "procedure_stat" || rule == "block_stat" || rule == "function_stat") {
+      if (rule == "procedure_stat" || rule == "block_stat" ||
+          rule == "function_stat") {
         throw StatementError(
             line, "Function declarations are only allowed in global scope");
       }
@@ -26,7 +27,8 @@ void ErrorListener::syntaxError(antlr4::Recognizer *recognizer,
   case GazpreaLexer::PROCEDURE: {
     // Check if procedure was declared somewhere except global scope
     for (const auto &rule : rule_stack) {
-      if (rule == "procedure_stat" || rule == "block_stat" || rule == "function_stat") {
+      if (rule == "procedure_stat" || rule == "block_stat" ||
+          rule == "function_stat") {
         throw StatementError(
             line, "Procedure declarations are only allowed in global scope");
       }

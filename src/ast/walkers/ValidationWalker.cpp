@@ -224,6 +224,12 @@ std::any ValidationWalker::visitProcedureParams(
 }
 std::any ValidationWalker::visitProcedureCall(
     std::shared_ptr<statements::ProcedureCallAst> ctx) {
+
+  const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
+  if (curScope && curScope->getScopeType() == symTable::ScopeType::Function) {
+    throw CallError(ctx->getLineNumber(), "Procedure call inside function");
+  }
+
   const auto methodSymbol =
       std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   if (methodSymbol->getScopeType() == symTable::ScopeType::Function) {
