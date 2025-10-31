@@ -157,11 +157,9 @@ std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureA
 
   if (ctx->getProto()->getReturnType()) {
     // If procedure has a return type, check that we reach a return statement
-    const auto blockAst =
-        std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
+    const auto blockAst = std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
     if (!hasReturnInMethod(blockAst)) {
-      throw ReturnError(ctx->getLineNumber(),
-                        "Function must have a return statement");
+      throw ReturnError(ctx->getLineNumber(), "Function must have a return statement");
     }
   }
   visit(ctx->getBody());
@@ -242,16 +240,13 @@ std::any ValidationWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> c
 std::any ValidationWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   return AstWalker::visitTypealias(ctx);
 }
-std::any
-ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
+std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   if (!ctx->getProto()->getReturnType()) {
     throw ReturnError(ctx->getLineNumber(), "Function must have a return type");
   }
-  const auto blockAst =
-      std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
+  const auto blockAst = std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
   if (!hasReturnInMethod(blockAst)) {
-    throw ReturnError(ctx->getLineNumber(),
-                      "Function must have a return statement");
+    throw ReturnError(ctx->getLineNumber(), "Function must have a return statement");
   }
 
   visit(ctx->getBody());
