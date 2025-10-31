@@ -5,6 +5,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/DefineWalker.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ResolveWalker.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ValidationWalker.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ValidationHelpers.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_walkers_src})

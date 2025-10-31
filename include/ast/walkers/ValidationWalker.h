@@ -63,18 +63,6 @@ class ValidationWalker final : public AstWalker {
   }
 
 public:
-  std::shared_ptr<symTable::Type>
-  resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
-  void validateTuple(std::shared_ptr<Ast> ctx,
-                     const std::shared_ptr<symTable::TupleTypeSymbol> &promoteFrom,
-                     const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo);
-  static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
-                             const std::string &typeName);
-  bool isNumericType(const std::shared_ptr<symTable::Type> &type) const;
-  bool isComparisonOperator(expressions::BinaryOpType opType) const;
-  bool areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
-                      const std::shared_ptr<expressions::ExpressionAst> &right) const;
-
   explicit ValidationWalker(std::shared_ptr<symTable::SymbolTable> symTab) : symTab(symTab) {};
   ~ValidationWalker() override = default;
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
@@ -112,5 +100,18 @@ public:
   std::any visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) override;
   std::any visitLoop(std::shared_ptr<statements::LoopAst> ctx) override;
   std::any visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) override;
+
+  // Helpers
+  std::shared_ptr<symTable::Type>
+  resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
+  static void validateTuple(std::shared_ptr<Ast> ctx,
+                            const std::shared_ptr<symTable::TupleTypeSymbol> &promoteFrom,
+                            const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo);
+  static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
+                             const std::string &typeName);
+  static bool isNumericType(const std::shared_ptr<symTable::Type> &type);
+  static bool isComparisonOperator(expressions::BinaryOpType opType);
+  static bool areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
+                             const std::shared_ptr<expressions::ExpressionAst> &right);
 };
 } // namespace gazprea::ast::walkers
