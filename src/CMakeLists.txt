@@ -1,9 +1,8 @@
 # Gather our source files in this directory.
 set(
   gazprea_src_files
-    	"${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
-    	"${CMAKE_CURRENT_SOURCE_DIR}/BackEnd.cpp"
-		"${CMAKE_CURRENT_SOURCE_DIR}/ErrorListener.cpp"
+			"${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+			"${CMAKE_CURRENT_SOURCE_DIR}/ErrorListener.cpp"
 )
 
 # Build our executable from the source files.
@@ -12,6 +11,7 @@ add_executable(gazc ${gazprea_src_files})
 add_subdirectory(ast)
 add_subdirectory(symTable)
 add_subdirectory(utils)
+add_subdirectory(backend)
 
 target_include_directories(gazc PUBLIC ${ANTLR_GEN_DIR})
 

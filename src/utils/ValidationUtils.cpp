@@ -13,10 +13,10 @@ namespace gazprea::utils {
 //
 int promotionTable[4][4] = {
     // To:  bool      char         int          real
-    {IDENTITY, BOOL_TO_CHAR, BOOL_TO_INT, BOOL_TO_REAL},     // From: boolean
-    {CHAR_TO_BOOL, IDENTITY, CHAR_TO_INT, CHAR_TO_REAL},     // From: character
-    {INT_TO_BOOL, INT_TO_CHAR, IDENTITY, INT_TO_REAL},       // From: integer
-    {NOT_ALLOWED, NOT_ALLOWED, REAL_TO_INT, IDENTITY},       // From: real
+    {IDENTITY, BOOL_TO_CHAR, BOOL_TO_INT, BOOL_TO_REAL}, // From: boolean
+    {CHAR_TO_BOOL, IDENTITY, CHAR_TO_INT, CHAR_TO_REAL}, // From: character
+    {INT_TO_BOOL, INT_TO_CHAR, IDENTITY, INT_TO_REAL},   // From: integer
+    {NOT_ALLOWED, NOT_ALLOWED, REAL_TO_INT, IDENTITY},   // From: real
 };
 
 // Helper function to convert type name to index

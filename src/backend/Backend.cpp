@@ -1,7 +1,7 @@
-#include "BackEnd.h"
 #include <assert.h>
-
-BackEnd::BackEnd() : loc(mlir::UnknownLoc::get(&context)) {
+#include <backend/Backend.h>
+namespace gazprea::backend {
+Backend::Backend() : loc(mlir::UnknownLoc::get(&context)) {
   // Load Dialects.
   context.loadDialect<mlir::LLVM::LLVMDialect>();
   context.loadDialect<mlir::func::FuncDialect>();
@@ -21,7 +21,7 @@ BackEnd::BackEnd() : loc(mlir::UnknownLoc::get(&context)) {
   createGlobalString("%d\0", "intFormat");
 }
 
-int BackEnd::emitModule() {
+int Backend::emitModule() {
 
   // Create a main function
   mlir::Type intType = mlir::IntegerType::get(&context, 32);
@@ -63,7 +63,7 @@ int BackEnd::emitModule() {
   return 0;
 }
 
-int BackEnd::lowerDialects() {
+int Backend::lowerDialects() {
   // Set up the MLIR pass manager to iteratively lower all the Ops
   mlir::PassManager pm(&context);
 
@@ -93,7 +93,7 @@ int BackEnd::lowerDialects() {
   return 0;
 }
 
-void BackEnd::dumpLLVM(std::ostream &os) {
+void Backend::dumpLLVM(std::ostream &os) {
   // The only remaining dialects in our module after the passes are builtin
   // and LLVM. Setup translation patterns to get them to LLVM IR.
   mlir::registerBuiltinDialectTranslation(context);
@@ -105,7 +105,7 @@ void BackEnd::dumpLLVM(std::ostream &os) {
   output << *llvm_module;
 }
 
-void BackEnd::setupPrintf() {
+void Backend::setupPrintf() {
   // Create a function declaration for printf, the signature is:
   //   * `i32 (ptr, ...)`
   mlir::Type intType = mlir::IntegerType::get(&context, 32);
@@ -117,7 +117,7 @@ void BackEnd::setupPrintf() {
   builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printf", llvmFnType);
 }
 
-void BackEnd::createGlobalString(const char *str, const char *stringName) {
+void Backend::createGlobalString(const char *str, const char *stringName) {
 
   mlir::Type charType = mlir::IntegerType::get(&context, 8);
 
@@ -131,3 +131,4 @@ void BackEnd::createGlobalString(const char *str, const char *stringName) {
       stringName, builder->getStringAttr(mlirString), /*alignment=*/0);
   return;
 }
+} // namespace gazprea::backend

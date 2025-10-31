@@ -1,5 +1,5 @@
+#include "../include/backend/Backend.h"
 #include "ANTLRFileStream.h"
-#include "BackEnd.h"
 #include "CommonTokenStream.h"
 #include "ErrorListener.h"
 #include "GazpreaLexer.h"

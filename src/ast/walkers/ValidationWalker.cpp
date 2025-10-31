@@ -127,14 +127,14 @@ std::any ValidationWalker::visitDeclaration(
     std::shared_ptr<statements::DeclarationAst> ctx) {
   if (ctx->getExpr())
     visit(ctx->getExpr());
-  auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  auto variableSymbol =
+      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   if (ctx->getType()) {
     // Promoting type here
 
   } else {
     // setting inferred type here
-    variableSymbol
-        ->setType(ctx->getExpr()->getInferredSymbolType());
+    variableSymbol->setType(ctx->getExpr()->getInferredSymbolType());
     ctx->setType(ctx->getExpr()->getInferredDataType());
   }
   // type check
@@ -456,21 +456,29 @@ ValidationWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
 std::any
 ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   visit(ctx->getExpression());
-  if (ctx->getExpression()->getInferredDataType()->getNodeType() == NodeType::TupleType) {
-    const auto targetTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getResolvedTargetType());
-    const auto curTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getExpression()->getInferredSymbolType());
+  if (ctx->getExpression()->getInferredDataType()->getNodeType() ==
+      NodeType::TupleType) {
+    const auto targetTupleTypeSymbol =
+        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
+            ctx->getResolvedTargetType());
+    const auto curTupleTypeSymbol =
+        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
+            ctx->getExpression()->getInferredSymbolType());
     const auto targetSubTypes = targetTupleTypeSymbol->getResolvedTypes();
     const auto curSubTypes = curTupleTypeSymbol->getResolvedTypes();
-    if (curSubTypes.size() != targetSubTypes.size()) throw SizeError(ctx->getLineNumber(), "Tuple sizes do not match");
+    if (curSubTypes.size() != targetSubTypes.size())
+      throw SizeError(ctx->getLineNumber(), "Tuple sizes do not match");
     for (size_t i = 0; i < curSubTypes.size(); i++) {
-      if (!utils::isPromotable(curSubTypes[i]->getName(), targetSubTypes[i]->getName())) {
+      if (!utils::isPromotable(curSubTypes[i]->getName(),
+                               targetSubTypes[i]->getName())) {
         throw TypeError(ctx->getLineNumber(), "Tuple sub type not promotable");
       }
     }
   } else {
     // check scalar is promotable
     const auto promoteTo = ctx->getResolvedTargetType()->getName();
-    const auto promoteFrom = ctx->getExpression()->getInferredSymbolType()->getName();
+    const auto promoteFrom =
+        ctx->getExpression()->getInferredSymbolType()->getName();
     if (!utils::isPromotable(promoteFrom, promoteTo)) {
       throw TypeError(ctx->getLineNumber(), "Type not promotable");
     }
