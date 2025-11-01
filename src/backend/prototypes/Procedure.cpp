@@ -1,9 +1,11 @@
 #include "backend/Backend.h"
+#include "symTable/MethodSymbol.h"
 
 namespace gazprea::backend {
 
 std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> ctx) {
-  const auto methodSym = ctx->getProto()->getSymbol();
+  const auto methodSym =
+      std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getProto()->getSymbol());
 
   if (methodSym && methodSym->getName() == "main") {
     auto mainType = mlir::LLVM::LLVMFunctionType::get(intTy, {}, false);
