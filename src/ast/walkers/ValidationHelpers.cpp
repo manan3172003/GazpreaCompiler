@@ -5,31 +5,45 @@
 
 namespace gazprea::ast::walkers {
 
-// DO NOT USE FOR BINARY OP COMPARISONS
-void ValidationWalker::validateTuple(std::shared_ptr<Ast> ctx,
-                                     const std::shared_ptr<symTable::TupleTypeSymbol> &promoteFrom,
-                                     const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo) {
-  const auto promoteFromResolvedTypes = promoteFrom->getResolvedTypes();
-  const auto promoteToResolvedTypes = promoteTo->getResolvedTypes();
-
-  if (promoteFromResolvedTypes.size() != promoteToResolvedTypes.size())
-    throw SizeError(ctx->getLineNumber(), "Tuple sizes do not match");
-
-  for (size_t i = 0; i < promoteFromResolvedTypes.size(); i++) {
-    if (promoteFromResolvedTypes[i]->getName() == promoteToResolvedTypes[i]->getName())
-      continue;
-    if (promoteFromResolvedTypes[i]->getName() == "integer" &&
-        promoteToResolvedTypes[i]->getName() == "real")
-      continue;
-    if (promoteFromResolvedTypes[i]->getName() != promoteToResolvedTypes[i]->getName())
-      throw TypeError(ctx->getLineNumber(), "Type mismatch");
+bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destination,
+                                  const std::shared_ptr<symTable::Type> &source) {
+  if (isOfSymbolType(destination, "integer") && isOfSymbolType(source, "integer"))
+    return true;
+  if (isOfSymbolType(destination, "real") && isOfSymbolType(source, "real"))
+    return true;
+  if (isOfSymbolType(destination, "real") && isOfSymbolType(source, "integer"))
+    return true;
+  if (isOfSymbolType(destination, "character") && isOfSymbolType(source, "character"))
+    return true;
+  if (isOfSymbolType(destination, "boolean") && isOfSymbolType(source, "boolean"))
+    return true;
+  if (isOfSymbolType(destination, "tuple") && isOfSymbolType(source, "tuple")) {
+    const auto destTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(destination);
+    const auto sourceTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(source);
+    return isTupleTypeMatch(destTuple, sourceTuple);
   }
+  return false;
+}
+
+bool ValidationWalker::isTupleTypeMatch(
+    const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
+    const std::shared_ptr<symTable::TupleTypeSymbol> &source) {
+  const auto destSubTypes = destination->getResolvedTypes();
+  const auto sourceSubTypes = source->getResolvedTypes();
+  if (destSubTypes.size() != sourceSubTypes.size())
+    return false;
+
+  for (size_t i = 0; i < destSubTypes.size(); i++) {
+    if (not typesMatch(destSubTypes[i], sourceSubTypes[i]))
+      return false;
+  }
+  return true;
 }
 
 bool ValidationWalker::isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
                                       const std::string &typeName) {
   if (!symbolType)
-    throw std::runtime_error("SymbolType should not be null");
+    throw std::runtime_error("SymbolType should not be null\n");
 
   return symbolType->getName() == typeName;
 }

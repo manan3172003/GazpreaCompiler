@@ -89,9 +89,7 @@ std::any DefRefWalker::visitDeclaration(std::shared_ptr<statements::DeclarationA
   const auto varSymbol =
       std::make_shared<symTable::VariableSymbol>(ctx->getName(), ctx->getQualifier());
   if (ctx->getType()) {
-    if (ctx->getType()->getNodeType() == NodeType::TupleType) {
-      visit(ctx->getType());
-    }
+    visit(ctx->getType());
     varSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   }
 
@@ -226,6 +224,42 @@ std::any DefRefWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) 
   }
   tupleTypeSymbol->setDef(ctx);
   ctx->setSymbol(tupleTypeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitAliasType(std::shared_ptr<types::AliasTypeAst> ctx) {
+  const auto typeSymbol =
+      std::dynamic_pointer_cast<symTable::Symbol>(resolvedType(ctx->getLineNumber(), ctx));
+  ctx->setSymbol(typeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitIntegerType(std::shared_ptr<types::IntegerTypeAst> ctx) {
+  const auto typeSymbol =
+      std::dynamic_pointer_cast<symTable::Symbol>(resolvedType(ctx->getLineNumber(), ctx));
+  ctx->setSymbol(typeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitRealType(std::shared_ptr<types::RealTypeAst> ctx) {
+  const auto typeSymbol =
+      std::dynamic_pointer_cast<symTable::Symbol>(resolvedType(ctx->getLineNumber(), ctx));
+  ctx->setSymbol(typeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitCharacterType(std::shared_ptr<types::CharacterTypeAst> ctx) {
+  const auto typeSymbol =
+      std::dynamic_pointer_cast<symTable::Symbol>(resolvedType(ctx->getLineNumber(), ctx));
+  ctx->setSymbol(typeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitBooleanType(std::shared_ptr<types::BooleanTypeAst> ctx) {
+  const auto typeSymbol =
+      std::dynamic_pointer_cast<symTable::Symbol>(resolvedType(ctx->getLineNumber(), ctx));
+  ctx->setSymbol(typeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {

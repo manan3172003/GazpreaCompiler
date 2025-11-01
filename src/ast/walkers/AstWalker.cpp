@@ -77,6 +77,16 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
     return visitTuple(std::static_pointer_cast<expressions::TupleLiteralAst>(ast));
   case NodeType::TupleType:
     return visitTupleType(std::static_pointer_cast<types::TupleTypeAst>(ast));
+  case NodeType::AliasType:
+    return visitAliasType(std::static_pointer_cast<types::AliasTypeAst>(ast));
+  case NodeType::IntegerType:
+    return visitIntegerType(std::static_pointer_cast<types::IntegerTypeAst>(ast));
+  case NodeType::RealType:
+    return visitRealType(std::static_pointer_cast<types::RealTypeAst>(ast));
+  case NodeType::CharType:
+    return visitCharacterType(std::static_pointer_cast<types::CharacterTypeAst>(ast));
+  case NodeType::BoolType:
+    return visitBooleanType(std::static_pointer_cast<types::BooleanTypeAst>(ast));
   default:
     return {};
   }

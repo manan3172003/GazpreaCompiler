@@ -26,18 +26,21 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
   return AstWalker::visitAssignment(ctx);
 }
 std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
-  if (ctx->getExpr())
-    visit(ctx->getExpr());
-  auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  if (ctx->getType()) {
-    // Promoting type here
-
-  } else {
+  const auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (not ctx->getType()) {
     // setting inferred type here
     variableSymbol->setType(ctx->getExpr()->getInferredSymbolType());
     ctx->setType(ctx->getExpr()->getInferredDataType());
   }
+
   // type check
+  // We're going to have an expression since we'll set defaults in AstBuilder
+  visit(ctx->getExpr());
+  const auto declarationType =
+      std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
+  const auto expressionType = ctx->getExpr()->getInferredSymbolType();
+  if (not typesMatch(declarationType, expressionType))
+    throw TypeError(ctx->getLineNumber(), "Type mismatch");
 
   return {};
 }
@@ -212,7 +215,8 @@ std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ct
         ctx->getExpr()->getInferredSymbolType());
     auto expectedTuple =
         std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(methodSymbol->getReturnType());
-    validateTuple(ctx, returnExprTuple, expectedTuple);
+    if (!isTupleTypeMatch(expectedTuple, returnExprTuple))
+      throw TypeError(ctx->getLineNumber(), "Type mismatch");
   }
   return {};
 }

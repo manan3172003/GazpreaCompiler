@@ -50,5 +50,10 @@ public:
   std::any visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) override;
   std::any visitLoop(std::shared_ptr<statements::LoopAst> ctx) override;
   std::any visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) override;
+  std::any visitAliasType(std::shared_ptr<types::AliasTypeAst> ctx) override;
+  std::any visitIntegerType(std::shared_ptr<types::IntegerTypeAst> ctx) override;
+  std::any visitRealType(std::shared_ptr<types::RealTypeAst> ctx) override;
+  std::any visitCharacterType(std::shared_ptr<types::CharacterTypeAst> ctx) override;
+  std::any visitBooleanType(std::shared_ptr<types::BooleanTypeAst> ctx) override;
 };
 } // namespace gazprea::ast::walkers

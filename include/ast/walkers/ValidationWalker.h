@@ -131,9 +131,13 @@ public:
   // Helpers
   std::shared_ptr<symTable::Type>
   resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
+  static bool typesMatch(const std::shared_ptr<symTable::Type> &destination,
+                         const std::shared_ptr<symTable::Type> &source);
+  static bool isTupleTypeMatch(const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
+                               const std::shared_ptr<symTable::TupleTypeSymbol> &source);
   static void validateTuple(std::shared_ptr<Ast> ctx,
-                            const std::shared_ptr<symTable::TupleTypeSymbol> &promoteFrom,
-                            const std::shared_ptr<symTable::TupleTypeSymbol> &promoteTo);
+                            const std::shared_ptr<symTable::TupleTypeSymbol> &left,
+                            const std::shared_ptr<symTable::TupleTypeSymbol> &right);
   static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
                              const std::string &typeName);
   static bool isNumericType(const std::shared_ptr<symTable::Type> &type);
