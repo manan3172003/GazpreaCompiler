@@ -179,7 +179,7 @@ std::any DefRefWalker::visitProcedureCall(std::shared_ptr<statements::ProcedureC
   ctx->setScope(symTab->getCurrentScope());
 
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
-      ctx->getScope()->resolveSymbol(ctx->getName()));
+      symTab->getCurrentScope()->resolveSymbol(ctx->getName()));
   throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
 
   ctx->setSymbol(methodSymbol);
@@ -192,7 +192,7 @@ std::any DefRefWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
 }
 std::any
 DefRefWalker::visitTupleElementAssign(std::shared_ptr<statements::TupleElementAssignAst> ctx) {
-  auto symbol = ctx->getScope()->resolveSymbol(ctx->getTupleName());
+  auto symbol = symTab->getCurrentScope()->resolveSymbol(ctx->getTupleName());
   throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
   ctx->setScope(symTab->getCurrentScope());
   ctx->setSymbol(symbol);
@@ -206,7 +206,7 @@ DefRefWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssi
   return {};
 }
 std::any DefRefWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
-  auto symbol = ctx->getScope()->resolveSymbol(ctx->getTupleName());
+  auto symbol = symTab->getCurrentScope()->resolveSymbol(ctx->getTupleName());
   throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
   ctx->setScope(symTab->getCurrentScope());
   ctx->setSymbol(symbol);
@@ -294,7 +294,7 @@ std::any DefRefWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCa
   }
   ctx->setScope(symTab->getCurrentScope());
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
-      ctx->getScope()->resolveSymbol(ctx->getName()));
+      symTab->getCurrentScope()->resolveSymbol(ctx->getName()));
   throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
   ctx->setSymbol(methodSymbol);
   return {};
