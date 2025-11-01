@@ -38,7 +38,7 @@
 namespace gazprea::backend {
 class Backend final : public ast::walkers::AstWalker {
 public:
-  Backend();
+  explicit Backend(const std::shared_ptr<ast::Ast> &ast);
 
   int emitModule();
   int lowerDialects();
@@ -82,10 +82,12 @@ public:
   std::any visitIteratorLoop(std::shared_ptr<ast::statements::IteratorLoopAst> ctx) override;
 
 protected:
-  void setupPrintf();
-  void createGlobalString(const char *str, const char *stringName);
+  void setupPrintf() const;
+  void createGlobalString(const char *str, const char *stringName) const;
 
 private:
+  std::shared_ptr<ast::Ast> ast;
+
   // MLIR
   mlir::MLIRContext context;
   mlir::ModuleOp module;
@@ -95,5 +97,10 @@ private:
   // LLVM
   llvm::LLVMContext llvm_context;
   std::unique_ptr<llvm::Module> llvm_module;
+
+  // Constants
+  mlir::Value constOne, constZero;
+  // Types
+  mlir::Type intTy, floatTy, charTy, ptrTy;
 };
 } // namespace gazprea::backend

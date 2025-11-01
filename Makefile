@@ -27,4 +27,4 @@ file:
 	touch include/$(path).h
 	touch src/$(path).cpp
 
-run: build compile
+run: build compile run-llvm

@@ -2,6 +2,11 @@
 
 namespace gazprea::backend {
 
-std::any Backend::visitRoot(std::shared_ptr<ast::RootAst> ctx) { return {}; }
+std::any Backend::visitRoot(std::shared_ptr<ast::RootAst> ctx) {
+  for (const auto &child : ctx->children) {
+    visit(child);
+  }
+  return {};
+}
 
 } // namespace gazprea::backend

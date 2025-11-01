@@ -49,10 +49,10 @@ int main(int argc, char **argv) {
     std::cout << rootAst->toStringTree("") << std::endl;
 
     std::ofstream os(argv[2]);
-    // BackEnd backend;
-    // backend.emitModule();
-    // backend.lowerDialects();
-    // backend.dumpLLVM(os);
+    gazprea::backend::Backend backend(rootAst);
+    backend.emitModule();
+    backend.lowerDialects();
+    backend.dumpLLVM(os);
   } catch (const std::exception &e) {
     std::cerr << e.what();
   }
