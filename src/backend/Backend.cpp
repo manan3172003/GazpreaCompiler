@@ -1,3 +1,6 @@
+#include "symTable/TupleTypeSymbol.h"
+#include "symTable/VariableSymbol.h"
+
 #include <assert.h>
 #include <backend/Backend.h>
 namespace gazprea::backend {
@@ -122,17 +125,58 @@ void Backend::createGlobalString(const char *str, const char *stringName) const 
                                         builder->getStringAttr(mlirString), /*alignment=*/0);
   return;
 }
-mlir::Value Backend::constOne() { return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1); }
-mlir::Value Backend::constZero() {
+mlir::Value Backend::constOne() const {
+  return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1);
+}
+mlir::Value Backend::constZero() const {
   return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
 }
 mlir::Type Backend::structTy(const mlir::ArrayRef<mlir::Type> &memberTypes) {
   return mlir::LLVM::LLVMStructType::getLiteral(&context, memberTypes);
 }
-mlir::Type Backend::floatTy() { return mlir::Float32Type::get(builder->getContext()); }
+mlir::Type Backend::floatTy() const { return mlir::Float32Type::get(builder->getContext()); }
 mlir::Type Backend::charTy() const { return mlir::IntegerType::get(builder->getContext(), 8); }
+mlir::Type Backend::boolTy() const { return mlir::IntegerType::get(builder->getContext(), 1); }
 mlir::Type Backend::ptrTy() const {
   return mlir::LLVM::LLVMPointerType::get(builder->getContext());
 }
 mlir::Type Backend::intTy() const { return mlir::IntegerType::get(builder->getContext(), 32); }
+
+mlir::Type Backend::getMLIRType(const std::shared_ptr<symTable::Type> &returnType) {
+  if (returnType->getName() == "integer") {
+    return intTy();
+  }
+  if (returnType->getName() == "real") {
+    return floatTy();
+  }
+  if (returnType->getName() == "character") {
+    return charTy();
+  }
+  if (returnType->getName() == "boolean") {
+    return boolTy();
+  }
+  if (returnType->getName() == "tuple") {
+    // Tuple type
+    const auto tupleTypeSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(returnType);
+    std::vector<mlir::Type> memberTypes;
+    for (const auto &memberType : tupleTypeSym->getResolvedTypes()) {
+      memberTypes.push_back(getMLIRType(memberType));
+    }
+    return structTy(memberTypes);
+  }
+  // TODO: Support other return types
+  return {};
+}
+
+std::vector<mlir::Type>
+Backend::collectMethodParams(const std::vector<std::shared_ptr<ast::Ast>> &params) const {
+  std::vector<mlir::Type> paramTypes;
+  for (const auto &param : params) {
+    const auto varSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(param->getSymbol());
+    // For now pass everything as pointer type
+    paramTypes.push_back(ptrTy());
+  }
+  return paramTypes;
+}
+
 } // namespace gazprea::backend

@@ -218,7 +218,7 @@ std::any DefRefWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> 
   return {};
 }
 std::any DefRefWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
-  auto tupleTypeSymbol = std::make_shared<symTable::TupleTypeSymbol>("");
+  auto tupleTypeSymbol = std::make_shared<symTable::TupleTypeSymbol>("tuple");
   for (const auto &subType : ctx->getTypes()) {
     tupleTypeSymbol->addResolvedType(resolvedType(ctx->getLineNumber(), subType));
   }
@@ -334,6 +334,7 @@ std::any DefRefWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCa
   return {};
 }
 std::any DefRefWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   visit(ctx->getExpr());
   return {};
 }

@@ -36,9 +36,4 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 
-namespace gazprea::utils {
-
-mlir::Type getMLIRTypeFromSymbolType(mlir::MLIRContext &context,
-                                     const std::shared_ptr<symTable::Type> &typeSymbol);
-
-}
+namespace gazprea::utils {}

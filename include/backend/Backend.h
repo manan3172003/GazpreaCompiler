@@ -100,13 +100,18 @@ private:
   llvm::LLVMContext llvm_context;
   std::unique_ptr<llvm::Module> llvm_module;
 
-  mlir::Value constOne();
-  mlir::Value constZero();
+  mlir::Value constOne() const;
+  mlir::Value constZero() const;
 
   mlir::Type structTy(const mlir::ArrayRef<mlir::Type> &memberTypes);
-  mlir::Type floatTy();
+  mlir::Type floatTy() const;
   mlir::Type charTy() const;
+  mlir::Type boolTy() const;
   mlir::Type ptrTy() const;
   mlir::Type intTy() const;
+
+  // helpers
+  mlir::Type getMLIRType(const std::shared_ptr<symTable::Type> &returnType);
+  std::vector<mlir::Type> collectMethodParams(const std::vector<std::shared_ptr<ast::Ast>> &params) const;
 };
 } // namespace gazprea::backend
