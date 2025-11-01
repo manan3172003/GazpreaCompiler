@@ -23,7 +23,24 @@ std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   return {};
 }
 std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
-  return AstWalker::visitAssignment(ctx);
+  visit(ctx->getLVal());
+  visit(ctx->getExpr());
+
+  const auto exprTypeSymbol = ctx->getExpr()->getInferredSymbolType();
+  if (ctx->getLVal()->getNodeType() == NodeType::IdentifierLeft) {
+    const auto idAssignStat =
+        std::dynamic_pointer_cast<statements::IdentifierLeftAst>(ctx->getLVal());
+    validateVariableAssignmentTypes(idAssignStat, exprTypeSymbol);
+  } else if (ctx->getLVal()->getNodeType() == NodeType::TupleElementAssign) {
+    const auto tupleElementAssignStat =
+        std::dynamic_pointer_cast<statements::TupleElementAssignAst>(ctx->getLVal());
+    validateTupleElementAssignmentTypes(tupleElementAssignStat, exprTypeSymbol);
+  } else if (ctx->getLVal()->getNodeType() == NodeType::TupleUnpackAssign) {
+    const auto tupleUnpackAssignStat =
+        std::dynamic_pointer_cast<statements::TupleUnpackAssignAst>(ctx->getLVal());
+    validateTupleUnpackAssignmentTypes(tupleUnpackAssignStat, exprTypeSymbol);
+  } // TODO: add more assignment types here in part 2
+  return {};
 }
 std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
   const auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
@@ -222,11 +239,25 @@ std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ct
 }
 std::any
 ValidationWalker::visitTupleElementAssign(std::shared_ptr<statements::TupleElementAssignAst> ctx) {
-  return AstWalker::visitTupleElementAssign(ctx);
+  const auto idSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  const auto tupleTypeSymbol =
+      std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(idSymbol->getType());
+  if (not idSymbol)
+    throw SymbolError(ctx->getLineNumber(), "Identifier symbol is not a variable");
+  if (not tupleTypeSymbol)
+    throw TypeError(ctx->getLineNumber(), "Identifier symbol is not a tuple type");
+  if (ctx->getFieldIndex() == 0 ||
+      ctx->getFieldIndex() > tupleTypeSymbol->getResolvedTypes().size())
+    throw SizeError(ctx->getLineNumber(), "Invalid tuple index");
+  return {};
 }
 std::any
 ValidationWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
-  return AstWalker::visitTupleUnpackAssign(ctx);
+  const std::vector<std::shared_ptr<statements::AssignLeftAst>> lVals = ctx->getLVals();
+  for (const auto &lVal : lVals) {
+    visit(lVal);
+  }
+  return {};
 }
 std::any ValidationWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
   return AstWalker::visitTupleAccess(ctx);
@@ -397,7 +428,9 @@ std::any ValidationWalker::visitIdentifier(std::shared_ptr<expressions::Identifi
   return {};
 }
 std::any ValidationWalker::visitIdentifierLeft(std::shared_ptr<statements::IdentifierLeftAst> ctx) {
-  return AstWalker::visitIdentifierLeft(ctx);
+  if (not std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol()))
+    throw SymbolError(ctx->getLineNumber(), "Identifier symbol is not a variable");
+  return {};
 }
 std::any ValidationWalker::visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
   auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);

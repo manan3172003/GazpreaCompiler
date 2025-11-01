@@ -1,9 +1,57 @@
 #include "CompileTimeExceptions.h"
 #include "ast/types/AliasTypeAst.h"
+#include "symTable/VariableSymbol.h"
 
 #include <ast/walkers/ValidationWalker.h>
 
 namespace gazprea::ast::walkers {
+
+void ValidationWalker::validateVariableAssignmentTypes(
+    std::shared_ptr<statements::IdentifierLeftAst> ctx,
+    std::shared_ptr<symTable::Type> exprTypeSymbol) {
+  const auto lValSymbolType =
+      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())->getType();
+  if (not typesMatch(lValSymbolType, exprTypeSymbol))
+    throw TypeError(ctx->getLineNumber(), "Type mismatch");
+}
+
+void ValidationWalker::validateTupleElementAssignmentTypes(
+    std::shared_ptr<statements::TupleElementAssignAst> ctx,
+    std::shared_ptr<symTable::Type> exprTypeSymbol) {
+  const auto lValSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  const auto tupleType =
+      std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(lValSymbol->getType());
+  const auto tupleSubType = tupleType->getResolvedTypes()[ctx->getFieldIndex() - 1];
+
+  if (not typesMatch(tupleSubType, exprTypeSymbol))
+    throw TypeError(ctx->getLineNumber(), "Type mismatch");
+}
+
+void ValidationWalker::validateTupleUnpackAssignmentTypes(
+    std::shared_ptr<statements::TupleUnpackAssignAst> ctx,
+    std::shared_ptr<symTable::Type> exprTypeSymbol) {
+  const auto tupleType = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(exprTypeSymbol);
+  if (not tupleType)
+    throw TypeError(ctx->getLineNumber(), "Can only unpack tuples");
+
+  const auto varList = ctx->getLVals();
+  const auto tupleElements = tupleType->getResolvedTypes();
+
+  if (varList.size() != tupleElements.size())
+    throw SizeError(ctx->getLineNumber(), "unpack list size does not match tuple size");
+
+  for (size_t i = 0; i < tupleElements.size(); ++i) {
+    if (varList[i]->getNodeType() == NodeType::IdentifierLeft) {
+      const auto idAssignStat =
+          std::dynamic_pointer_cast<statements::IdentifierLeftAst>(varList[i]);
+      validateVariableAssignmentTypes(idAssignStat, tupleElements[i]);
+    } else if (varList[i]->getNodeType() == NodeType::TupleElementAssign) {
+      const auto tupleElementAssignStat =
+          std::dynamic_pointer_cast<statements::TupleElementAssignAst>(varList[i]);
+      validateTupleElementAssignmentTypes(tupleElementAssignStat, tupleElements[i]);
+    } // TODO: add more assignment types in part 2
+  }
+}
 
 bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destination,
                                   const std::shared_ptr<symTable::Type> &source) {

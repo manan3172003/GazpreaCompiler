@@ -131,6 +131,14 @@ public:
   // Helpers
   std::shared_ptr<symTable::Type>
   resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
+  static void validateVariableAssignmentTypes(std::shared_ptr<statements::IdentifierLeftAst> ctx,
+                                              std::shared_ptr<symTable::Type> exprTypeSymbol);
+  static void
+  validateTupleElementAssignmentTypes(std::shared_ptr<statements::TupleElementAssignAst> ctx,
+                                      std::shared_ptr<symTable::Type> exprTypeSymbol);
+  static void
+  validateTupleUnpackAssignmentTypes(std::shared_ptr<statements::TupleUnpackAssignAst> ctx,
+                                     std::shared_ptr<symTable::Type> exprTypeSymbol);
   static bool typesMatch(const std::shared_ptr<symTable::Type> &destination,
                          const std::shared_ptr<symTable::Type> &source);
   static bool isTupleTypeMatch(const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
