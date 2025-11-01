@@ -2,6 +2,7 @@
 #include "Type.h"
 #include "symTable/Scope.h"
 #include <memory>
+#include <mlir/IR/Value.h>
 #include <string>
 
 namespace gazprea::ast {
@@ -19,6 +20,7 @@ class Symbol {
 
 public:
   explicit Symbol(const std::string &name);
+  mlir::Value value;
 
   std::weak_ptr<Scope> getScope();
   std::shared_ptr<ast::Ast> getDef() { return def.lock(); }

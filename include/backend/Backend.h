@@ -83,6 +83,8 @@ public:
 
 protected:
   void setupPrintf() const;
+  void printInt(mlir::Value integer);
+  void printChar(char c);
   void createGlobalString(const char *str, const char *stringName) const;
 
 private:
@@ -98,9 +100,13 @@ private:
   llvm::LLVMContext llvm_context;
   std::unique_ptr<llvm::Module> llvm_module;
 
-  // Constants
-  mlir::Value constOne, constZero;
-  // Types
-  mlir::Type intTy, floatTy, charTy, ptrTy;
+  mlir::Value constOne();
+  mlir::Value constZero();
+
+  mlir::Type structTy(const mlir::ArrayRef<mlir::Type> &memberTypes);
+  mlir::Type floatTy();
+  mlir::Type charTy() const;
+  mlir::Type ptrTy() const;
+  mlir::Type intTy() const;
 };
 } // namespace gazprea::backend

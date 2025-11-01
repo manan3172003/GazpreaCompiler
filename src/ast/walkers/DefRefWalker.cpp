@@ -216,6 +216,7 @@ std::any DefRefWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> 
   for (const auto &element : ctx->getElements()) {
     visit(element);
   }
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
@@ -303,7 +304,8 @@ std::any DefRefWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
   return {};
 }
 std::any DefRefWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
-  return AstWalker::visitBool(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefRefWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   if (ctx->getTargetType() && ctx->getTargetType()->getNodeType() == NodeType::TupleType) {
@@ -314,7 +316,8 @@ std::any DefRefWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   return {};
 }
 std::any DefRefWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
-  return AstWalker::visitChar(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefRefWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
@@ -331,13 +334,16 @@ std::any DefRefWalker::visitIdentifierLeft(std::shared_ptr<statements::Identifie
   return {};
 }
 std::any DefRefWalker::visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
-  return AstWalker::visitInteger(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefRefWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
-  return AstWalker::visitReal(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 std::any DefRefWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   visit(ctx->getExpression());
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {

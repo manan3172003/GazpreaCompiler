@@ -2,6 +2,7 @@
 #include "Symbol.h"
 
 #include <memory>
+#include <mlir/IR/Value.h>
 #include <string>
 #include <unordered_map>
 
@@ -13,6 +14,7 @@ enum class ScopeType { Global, Local, Function, Procedure };
 
 class Scope : public std::enable_shared_from_this<Scope> {
   ScopeType scType;
+  std::vector<std::pair<std::shared_ptr<Type>, mlir::Value>> scopeStack;
 
 public:
   explicit Scope(const ScopeType scType) : scType(scType) {}
@@ -26,6 +28,12 @@ public:
   virtual std::shared_ptr<Symbol> getSymbol(const std::string &name) = 0;
   virtual std::shared_ptr<Symbol> getTypeSymbol(const std::string &name) = 0;
   virtual std::string toString() = 0;
+  void pushElementToScopeStack(std::shared_ptr<Type> elementType, mlir::Value val) {
+    scopeStack.push_back(std::make_pair(elementType, val));
+  }
+  void popElementFromScopeStack() { scopeStack.pop_back(); }
+  std::pair<std::shared_ptr<Type>, mlir::Value> getTopElementInStack() { return scopeStack.back(); }
+  std::vector<std::pair<std::shared_ptr<Type>, mlir::Value>> &getScopeStack() { return scopeStack; }
   ScopeType getScopeType() const { return scType; }
   std::string scTypeToString() const;
   virtual ~Scope();

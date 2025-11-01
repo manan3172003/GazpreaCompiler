@@ -16,16 +16,6 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   module = mlir::ModuleOp::create(builder->getUnknownLoc());
   builder->setInsertionPointToStart(module.getBody());
 
-  // Constants
-  constOne = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 1);
-  constZero = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0);
-
-  // Types
-  intTy = mlir::IntegerType::get(&context, 32);
-  floatTy = mlir::Float32Type::get(&context);
-  charTy = mlir::IntegerType::get(&context, 8);
-  ptrTy = mlir::LLVM::LLVMPointerType::get(&context);
-
   // Some initial setup to get off the ground
   setupPrintf();
   createGlobalString("%c\0", "charFormat");
@@ -90,21 +80,59 @@ void Backend::dumpLLVM(std::ostream &os) {
 void Backend::setupPrintf() const {
   // Create a function declaration for printf, the signature is:
   //   * `i32 (ptr, ...)`
-  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(intTy, ptrTy,
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(intTy(), ptrTy(),
                                                       /*isVarArg=*/true);
 
   // Insert the printf function into the body of the parent module.
   builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printf", llvmFnType);
 }
 
+void Backend::printInt(mlir::Value integer) {
+  mlir::LLVM::GlobalOp formatString;
+  if (!(formatString = module.lookupSymbol<mlir::LLVM::GlobalOp>("intFormat"))) {
+    llvm::errs() << "missing format string!\n";
+  }
+  const mlir::Value formatStringPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatString);
+  mlir::ValueRange args = {formatStringPtr, integer};
+  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+  builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
+  printChar('\n');
+}
+
+void Backend::printChar(char c) {
+  mlir::LLVM::GlobalOp formatString;
+  if (!(formatString = module.lookupSymbol<mlir::LLVM::GlobalOp>("charFormat"))) {
+    llvm::errs() << "missing format string!\n";
+  }
+  const mlir::Value formatStringPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatString);
+  const mlir::Value charToPrint =
+      builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI8Type(), c);
+  mlir::ValueRange args = {formatStringPtr, charToPrint};
+  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+  builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
+}
+
 void Backend::createGlobalString(const char *str, const char *stringName) const {
   // create string and string type
   auto mlirString = mlir::StringRef(str, strlen(str) + 1);
-  auto mlirStringType = mlir::LLVM::LLVMArrayType::get(charTy, mlirString.size());
+  auto mlirStringType = mlir::LLVM::LLVMArrayType::get(charTy(), mlirString.size());
 
   builder->create<mlir::LLVM::GlobalOp>(loc, mlirStringType, /*isConstant=*/true,
                                         mlir::LLVM::Linkage::Internal, stringName,
                                         builder->getStringAttr(mlirString), /*alignment=*/0);
   return;
 }
+mlir::Value Backend::constOne() { return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1); }
+mlir::Value Backend::constZero() {
+  return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
+}
+mlir::Type Backend::structTy(const mlir::ArrayRef<mlir::Type> &memberTypes) {
+  return mlir::LLVM::LLVMStructType::getLiteral(&context, memberTypes);
+}
+mlir::Type Backend::floatTy() { return mlir::Float32Type::get(builder->getContext()); }
+mlir::Type Backend::charTy() const { return mlir::IntegerType::get(builder->getContext(), 8); }
+mlir::Type Backend::ptrTy() const {
+  return mlir::LLVM::LLVMPointerType::get(builder->getContext());
+}
+mlir::Type Backend::intTy() const { return mlir::IntegerType::get(builder->getContext(), 32); }
 } // namespace gazprea::backend
