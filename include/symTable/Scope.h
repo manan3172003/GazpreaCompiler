@@ -73,6 +73,6 @@ class LocalScope final : public BaseScope {
 public:
   LocalScope() : BaseScope(ScopeType::Local) {};
   std::string getScopeName() override;
-  void setScopeName(ScopeType scopeType) { scType = scopeType; }
+  void setScopeType(ScopeType scopeType) { scType = scopeType; }
 };
 } // namespace gazprea::symTable

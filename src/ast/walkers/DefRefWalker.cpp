@@ -101,11 +101,12 @@ std::any DefRefWalker::visitDeclaration(std::shared_ptr<statements::DeclarationA
 std::any DefRefWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
   visit(ctx->getLeft());
   visit(ctx->getRight());
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   auto newScope = std::make_shared<symTable::LocalScope>();
-  ctx->setScope(newScope);
+  ctx->setScope(symTab->getCurrentScope());
   symTab->pushScope(newScope);
   for (const auto &child : ctx->getChildren()) {
     visit(child);
@@ -113,20 +114,33 @@ std::any DefRefWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   symTab->popScope();
   return {};
 }
-std::any DefRefWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) { return {}; }
-std::any DefRefWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) { return {}; }
+std::any DefRefWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
 std::any DefRefWalker::visitConditional(std::shared_ptr<statements::ConditionalAst> ctx) {
   visit(ctx->getCondition());
   visit(ctx->getThenBody());
-  const auto localIfScope =
-      std::dynamic_pointer_cast<symTable::LocalScope>(ctx->getThenBody()->getScope());
-  localIfScope->setScopeName(symTable::ScopeType::Conditional);
-
+  ctx->setScope(symTab->getCurrentScope());
+  // setting the body's scope type to Conditional type
+  if (not ctx->getThenBody()->getChildren().empty()) {
+    const auto thenBodyScope = std::dynamic_pointer_cast<symTable::LocalScope>(
+        ctx->getThenBody()->getChildren()[0]->getScope());
+    thenBodyScope->setScopeType(symTable::ScopeType::Conditional);
+  }
   if (ctx->getElseBody()) {
     visit(ctx->getElseBody());
-    const auto localElseScope =
-        std::dynamic_pointer_cast<symTable::LocalScope>(ctx->getElseBody()->getScope());
-    localElseScope->setScopeName(symTable::ScopeType::Conditional);
+
+    // setting the body's scope type to Conditional type
+    if (not ctx->getElseBody()->getChildren().empty()) {
+      const auto elseBodyScope = std::dynamic_pointer_cast<symTable::LocalScope>(
+          ctx->getElseBody()->getChildren()[0]->getScope());
+      elseBodyScope->setScopeType(symTable::ScopeType::Conditional);
+    }
   }
   return {};
 }
@@ -208,6 +222,7 @@ DefRefWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssi
   for (const auto &lVal : ctx->getLVals()) {
     visit(lVal);
   }
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
@@ -343,6 +358,7 @@ std::any DefRefWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCa
 std::any DefRefWalker::visitArg(std::shared_ptr<expressions::ArgAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   visit(ctx->getExpr());
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) {
@@ -350,6 +366,7 @@ std::any DefRefWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ct
   return {};
 }
 std::any DefRefWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   if (ctx->getTargetType() && ctx->getTargetType()->getNodeType() == NodeType::TupleType) {
     visit(ctx->getTargetType());
   }
@@ -389,12 +406,18 @@ std::any DefRefWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   return {};
 }
 std::any DefRefWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   if (ctx->getCondition())
     visit(ctx->getCondition());
   visit(ctx->getBody());
-  const auto localScope =
-      std::dynamic_pointer_cast<symTable::LocalScope>(ctx->getBody()->getScope());
-  localScope->setScopeName(symTable::ScopeType::Loop);
+
+  // setting the body's scope type to Loop type
+  if (not ctx->getBody()->getChildren().empty()) {
+    const auto loopScope = std::dynamic_pointer_cast<symTable::LocalScope>(
+        ctx->getBody()->getChildren()[0]->getScope());
+    loopScope->setScopeType(symTable::ScopeType::Loop);
+  }
+
   return {};
 }
 std::any DefRefWalker::visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {

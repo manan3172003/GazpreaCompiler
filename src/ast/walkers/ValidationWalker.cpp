@@ -135,10 +135,20 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
   return {};
 }
 std::any ValidationWalker::visitBreak(std::shared_ptr<statements::BreakAst> ctx) {
-  return AstWalker::visitBreak(ctx);
+  auto curScope = ctx->getScope();
+  while (curScope && curScope->getScopeType() != symTable::ScopeType::Loop)
+    curScope = curScope->getEnclosingScope();
+  if (!curScope)
+    throw StatementError(ctx->getLineNumber(), "Break statement must be in loop statement");
+  return {};
 }
 std::any ValidationWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ctx) {
-  return AstWalker::visitContinue(ctx);
+  auto curScope = ctx->getScope();
+  while (curScope && curScope->getScopeType() != symTable::ScopeType::Loop)
+    curScope = curScope->getEnclosingScope();
+  if (!curScope)
+    throw StatementError(ctx->getLineNumber(), "Continue statement must be in loop statement");
+  return {};
 }
 std::any ValidationWalker::visitConditional(std::shared_ptr<statements::ConditionalAst> ctx) {
   visit(ctx->getCondition());

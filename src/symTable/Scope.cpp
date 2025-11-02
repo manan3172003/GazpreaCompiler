@@ -84,6 +84,11 @@ std::string Scope::scTypeToString() const {
     return "Function";
   case ScopeType::Procedure:
     return "Procedure";
+  case ScopeType::Loop:
+    return "Loop";
+  case ScopeType::Conditional:
+    return "Conditional";
+
   default:
     return "Unknown";
   }
