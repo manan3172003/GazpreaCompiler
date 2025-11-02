@@ -1,4 +1,5 @@
 #include "backend/Backend.h"
+#include "symTable/VariableSymbol.h"
 #include "utils/BackendUtils.h"
 
 namespace gazprea::backend {
@@ -7,8 +8,9 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
 
   auto [type, valueAddr] = ctx->getScope()->getTopElementInStack();
   ctx->getSymbol()->value = valueAddr;
-  utils::castIfNeeded(builder, loc, valueAddr, ctx->getExpr()->getInferredSymbolType(),
-                      ctx->getInferredType());
+  utils::castIfNeeded(
+      builder, loc, valueAddr, ctx->getExpr()->getInferredSymbolType(),
+      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())->getType());
   return {};
 }
 
