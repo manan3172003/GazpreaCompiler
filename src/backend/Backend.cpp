@@ -235,7 +235,7 @@ void Backend::castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type
       castIfNeeded(elementPtr, fromSubType, toSubType);
     }
   } else if (fromType->getName() == "integer" && toType->getName() == "real") {
-    auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getIntegerType(32), valueAddr);
+    auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getI32Type(), valueAddr);
     auto castedValue = builder->create<mlir::LLVM::SIToFPOp>(
         loc, mlir::Float32Type::get(builder->getContext()), value);
     builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
