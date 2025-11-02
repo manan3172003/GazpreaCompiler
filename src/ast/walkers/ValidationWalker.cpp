@@ -277,6 +277,29 @@ ValidationWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpack
 std::any ValidationWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
   // call helper to validate inferred types
   validateTupleAccessInferredTypes(ctx);
+
+  const auto tupleSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  const auto tupleTypeSymbol =
+      std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(tupleSymbol->getType());
+  const int32_t fieldIndex = ctx->getFieldIndex();
+  const auto elementType = tupleTypeSymbol->getResolvedTypes()[fieldIndex - 1];
+  const auto declNode = tupleSymbol->getDef();
+
+  std::shared_ptr<types::DataTypeAst> dataType;
+  const std::string typeName = elementType->getName();
+
+  if (typeName == "integer")
+    dataType = std::make_shared<types::IntegerTypeAst>(ctx->token);
+  else if (typeName == "real")
+    dataType = std::make_shared<types::RealTypeAst>(ctx->token);
+  else if (typeName == "character")
+    dataType = std::make_shared<types::CharacterTypeAst>(ctx->token);
+  else if (typeName == "boolean")
+    dataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+  else
+    throw TypeError(ctx->getLineNumber(), "Type mismatch");
+
+  ctx->setInferredSymbolType(elementType);
   ctx->setInferredDataType(dataType);
 
   return {};

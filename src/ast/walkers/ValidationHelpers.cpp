@@ -275,25 +275,6 @@ void ValidationWalker::validateTupleAccessInferredTypes(
   if (fieldIndex == 0 || fieldIndex > static_cast<int32_t>(tupleSize)) {
     throw SizeError(ctx->getLineNumber(), "Invalid tuple index");
   }
-  const auto elementType = tupleTypeSymbol->getResolvedTypes()[fieldIndex - 1];
-  ctx->setInferredSymbolType(elementType);
-
-  std::shared_ptr<types::DataTypeAst> dataType;
-  auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);
-  auto realType = std::make_shared<types::RealTypeAst>(ctx->token);
-  auto charType = std::make_shared<types::CharacterTypeAst>(ctx->token);
-  auto boolType = std::make_shared<types::BooleanTypeAst>(ctx->token);
-  if (typesMatch(elementType, resolvedInferredType(intType))) {
-    dataType = intType;
-  } else if (typesMatch(elementType, resolvedInferredType(realType))) {
-    dataType = realType;
-  } else if (typesMatch(elementType, resolvedInferredType(charType))) {
-    dataType = charType;
-  } else if (typesMatch(elementType, resolvedInferredType(boolType))) {
-    dataType = boolType;
-  } else {
-    throw TypeError(ctx->getLineNumber(), "Type mismatch");
-  }
 }
 
 } // namespace gazprea::ast::walkers
