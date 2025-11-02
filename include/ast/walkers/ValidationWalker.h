@@ -7,86 +7,11 @@ namespace gazprea::ast::walkers {
 class ValidationWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
   bool inBinaryOp = false;
-  int opTable[5][15] = {
-      //  ^  *  /  %  +  -  <  > <= >= == !=  & or xor
-      {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Integer
-      {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Real
-      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Character
-      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1}, // Boolean
-      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Tuple
-  };
-
-  static int nodeTypeToIndex(const std::string &typeName) {
-    if (typeName == "integer")
-      return 0;
-    if (typeName == "real")
-      return 1;
-    if (typeName == "character")
-      return 2;
-    if (typeName == "boolean")
-      return 3;
-    if (typeName == "tuple")
-      return 4;
-    return -1;
-  }
-
-  bool isValidOp(const std::string &typeName, expressions::BinaryOpType opType) const {
-    if (nodeTypeToIndex(typeName) == -1)
-      throw std::runtime_error("Invalid data type");
-    return opTable[nodeTypeToIndex(typeName)][static_cast<int>(opType)];
-  }
-
-  void promoteIfNeeded(std::shared_ptr<expressions::ExpressionAst> ctx,
-                       std::shared_ptr<symTable::Type> promoteFrom,
-                       std::shared_ptr<symTable::Type> promoteTo,
-                       std::shared_ptr<types::DataTypeAst> promoteToDataType) {
-    if (promoteFrom->getName() == "integer" && promoteTo->getName() == "real") {
-      ctx->setInferredSymbolType(promoteTo);
-      ctx->setInferredDataType(promoteToDataType);
-      return;
-    }
-  }
-  void visitExpression(std::shared_ptr<Ast> exprAst) {
+  static int opTable[5][15];
+  void visitExpression(const std::shared_ptr<Ast> &exprAst) {
     inBinaryOp = true;
     visit(exprAst);
     inBinaryOp = false;
-  }
-
-  static std::shared_ptr<symTable::Scope>
-  getEnclosingFuncProcScope(std::shared_ptr<symTable::Scope> currentScope) {
-    while (currentScope != nullptr &&
-           (currentScope->getScopeType() != symTable::ScopeType::Function &&
-            currentScope->getScopeType() != symTable::ScopeType::Procedure)) {
-      currentScope = currentScope->getEnclosingScope();
-    }
-    return currentScope;
-  }
-
-  static bool hasReturnInMethod(const std::shared_ptr<statements::BlockAst> &block) {
-    for (const auto &stat : block->getChildren()) {
-      if (stat->getNodeType() == NodeType::Return) {
-        return true;
-      }
-      if (stat->getNodeType() == NodeType::Block) {
-        auto nestedBlock = std::dynamic_pointer_cast<statements::BlockAst>(stat);
-        if (hasReturnInMethod(nestedBlock)) {
-          return true;
-        }
-      }
-      if (stat->getNodeType() == NodeType::Conditional) {
-        const auto conditional = std::dynamic_pointer_cast<statements::ConditionalAst>(stat);
-        const auto thenBlock =
-            std::dynamic_pointer_cast<statements::BlockAst>(conditional->getThenBody());
-        auto elseBlock =
-            std::dynamic_pointer_cast<statements::BlockAst>(conditional->getElseBody());
-
-        if (thenBlock && elseBlock && hasReturnInMethod(thenBlock) &&
-            hasReturnInMethod(elseBlock)) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
 public:
@@ -143,11 +68,17 @@ public:
                          const std::shared_ptr<symTable::Type> &source);
   static bool isTupleTypeMatch(const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
                                const std::shared_ptr<symTable::TupleTypeSymbol> &source);
-  static void validateTuple(std::shared_ptr<Ast> ctx,
-                            const std::shared_ptr<symTable::TupleTypeSymbol> &left,
-                            const std::shared_ptr<symTable::TupleTypeSymbol> &right);
   static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
                              const std::string &typeName);
+  static std::shared_ptr<symTable::Scope>
+  getEnclosingFuncProcScope(std::shared_ptr<symTable::Scope> currentScope);
+  static bool isValidOp(const std::string &typeName, expressions::BinaryOpType opType);
+  static void promoteIfNeeded(std::shared_ptr<expressions::ExpressionAst> ctx,
+                              std::shared_ptr<symTable::Type> promoteFrom,
+                              std::shared_ptr<symTable::Type> promoteTo,
+                              std::shared_ptr<types::DataTypeAst> promoteToDataType);
+  static int nodeTypeToIndex(const std::string &typeName);
+  static bool hasReturnInMethod(const std::shared_ptr<statements::BlockAst> &block);
   static bool isNumericType(const std::shared_ptr<symTable::Type> &type);
   static bool isComparisonOperator(expressions::BinaryOpType opType);
   static bool areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,

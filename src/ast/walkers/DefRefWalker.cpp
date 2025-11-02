@@ -118,8 +118,15 @@ std::any DefRefWalker::visitContinue(std::shared_ptr<statements::ContinueAst> ct
 std::any DefRefWalker::visitConditional(std::shared_ptr<statements::ConditionalAst> ctx) {
   visit(ctx->getCondition());
   visit(ctx->getThenBody());
+  const auto localIfScope =
+      std::dynamic_pointer_cast<symTable::LocalScope>(ctx->getThenBody()->getScope());
+  localIfScope->setScopeName(symTable::ScopeType::Conditional);
+
   if (ctx->getElseBody()) {
     visit(ctx->getElseBody());
+    const auto localElseScope =
+        std::dynamic_pointer_cast<symTable::LocalScope>(ctx->getElseBody()->getScope());
+    localElseScope->setScopeName(symTable::ScopeType::Conditional);
   }
   return {};
 }
@@ -385,6 +392,9 @@ std::any DefRefWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
   if (ctx->getCondition())
     visit(ctx->getCondition());
   visit(ctx->getBody());
+  const auto localScope =
+      std::dynamic_pointer_cast<symTable::LocalScope>(ctx->getBody()->getScope());
+  localScope->setScopeName(symTable::ScopeType::Loop);
   return {};
 }
 std::any DefRefWalker::visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {

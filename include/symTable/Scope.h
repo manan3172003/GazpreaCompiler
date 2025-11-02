@@ -10,11 +10,13 @@ namespace gazprea::symTable {
 // Forward declaration
 class Symbol;
 
-enum class ScopeType { Global, Local, Function, Procedure };
+enum class ScopeType { Global, Local, Function, Procedure, Loop, Conditional };
 
 class Scope : public std::enable_shared_from_this<Scope> {
-  ScopeType scType;
   std::vector<std::pair<std::shared_ptr<Type>, mlir::Value>> scopeStack;
+
+protected:
+  ScopeType scType;
 
 public:
   explicit Scope(const ScopeType scType) : scType(scType) {}
@@ -71,5 +73,6 @@ class LocalScope final : public BaseScope {
 public:
   LocalScope() : BaseScope(ScopeType::Local) {};
   std::string getScopeName() override;
+  void setScopeName(ScopeType scopeType) { scType = scopeType; }
 };
 } // namespace gazprea::symTable
