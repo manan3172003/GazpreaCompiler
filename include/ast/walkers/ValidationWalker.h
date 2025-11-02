@@ -7,6 +7,7 @@ namespace gazprea::ast::walkers {
 class ValidationWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
   bool inBinaryOp = false;
+  bool inConditionalExpression = false;
   static int opTable[5][15];
   void visitExpression(const std::shared_ptr<Ast> &exprAst) {
     inBinaryOp = true;

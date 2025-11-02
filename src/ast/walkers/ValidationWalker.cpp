@@ -151,7 +151,9 @@ std::any ValidationWalker::visitContinue(std::shared_ptr<statements::ContinueAst
   return {};
 }
 std::any ValidationWalker::visitConditional(std::shared_ptr<statements::ConditionalAst> ctx) {
+  inConditionalExpression = true;
   visit(ctx->getCondition());
+  inConditionalExpression = false;
 
   if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(), "boolean")) {
     throw TypeError(ctx->getLineNumber(), "If statement condition must be of type boolean");
@@ -312,6 +314,9 @@ std::any ValidationWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeA
 std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCallAst> ctx) {
   const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
 
+  if (inConditionalExpression)
+    throw CallError(ctx->getLineNumber(), "Cannot call procedure in control flow expressions");
+
   // Indirect way to check if symbol is a procedure
   if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {
     // Check if we call a procedure from a function
@@ -420,6 +425,9 @@ std::any ValidationWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst
 }
 std::any ValidationWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
   const auto dataTypeSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (not dataTypeSymbol)
+    throw TypeError(ctx->getLineNumber(), "Symbol is not a variable");
+
   auto astNode = dataTypeSymbol->getDef();
 
   if (astNode->getNodeType() == NodeType::Declaration) {
@@ -481,7 +489,9 @@ std::any ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx
 std::any ValidationWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
 
   if (ctx->getCondition()) {
+    inConditionalExpression = true;
     visit(ctx->getCondition());
+    inConditionalExpression = false;
     if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(), "boolean")) {
       throw TypeError(ctx->getLineNumber(), "Loop condition must be of type boolean");
     }
