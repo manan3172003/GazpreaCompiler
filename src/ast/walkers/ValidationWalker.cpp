@@ -446,6 +446,21 @@ std::any ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst
 }
 std::any ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   visit(ctx->getExpression());
+
+  auto exprType = ctx->getExpression()->getInferredSymbolType();
+  auto opType = ctx->getUnaryOpType();
+  if (opType == expressions::UnaryOpType::NOT) {
+    if (!isOfSymbolType(exprType, "boolean")) {
+      throw TypeError(ctx->getLineNumber(), "NOT operator can only be applied to boolean type");
+    }
+  } else if (opType == expressions::UnaryOpType::MINUS ||
+             opType == expressions::UnaryOpType::PLUS) {
+    if (!isOfSymbolType(exprType, "integer") && !isOfSymbolType(exprType, "real")) {
+      throw TypeError(ctx->getLineNumber(),
+                      "Unary +/- can only be applied to numeric types (integer or real)");
+    }
+  }
+
   ctx->setInferredSymbolType(ctx->getExpression()->getInferredSymbolType());
   ctx->setInferredDataType(ctx->getExpression()->getInferredDataType());
   return {};
