@@ -451,7 +451,7 @@ std::any ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx
   auto opType = ctx->getUnaryOpType();
   if (opType == expressions::UnaryOpType::NOT) {
     if (!isOfSymbolType(exprType, "boolean")) {
-      throw TypeError(ctx->getLineNumber(), "NOT operator can only be applied to boolean type");
+      throw TypeError(ctx->getLineNumber(), "not operator can only be applied to boolean type");
     }
   } else if (opType == expressions::UnaryOpType::MINUS ||
              opType == expressions::UnaryOpType::PLUS) {
