@@ -100,7 +100,6 @@ void Backend::printFloat(mlir::Value floatValue) {
   mlir::ValueRange args = {formatStringPtr, floatValue};
   auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
-  printChar('\n');
 }
 
 void Backend::printInt(mlir::Value integer) {
@@ -123,6 +122,19 @@ void Backend::printIntChar(mlir::Value integer) {
   mlir::ValueRange args = {formatStringPtr, integer};
   auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
+}
+
+void Backend::printBool(mlir::Value boolValue) {
+  builder->create<mlir::scf::IfOp>(
+      loc, boolValue,
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        printChar('T');
+        b.create<mlir::scf::YieldOp>(l);
+      },
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        printChar('F');
+        b.create<mlir::scf::YieldOp>(l);
+      });
 }
 
 void Backend::printChar(char c) {
@@ -148,9 +160,32 @@ void Backend::createGlobalString(const char *str, const char *stringName) const 
                                         builder->getStringAttr(mlirString), /*alignment=*/0);
   return;
 }
-mlir::Value Backend::constOne() const {
-  return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1);
-}
+
+// void Backend::castIfNeeded(
+//                   mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
+//                   std::shared_ptr<symTable::Type> toType) {
+//   if (auto fromTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType)) {
+//     auto toTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(toType);
+//     auto sTy = getMLIRType(*builder->getContext(), fromType);
+//     for (size_t i = 0; i < fromTupleTypeSymbol->getResolvedTypes().size(); i++) {
+//       auto fromSubType = fromTupleTypeSymbol->getResolvedTypes()[i];
+//       auto toSubType = toTupleTypeSymbol->getResolvedTypes()[i];
+//       auto gepIndices = std::vector<mlir::Value>{
+//         builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+//         builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
+//       auto elementPtr = builder->create<mlir::LLVM::GEPOp>(
+//           loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, valueAddr, gepIndices);
+//       castIfNeeded(builder, loc, elementPtr, fromSubType, toSubType);
+//     }
+//   } else if (fromType->getName() == "integer" && toType->getName() == "real") {
+//     auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getIntegerType(32), valueAddr);
+//     auto castedValue = builder->create<mlir::LLVM::SIToFPOp>(
+//         loc, mlir::Float32Type::get(builder->getContext()), value);
+//     builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
+//   }
+// }
+
+mlir::Value Backend::constOne() const { return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1); }
 mlir::Value Backend::constZero() const {
   return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
 }

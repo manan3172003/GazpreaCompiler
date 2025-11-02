@@ -87,6 +87,7 @@ protected:
   void printFloat(mlir::Value floatValue);
   void printInt(mlir::Value integer);
   void printIntChar(mlir::Value integer);
+  void printBool(mlir::Value boolValue);
   void printChar(char c);
   void createGlobalString(const char *str, const char *stringName) const;
 
@@ -112,6 +113,7 @@ private:
   mlir::Type charTy() const;
   mlir::Type boolTy() const;
   mlir::Type ptrTy() const;
+  mlir::Type boolTy() const;
   mlir::Type intTy() const;
 
   // helpers
