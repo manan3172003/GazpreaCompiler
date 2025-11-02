@@ -34,17 +34,8 @@ jobs:
       - name: Add dragon-runner to PATH
         run: echo "/opt/Dragon-Runner" >> $GITHUB_PATH
 
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ github.job }}
-          max-size: 2G
-
-      - name: Install mold
-        run: apt-get install -y mold
-
       - name: Configure
-        run: cmake -B bin -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold" -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=mold"
+        run: cmake -B bin -G Ninja .
 
       - name: Build
         run: cmake --build bin --parallel $(nproc)
@@ -53,7 +44,7 @@ jobs:
         run: chmod +x ./bin/gazc
 
       - name: Run valgrind tests
-        run: dragon-runner memcheck tests/CIConfigValgrind.json -v --timeout 30
+        run: dragon-runner memcheck tests/CIConfigValgrind.json --timeout 30
 
       - name: Run llc tests
-        run: dragon-runner tests/CIConfig.json -v --timeout 30
+        run: dragon-runner tests/CIConfig.json --timeout 30
