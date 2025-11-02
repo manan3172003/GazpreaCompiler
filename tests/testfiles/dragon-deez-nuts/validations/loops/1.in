@@ -1,0 +1,17 @@
+/*
+This test tests for procedure calls in conditionals
+*/
+
+procedure myProc() returns boolean{
+    return true;
+}
+
+procedure main() {
+    loop while (myProc()) {
+        integer x = 10;
+    }
+
+    return 0;
+}
+
+//CHECK_FILE:1.out
