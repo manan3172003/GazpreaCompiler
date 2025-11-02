@@ -30,6 +30,7 @@
 #include "ast/walkers/AstWalker.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -100,6 +101,12 @@ protected:
 private:
   std::shared_ptr<ast::Ast> ast;
   std::unordered_map<std::string, mlir::Value> blockArg;
+
+  struct LoopContext {
+    mlir::Value breakFlag;
+    bool isDoWhile = false;
+  };
+  std::vector<LoopContext> loopStack;
 
   // MLIR
   mlir::MLIRContext context;
