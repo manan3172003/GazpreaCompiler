@@ -72,5 +72,7 @@ private:
   static expressions::BinaryOpType stringToBinaryOpType(const std::string &op);
   std::any createBinaryExpr(antlr4::tree::ParseTree *leftCtx, const std::string &op,
                             antlr4::tree::ParseTree *rightCtx, antlr4::Token *token);
+  static std::shared_ptr<expressions::ExpressionAst>
+  createDefaultLiteral(const std::shared_ptr<types::DataTypeAst> &typeAst, antlr4::Token *token);
 };
 } // namespace gazprea::ast::walkers
