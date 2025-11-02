@@ -6,11 +6,14 @@ namespace gazprea::backend {
 
 std::any Backend::visitProcedureCall(std::shared_ptr<ast::statements::ProcedureCallAst> ctx) {
   const auto methodSym = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  const auto procedureDeclaration =
+      std::dynamic_pointer_cast<ast::prototypes::ProcedureAst>(methodSym->getDef());
+  const auto prototype = procedureDeclaration->getProto();
 
-  std::vector<mlir::Value> mlirArgs;
+  const auto params = prototype->getParams();
   const auto args = ctx->getArgs();
-  const auto params =
-      std::dynamic_pointer_cast<ast::prototypes::PrototypeAst>(methodSym->getDef())->getParams();
+  std::vector<mlir::Value> mlirArgs;
+
   for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
     visit(args[i]);
     const auto topElement = args[i]->getScope()->getTopElementInStack();

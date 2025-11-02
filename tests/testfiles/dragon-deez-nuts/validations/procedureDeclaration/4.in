@@ -1,0 +1,12 @@
+
+procedure myProc(integer x);
+
+procedure main() returns integer{
+    call myProc();
+
+    return 0;
+}
+
+procedure myProc(real x) {}
+
+//CHECK:DefinitionError on Line 10: Parameter type does not match

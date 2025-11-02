@@ -203,7 +203,16 @@ std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureA
       throw ReturnError(ctx->getLineNumber(), "Function must have a return statement");
     }
   }
-  visit(ctx->getBody());
+  if (not ctx->getBody()) {
+    const auto methodSymbol = symTab->getGlobalScope()->getSymbol(ctx->getProto()->getName());
+    const auto procedureDeclaration =
+        std::dynamic_pointer_cast<prototypes::ProcedureAst>(methodSymbol->getDef());
+    if (not procedureDeclaration->getBody())
+      throw DefinitionError(procedureDeclaration->getLineNumber(),
+                            "Procedure does not have a definition");
+  }
+  if (ctx->getBody())
+    visit(ctx->getBody());
   return {};
 }
 std::any
@@ -217,12 +226,17 @@ std::any ValidationWalker::visitProcedureCall(std::shared_ptr<statements::Proced
     throw CallError(ctx->getLineNumber(), "Procedure call inside function");
   }
 
-  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  // need to re-resolve to get defined function
+  methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
+      symTab->getGlobalScope()->resolveSymbol(methodSymbol->getName()));
+  ctx->setSymbol(methodSymbol);
   if (methodSymbol->getScopeType() == symTable::ScopeType::Function) {
     throw CallError(ctx->getLineNumber(), "Call statement used on non-procedure type");
   }
+  auto procedureDecl = std::dynamic_pointer_cast<prototypes::ProcedureAst>(methodSymbol->getDef());
+  auto protoType = procedureDecl->getProto();
   // check for var parameter aliasing
-  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(methodSymbol->getDef());
   checkVarArgs(protoType, ctx->getArgs(), ctx->getLineNumber());
   return {};
 }
@@ -239,7 +253,6 @@ std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ct
   }
 
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(curScope);
-  auto protoType = std::dynamic_pointer_cast<prototypes::PrototypeAst>(methodSymbol->getDef());
 
   if (ctx->getExpr()->getInferredSymbolType()->getName() !=
       methodSymbol->getReturnType()->getName()) {
@@ -363,8 +376,20 @@ std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncPr
   if (inBinaryOp && methodSymbol->getScopeType() == symTable::ScopeType::Procedure)
     throw CallError(ctx->getLineNumber(), "Procedure cannot be called in a binary expression");
 
-  const auto protoType =
-      std::dynamic_pointer_cast<prototypes::PrototypeAst>(methodSymbol->getDef());
+  std::shared_ptr<prototypes::PrototypeAst> protoType;
+  if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {
+    const auto procedureDecl =
+        std::dynamic_pointer_cast<prototypes::ProcedureAst>(methodSymbol->getDef());
+    if (not procedureDecl->getBody())
+      throw DefinitionError(ctx->getLineNumber(), "Procedure declared but not defined");
+    protoType = procedureDecl->getProto();
+  } else if (methodSymbol->getScopeType() == symTable::ScopeType::Function) {
+    const auto functionDecl =
+        std::dynamic_pointer_cast<prototypes::FunctionAst>(methodSymbol->getDef());
+    if (not functionDecl->getBody())
+      throw DefinitionError(ctx->getLineNumber(), "Procedure declared but not defined");
+    protoType = functionDecl->getProto();
+  }
 
   if (protoType->getName() == "main") {
     throw CallError(ctx->getLineNumber(), "Cannot call main function");

@@ -5,10 +5,20 @@ namespace gazprea::backend {
 
 std::any Backend::visitFuncProcCall(std::shared_ptr<ast::expressions::FuncProcCallAst> ctx) {
   const auto methodSym = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
-  std::vector<mlir::Value> mlirArgs;
+
+  std::shared_ptr<ast::prototypes::PrototypeAst> protoType;
+  if (methodSym->getScopeType() == symTable::ScopeType::Procedure) {
+    const auto procedureDecl =
+        std::dynamic_pointer_cast<ast::prototypes::ProcedureAst>(methodSym->getDef());
+    protoType = procedureDecl->getProto();
+  } else if (methodSym->getScopeType() == symTable::ScopeType::Function) {
+    const auto functionDecl =
+        std::dynamic_pointer_cast<ast::prototypes::FunctionAst>(methodSym->getDef());
+    protoType = functionDecl->getProto();
+  }
+  const auto params = protoType->getParams();
   const auto args = ctx->getArgs();
-  const auto params =
-      std::dynamic_pointer_cast<ast::prototypes::PrototypeAst>(methodSym->getDef())->getParams();
+  std::vector<mlir::Value> mlirArgs;
   for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
     visit(args[i]);
     const auto [_, valueAddr] = args[i]->getScope()->getTopElementInStack();

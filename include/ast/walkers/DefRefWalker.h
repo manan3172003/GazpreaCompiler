@@ -1,6 +1,7 @@
 #pragma once
 #include "AstWalker.h"
 #include "symTable/SymTable.h"
+#include "symTable/TupleTypeSymbol.h"
 
 namespace gazprea::ast::walkers {
 class DefRefWalker final : public AstWalker {
@@ -15,6 +16,13 @@ public:
   void throwGlobalError(std::shared_ptr<Ast> ctx);
   void throwDuplicateSymbolError(std::shared_ptr<Ast> ctx, const std::string &name,
                                  std::shared_ptr<symTable::Scope> curScope, bool isType);
+  bool isTupleTypeMatch(const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
+                        const std::shared_ptr<symTable::TupleTypeSymbol> &source);
+  bool exactTypeMatch(const std::shared_ptr<symTable::Type> &destination,
+                      const std::shared_ptr<symTable::Type> &source);
+  void compareProtoTypes(std::shared_ptr<prototypes::PrototypeAst> prev,
+                         std::shared_ptr<prototypes::PrototypeAst> cur,
+                         symTable::ScopeType scopeType);
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
   std::any visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) override;
   std::any visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) override;

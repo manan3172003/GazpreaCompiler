@@ -1,0 +1,11 @@
+/*
+This test checks for a forward declaration with no definition
+*/
+
+procedure myProc();
+
+procedure main() returns integer{
+    return 0;
+}
+
+//CHECK:DefinitionError on Line 5

@@ -1,0 +1,16 @@
+/*
+This test checks for inconsistent return type between declaration and definition of a procedure
+*/
+
+procedure myProc();
+
+procedure main() returns integer{
+    call myProc();
+
+    return 0;
+}
+
+procedure myProc() returns integer {
+    return 10;
+}
+//CHECK:DefinitionError on Line 13: Return type does not match

@@ -1,0 +1,15 @@
+/*
+This test tries to redeclare a procedure
+*/
+
+procedure myProc();
+
+procedure main() returns integer{
+    call myProc();
+
+    return 0;
+}
+
+procedure myProc() returns integer;
+
+//CHECK:SymbolError on Line 13: Duplicate symbol
