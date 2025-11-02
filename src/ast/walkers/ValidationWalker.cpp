@@ -277,6 +277,8 @@ ValidationWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpack
 std::any ValidationWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
   // call helper to validate inferred types
   validateTupleAccessInferredTypes(ctx);
+  ctx->setInferredDataType(dataType);
+
   return {};
 }
 std::any ValidationWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
