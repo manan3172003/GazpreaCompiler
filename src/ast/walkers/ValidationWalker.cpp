@@ -1,7 +1,6 @@
 #include "CompileTimeExceptions.h"
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
-#include "ast/types/IntegerTypeAst.h"
 #include "ast/types/RealTypeAst.h"
 #include "symTable/MethodSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
