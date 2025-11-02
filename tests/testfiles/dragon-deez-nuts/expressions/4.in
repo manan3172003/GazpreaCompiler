@@ -1,0 +1,15 @@
+/* This test checks that accessing a non-existent field on a procedure
+   results in a error.
+*/
+
+procedure p() returns integer {
+    return 0;
+}
+
+procedure main() returns integer {
+    var integer c = p.2;
+    
+    return 0;
+}
+
+//CHECK_FILE:4.out

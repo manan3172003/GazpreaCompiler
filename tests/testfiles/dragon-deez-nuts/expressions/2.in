@@ -1,0 +1,13 @@
+/* This test checks for out-of-bounds access in tuple indexing.
+   The code attempts to access the third element of a tuple that only has two elements.
+   The expected behavior is that the compiler will produce an error indicating
+   that the index is out of bounds.
+*/
+
+procedure main() returns integer {
+    var tuple (integer, integer) t = (10, 20);
+    var integer a = t.3;
+    return 0;
+}
+
+//CHECK_FILE:2.out

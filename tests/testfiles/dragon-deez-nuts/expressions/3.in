@@ -1,0 +1,11 @@
+/* This test checks that tuple element access works correctly. should throw an error as t.0 is out of bounds
+*/
+
+procedure main() returns integer {
+    var tuple (integer, integer) t = (10, 20);
+    var integer a = t.0;
+
+    return 0;
+}
+
+//CHECK_FILE:2.out
