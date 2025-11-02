@@ -47,4 +47,4 @@ jobs:
         run: dragon-runner memcheck tests/CIConfigValgrind.json --timeout 30
 
       - name: Run llc tests
-        run: dragon-runner tests/CIConfig.json --timeout 30
+        run: dragon-runner tests/CIConfig.json -v --timeout 30
