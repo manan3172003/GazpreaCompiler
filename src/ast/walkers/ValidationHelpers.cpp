@@ -279,21 +279,21 @@ void ValidationWalker::validateTupleAccessInferredTypes(
   ctx->setInferredSymbolType(elementType);
 
   std::shared_ptr<types::DataTypeAst> dataType;
-  const std::string typeName = elementType->getName();
-
-  if (typeName == "integer") {
-    dataType = std::make_shared<types::IntegerTypeAst>(ctx->token);
-  } else if (typeName == "real") {
-    dataType = std::make_shared<types::RealTypeAst>(ctx->token);
-  } else if (typeName == "character") {
-    dataType = std::make_shared<types::CharacterTypeAst>(ctx->token);
-  } else if (typeName == "boolean") {
-    dataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+  auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);
+  auto realType = std::make_shared<types::RealTypeAst>(ctx->token);
+  auto charType = std::make_shared<types::CharacterTypeAst>(ctx->token);
+  auto boolType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+  if (typesMatch(elementType, resolvedInferredType(intType))) {
+    dataType = intType;
+  } else if (typesMatch(elementType, resolvedInferredType(realType))) {
+    dataType = realType;
+  } else if (typesMatch(elementType, resolvedInferredType(charType))) {
+    dataType = charType;
+  } else if (typesMatch(elementType, resolvedInferredType(boolType))) {
+    dataType = boolType;
   } else {
-    throw TypeError(ctx->getLineNumber(), "Type Mistmatch");
+    throw TypeError(ctx->getLineNumber(), "Type mismatch");
   }
-
-  ctx->setInferredDataType(dataType);
 }
 
 } // namespace gazprea::ast::walkers
