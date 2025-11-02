@@ -1,0 +1,13 @@
+/*
+tests the behavior of a do-while loop with a break statement
+*/
+procedure main() returns integer {
+    loop{
+        5 -> std_output;
+        break;
+    } while (true);
+    3 -> std_output;
+    return 0;
+}
+
+// CHECK_FILE:2.out
