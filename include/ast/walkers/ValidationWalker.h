@@ -87,5 +87,6 @@ public:
   void checkVarArgs(const std::shared_ptr<prototypes::PrototypeAst> &proto,
                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
                     int lineNumber) const;
+  static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);
 };
 } // namespace gazprea::ast::walkers

@@ -1,6 +1,7 @@
 #include "CompileTimeExceptions.h"
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
+#include "ast/types/IntegerTypeAst.h"
 #include "ast/types/RealTypeAst.h"
 #include "symTable/MethodSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
@@ -275,7 +276,9 @@ ValidationWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpack
   return {};
 }
 std::any ValidationWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
-  return AstWalker::visitTupleAccess(ctx);
+  // call helper to validate inferred types
+  validateTupleAccessInferredTypes(ctx);
+  return {};
 }
 std::any ValidationWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   auto tupleType = std::make_shared<types::TupleTypeAst>(ctx->token);

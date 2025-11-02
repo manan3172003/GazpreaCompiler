@@ -257,4 +257,43 @@ void ValidationWalker::checkVarArgs(const std::shared_ptr<prototypes::PrototypeA
   }
 }
 
+void ValidationWalker::validateTupleAccessInferredTypes(
+    std::shared_ptr<expressions::TupleAccessAst> ctx) {
+  // Get the tuple's variable symbol
+  const auto tupleSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (!tupleSymbol) {
+    throw SymbolError(ctx->getLineNumber(), "Tuple identifier symbol is not a variable");
+  }
+  const auto tupleTypeSymbol =
+      std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(tupleSymbol->getType());
+  if (!tupleTypeSymbol) {
+    throw TypeError(ctx->getLineNumber(), "Identifier symbol is not a tuple type");
+  }
+  const int32_t fieldIndex = ctx->getFieldIndex();
+  const size_t tupleSize = tupleTypeSymbol->getResolvedTypes().size();
+
+  if (fieldIndex == 0 || fieldIndex > static_cast<int32_t>(tupleSize)) {
+    throw SizeError(ctx->getLineNumber(), "Invalid tuple index");
+  }
+  const auto elementType = tupleTypeSymbol->getResolvedTypes()[fieldIndex - 1];
+  ctx->setInferredSymbolType(elementType);
+
+  std::shared_ptr<types::DataTypeAst> dataType;
+  const std::string typeName = elementType->getName();
+
+  if (typeName == "integer") {
+    dataType = std::make_shared<types::IntegerTypeAst>(ctx->token);
+  } else if (typeName == "real") {
+    dataType = std::make_shared<types::RealTypeAst>(ctx->token);
+  } else if (typeName == "character") {
+    dataType = std::make_shared<types::CharacterTypeAst>(ctx->token);
+  } else if (typeName == "boolean") {
+    dataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+  } else {
+    throw TypeError(ctx->getLineNumber(), "Type Mistmatch");
+  }
+
+  ctx->setInferredDataType(dataType);
+}
+
 } // namespace gazprea::ast::walkers
