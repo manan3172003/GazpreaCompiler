@@ -12,8 +12,8 @@ std::any Backend::visitTupleAccess(std::shared_ptr<ast::expressions::TupleAccess
   auto structAddr = tupleSym->value;
   auto gepIndices = std::vector<mlir::Value>{
       builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
-      builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(),
-                                              ctx->getFieldIndex() - 1)}; // Tuples are 1-based indexing
+      builder->create<mlir::LLVM::ConstantOp>(
+          loc, builder->getI32Type(), ctx->getFieldIndex() - 1)}; // Tuples are 1-based indexing
   auto elementPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, structAddr, gepIndices);
   ctx->getScope()->pushElementToScopeStack(
       tupleTypeSymbol->getResolvedTypes()[ctx->getFieldIndex() - 1], elementPtr);
