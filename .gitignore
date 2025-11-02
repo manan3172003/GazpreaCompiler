@@ -16,3 +16,7 @@ build/
 
 # Custom entries
 runtime-tests/
+
+/tests/gaz
+/tests/gaz.ll
+/tests/gaz.o

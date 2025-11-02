@@ -99,7 +99,6 @@ void Backend::printInt(mlir::Value integer) {
   mlir::ValueRange args = {formatStringPtr, integer};
   auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
-  printChar('\n');
 }
 
 void Backend::printChar(char c) {

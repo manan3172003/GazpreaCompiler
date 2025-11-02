@@ -1,10 +1,10 @@
 {
   "testDir": "testfiles",
   "testedExecutablePaths": {
-    "dragon-deez-nuts": "<path_to_gazc_exe>"
+    "dragon-deez-nuts": "../bin/gazc"
   },
   "runtimes": {
-    "dragon-deez-nuts": "<path_to_libgazrt.so>"
+    "dragon-deez-nuts": "../bin/libgazrt.dylib"
   },
   "toolchains": {
     "gazprea": [
@@ -17,7 +17,7 @@
       },
       {
         "stepName": "lli",
-        "executablePath": "<path-to-lli>",
+        "executablePath": "/opt/homebrew/opt/llvm/bin/lli",
         "arguments": ["$INPUT"],
         "usesRuntime": true,
         "usesInStr": true,

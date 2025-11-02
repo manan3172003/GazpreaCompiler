@@ -1,0 +1,11 @@
+function g() returns integer {
+    return 3;
+}
+
+procedure main() returns integer {
+    const integer x = g();
+    x -> std_output;
+    return 0;
+}
+
+//CHECK_FILE:1.out

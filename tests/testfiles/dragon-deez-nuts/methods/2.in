@@ -1,0 +1,18 @@
+procedure g(var integer x) returns integer {
+    x -> std_output;
+    return 3;
+}
+
+procedure f(const integer y) {
+    y -> std_output;
+}
+
+procedure main() returns integer {
+    const integer x = 5;
+    call g(x);
+    x -> std_output;
+    call f(x);
+    return 0;
+}
+
+//CHECK_FILE:2.out

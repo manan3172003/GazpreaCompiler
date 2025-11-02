@@ -1,10 +1,10 @@
 {
   "testDir": "testfiles",
   "testedExecutablePaths": {
-    "dragon-deez-nuts": "<path-to-gazprea>"
+    "dragon-deez-nuts": "../bin/gazc"
   },
   "runtimes": {
-    "dragon-deez-nuts": "<path-to-runtime>"
+    "dragon-deez-nuts": "../bin/libgazrt.dylib"
   }, 
   "toolchains": {
     "gazprea-llc": [
@@ -17,7 +17,7 @@
       }, 
       {
         "stepName": "llc",
-        "executablePath": "<path-to-llc>",
+        "executablePath": "/opt/homebrew/opt/llvm/bin/llc",
         "arguments": ["-filetype=obj", "$INPUT", "-o", "$OUTPUT"],
         "output": "gaz.o"
       },
