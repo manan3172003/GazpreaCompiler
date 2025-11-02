@@ -1,10 +1,10 @@
 {
   "testDir": "testfiles",
   "testedExecutablePaths": {
-    "dragon-deez-nuts": "../bin/gazc"
+    "<team-name>": "../bin/gazc"
   },
   "runtimes": {
-    "dragon-deez-nuts": "../bin/libgazrt.so"
+    "<team-name>": "../bin/libgazrt.so"
   },
   "toolchains": {
     "gazprea-llc": [
@@ -17,13 +17,13 @@
       },
       {
         "stepName": "llc",
-        "executablePath": "/usr/local/llvm/bin/llc",
+        "executablePath": "/opt/llvm/bin/llc",
         "arguments": ["-filetype=obj", "-relocation-model=pic", "$INPUT", "-o", "$OUTPUT"],
         "output": "gaz.o"
       },
       {
         "stepName": "clang",
-        "executablePath": "/usr/local/llvm/bin/clang",
+        "executablePath": "/usr/bin/clang",
         "arguments": ["$INPUT", "-o", "$OUTPUT", "-L$RT_PATH", "-l$RT_LIB"],
         "output": "gaz"
       },
