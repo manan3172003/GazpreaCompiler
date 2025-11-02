@@ -164,7 +164,8 @@ void Backend::createGlobalString(const char *str, const char *stringName) const 
 // void Backend::castIfNeeded(
 //                   mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
 //                   std::shared_ptr<symTable::Type> toType) {
-//   if (auto fromTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType)) {
+//   if (auto fromTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType))
+//   {
 //     auto toTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(toType);
 //     auto sTy = getMLIRType(*builder->getContext(), fromType);
 //     for (size_t i = 0; i < fromTupleTypeSymbol->getResolvedTypes().size(); i++) {
@@ -174,18 +175,21 @@ void Backend::createGlobalString(const char *str, const char *stringName) const 
 //         builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
 //         builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
 //       auto elementPtr = builder->create<mlir::LLVM::GEPOp>(
-//           loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, valueAddr, gepIndices);
+//           loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, valueAddr,
+//           gepIndices);
 //       castIfNeeded(builder, loc, elementPtr, fromSubType, toSubType);
 //     }
 //   } else if (fromType->getName() == "integer" && toType->getName() == "real") {
-//     auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getIntegerType(32), valueAddr);
-//     auto castedValue = builder->create<mlir::LLVM::SIToFPOp>(
+//     auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getIntegerType(32),
+//     valueAddr); auto castedValue = builder->create<mlir::LLVM::SIToFPOp>(
 //         loc, mlir::Float32Type::get(builder->getContext()), value);
 //     builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
 //   }
 // }
 
-mlir::Value Backend::constOne() const { return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1); }
+mlir::Value Backend::constOne() const {
+  return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1);
+}
 mlir::Value Backend::constZero() const {
   return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
 }
