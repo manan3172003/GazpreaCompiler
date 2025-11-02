@@ -5,9 +5,7 @@ namespace gazprea::backend {
 std::any Backend::visitOutput(std::shared_ptr<ast::statements::OutputAst> ctx) {
   visit(ctx->getExpression());
 
-  auto topElement = ctx->getScope()->getTopElementInStack();
-  auto type = topElement.first;
-  auto valueAddr = topElement.second;
+  auto [type, valueAddr] = ctx->getScope()->getTopElementInStack();
   auto a = type;
   mlir::Value value;
   if (type->getName() == "integer") {
