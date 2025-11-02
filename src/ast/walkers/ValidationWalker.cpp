@@ -44,15 +44,17 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
 }
 std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
   const auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  // We're going to have an expression since we'll set defaults in AstBuilder
+  visit(ctx->getExpr());
   if (not ctx->getType()) {
     // setting inferred type here
     variableSymbol->setType(ctx->getExpr()->getInferredSymbolType());
     ctx->setType(ctx->getExpr()->getInferredDataType());
+    ctx->getType()->setSymbol(
+        std::dynamic_pointer_cast<symTable::Symbol>(ctx->getExpr()->getInferredSymbolType()));
   }
 
   // type check
-  // We're going to have an expression since we'll set defaults in AstBuilder
-  visit(ctx->getExpr());
   const auto declarationType =
       std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
   const auto expressionType = ctx->getExpr()->getInferredSymbolType();
