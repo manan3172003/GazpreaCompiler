@@ -7,7 +7,7 @@ namespace gazprea::backend {
 std::any Backend::visitTupleAccess(std::shared_ptr<ast::expressions::TupleAccessAst> ctx) {
   auto tupleSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   auto tupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(tupleSym->getType());
-  auto sTy = utils::getMLIRTypeFromSymbolType(context, tupleTypeSymbol);
+  auto sTy = getMLIRType(tupleTypeSymbol);
 
   auto structAddr = tupleSym->value;
   auto gepIndices = std::vector<mlir::Value>{

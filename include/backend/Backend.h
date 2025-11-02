@@ -90,6 +90,8 @@ protected:
   void printBool(mlir::Value boolValue);
   void printChar(char c);
   void createGlobalString(const char *str, const char *stringName) const;
+  void castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
+                    std::shared_ptr<symTable::Type> toType);
 
 private:
   std::shared_ptr<ast::Ast> ast;
@@ -113,7 +115,6 @@ private:
   mlir::Type charTy() const;
   mlir::Type boolTy() const;
   mlir::Type ptrTy() const;
-  mlir::Type boolTy() const;
   mlir::Type intTy() const;
 
   // helpers

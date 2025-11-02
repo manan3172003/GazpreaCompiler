@@ -199,7 +199,6 @@ mlir::Type Backend::ptrTy() const {
   return mlir::LLVM::LLVMPointerType::get(builder->getContext());
 }
 mlir::Type Backend::intTy() const { return mlir::IntegerType::get(builder->getContext(), 32); }
-
 mlir::Type Backend::getMLIRType(const std::shared_ptr<symTable::Type> &returnType) {
   if (!returnType) {
     return {};
@@ -236,5 +235,28 @@ Backend::getMethodParamTypes(const std::vector<std::shared_ptr<ast::Ast>> &param
     paramTypes.push_back(ptrTy());
   }
   return paramTypes;
+}
+
+void Backend::castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
+                           std::shared_ptr<symTable::Type> toType) {
+  if (auto fromTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType)) {
+    auto toTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(toType);
+    auto sTy = getMLIRType(fromType);
+    for (size_t i = 0; i < fromTupleTypeSymbol->getResolvedTypes().size(); i++) {
+      auto fromSubType = fromTupleTypeSymbol->getResolvedTypes()[i];
+      auto toSubType = toTupleTypeSymbol->getResolvedTypes()[i];
+      auto gepIndices = std::vector<mlir::Value>{
+          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
+      auto elementPtr = builder->create<mlir::LLVM::GEPOp>(
+          loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, valueAddr, gepIndices);
+      castIfNeeded(elementPtr, fromSubType, toSubType);
+    }
+  } else if (fromType->getName() == "integer" && toType->getName() == "real") {
+    auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getIntegerType(32), valueAddr);
+    auto castedValue = builder->create<mlir::LLVM::SIToFPOp>(
+        loc, mlir::Float32Type::get(builder->getContext()), value);
+    builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
+  }
 }
 } // namespace gazprea::backend

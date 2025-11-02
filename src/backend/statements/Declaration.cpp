@@ -8,9 +8,8 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
 
   auto [type, valueAddr] = ctx->getScope()->getTopElementInStack();
   ctx->getSymbol()->value = valueAddr;
-  utils::castIfNeeded(
-      builder, loc, valueAddr, ctx->getExpr()->getInferredSymbolType(),
-      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())->getType());
+  castIfNeeded(valueAddr, ctx->getExpr()->getInferredSymbolType(),
+               std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())->getType());
   return {};
 }
 
