@@ -97,7 +97,12 @@ void Backend::printFloat(mlir::Value floatValue) {
     llvm::errs() << "missing format string!\n";
   }
   const mlir::Value formatStringPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatString);
-  mlir::ValueRange args = {formatStringPtr, floatValue};
+
+  // Convert float (f32) to double (f64) for printf variadic args
+  auto doubleTy = mlir::Float64Type::get(builder->getContext());
+  mlir::Value doubleValue = builder->create<mlir::LLVM::FPExtOp>(loc, doubleTy, floatValue);
+
+  mlir::ValueRange args = {formatStringPtr, doubleValue};
   auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
 }
