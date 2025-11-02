@@ -34,7 +34,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "utils/BackendUtils.h"
 
 namespace gazprea::backend {
 class Backend final : public ast::walkers::AstWalker {
