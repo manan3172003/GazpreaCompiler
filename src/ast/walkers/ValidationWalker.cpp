@@ -175,6 +175,7 @@ std::any ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ct
   if (curScope && curScope->getScopeType() == symTable::ScopeType::Function) {
     throw StatementError(ctx->getLineNumber(), "Output statement not allowed in functions");
   }
+  visit(ctx->getExpression());
   return {};
 }
 std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {

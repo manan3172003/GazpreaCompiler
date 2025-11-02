@@ -23,6 +23,7 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   setupPrintf();
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%d\0", "intFormat");
+  createGlobalString("%f\0", "floatFormat");
 }
 
 int Backend::emitModule() {
@@ -90,9 +91,32 @@ void Backend::setupPrintf() const {
   builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printf", llvmFnType);
 }
 
+void Backend::printFloat(mlir::Value floatValue) {
+  mlir::LLVM::GlobalOp formatString;
+  if (!(formatString = module.lookupSymbol<mlir::LLVM::GlobalOp>("floatFormat"))) {
+    llvm::errs() << "missing format string!\n";
+  }
+  const mlir::Value formatStringPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatString);
+  mlir::ValueRange args = {formatStringPtr, floatValue};
+  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+  builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
+  printChar('\n');
+}
+
 void Backend::printInt(mlir::Value integer) {
   mlir::LLVM::GlobalOp formatString;
   if (!(formatString = module.lookupSymbol<mlir::LLVM::GlobalOp>("intFormat"))) {
+    llvm::errs() << "missing format string!\n";
+  }
+  const mlir::Value formatStringPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatString);
+  mlir::ValueRange args = {formatStringPtr, integer};
+  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+  builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
+}
+
+void Backend::printIntChar(mlir::Value integer) {
+  mlir::LLVM::GlobalOp formatString;
+  if (!(formatString = module.lookupSymbol<mlir::LLVM::GlobalOp>("charFormat"))) {
     llvm::errs() << "missing format string!\n";
   }
   const mlir::Value formatStringPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatString);

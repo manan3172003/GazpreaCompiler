@@ -34,6 +34,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "utils/BackendUtils.h"
 
 namespace gazprea::backend {
 class Backend final : public ast::walkers::AstWalker {
@@ -83,7 +84,9 @@ public:
 
 protected:
   void setupPrintf() const;
+  void printFloat(mlir::Value floatValue);
   void printInt(mlir::Value integer);
+  void printIntChar(mlir::Value integer);
   void printChar(char c);
   void createGlobalString(const char *str, const char *stringName) const;
 
