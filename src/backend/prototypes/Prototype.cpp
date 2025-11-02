@@ -2,6 +2,11 @@
 
 namespace gazprea::backend {
 
-std::any Backend::visitPrototype(std::shared_ptr<ast::prototypes::PrototypeAst> ctx) { return {}; }
+std::any Backend::visitPrototype(std::shared_ptr<ast::prototypes::PrototypeAst> ctx) {
+  for (const auto &param : ctx->getParams()) {
+    visit(param);
+  }
+  return {};
+}
 
 } // namespace gazprea::backend

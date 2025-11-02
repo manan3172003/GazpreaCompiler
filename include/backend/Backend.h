@@ -89,6 +89,7 @@ protected:
 
 private:
   std::shared_ptr<ast::Ast> ast;
+  std::unordered_map<std::string, mlir::Value> blockArg;
 
   // MLIR
   mlir::MLIRContext context;
@@ -112,6 +113,7 @@ private:
 
   // helpers
   mlir::Type getMLIRType(const std::shared_ptr<symTable::Type> &returnType);
-  std::vector<mlir::Type> collectMethodParams(const std::vector<std::shared_ptr<ast::Ast>> &params) const;
+  std::vector<mlir::Type>
+  getMethodParamTypes(const std::vector<std::shared_ptr<ast::Ast>> &params) const;
 };
 } // namespace gazprea::backend

@@ -143,6 +143,9 @@ mlir::Type Backend::ptrTy() const {
 mlir::Type Backend::intTy() const { return mlir::IntegerType::get(builder->getContext(), 32); }
 
 mlir::Type Backend::getMLIRType(const std::shared_ptr<symTable::Type> &returnType) {
+  if (!returnType) {
+    return {};
+  }
   if (returnType->getName() == "integer") {
     return intTy();
   }
@@ -169,14 +172,11 @@ mlir::Type Backend::getMLIRType(const std::shared_ptr<symTable::Type> &returnTyp
 }
 
 std::vector<mlir::Type>
-Backend::collectMethodParams(const std::vector<std::shared_ptr<ast::Ast>> &params) const {
+Backend::getMethodParamTypes(const std::vector<std::shared_ptr<ast::Ast>> &params) const {
   std::vector<mlir::Type> paramTypes;
-  for (const auto &param : params) {
-    const auto varSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(param->getSymbol());
-    // For now pass everything as pointer type
+  for (size_t i = 0; i < params.size(); ++i) {
     paramTypes.push_back(ptrTy());
   }
   return paramTypes;
 }
-
 } // namespace gazprea::backend

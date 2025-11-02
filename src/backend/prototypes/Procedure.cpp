@@ -15,15 +15,30 @@ std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> 
     mlir::Block *entry = mainFunc.addEntryBlock();
     builder->setInsertionPointToStart(entry);
 
+    blockArg.clear();
+    size_t argIndex = 0;
+    for (const auto &param : ctx->getProto()->getParams()) {
+      const auto paramNode = std::dynamic_pointer_cast<ast::prototypes::ProcedureParamAst>(param);
+      blockArg[paramNode->getName()] = entry->getArgument(argIndex++);
+    }
+
+    visit(ctx->getProto());
     visit(ctx->getBody());
   } else {
     const auto procReturnType = getMLIRType(methodSym->getReturnType());
     auto procType = mlir::LLVM::LLVMFunctionType::get(
-        procReturnType, collectMethodParams(ctx->getProto()->getParams()), false);
+        procReturnType, getMethodParamTypes(ctx->getProto()->getParams()), false);
     auto procOp = builder->create<mlir::LLVM::LLVMFuncOp>(loc, methodSym->getName(), procType);
     mlir::Block *entry = procOp.addEntryBlock();
     builder->setInsertionPointToStart(entry);
 
+    blockArg.clear();
+    size_t argIndex = 0;
+    for (const auto &param : ctx->getProto()->getParams()) {
+      const auto paramNode = std::dynamic_pointer_cast<ast::prototypes::ProcedureParamAst>(param);
+      blockArg[paramNode->getName()] = entry->getArgument(argIndex++);
+    }
+    visit(ctx->getProto());
     visit(ctx->getBody());
   }
   builder->restoreInsertionPoint(savedInsertPoint);
