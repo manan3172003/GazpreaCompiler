@@ -11,10 +11,9 @@ std::any Backend::visitFuncProcCall(std::shared_ptr<ast::expressions::FuncProcCa
       std::dynamic_pointer_cast<ast::prototypes::PrototypeAst>(methodSym->getDef())->getParams();
   for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
     visit(args[i]);
-    const auto topElement = args[i]->getScope()->getTopElementInStack();
-    params[i]->getSymbol()->value = topElement.second;
-    auto value = topElement.second;
-    mlirArgs.push_back(value);
+    const auto [_, valueAddr] = args[i]->getScope()->getTopElementInStack();
+    params[i]->getSymbol()->value = valueAddr;
+    mlirArgs.push_back(valueAddr);
   }
   auto funcOp = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(methodSym->getName());
   auto callOp = builder->create<mlir::LLVM::CallOp>(loc, funcOp, mlir::ValueRange(mlirArgs));
