@@ -16,8 +16,7 @@ std::any Backend::visitReturn(std::shared_ptr<ast::statements::ReturnAst> ctx) {
     }
     // TODO: Handle other return types
   } else {
-    // (void return)
-    builder->create<mlir::LLVM::ReturnOp>(builder->getUnknownLoc(), constZero());
+    builder->create<mlir::LLVM::ReturnOp>(builder->getUnknownLoc(), mlir::ValueRange{});
   }
 
   return {};

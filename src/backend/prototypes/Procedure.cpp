@@ -25,7 +25,13 @@ std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> 
     visit(ctx->getProto());
     visit(ctx->getBody());
   } else {
-    const auto procReturnType = getMLIRType(methodSym->getReturnType());
+    mlir::Type procReturnType;
+    if (!methodSym->getReturnType()) {
+      // Void procedure: no return type
+      procReturnType = mlir::LLVM::LLVMVoidType::get(&context);
+    } else {
+      procReturnType = getMLIRType(methodSym->getReturnType());
+    }
     auto procType = mlir::LLVM::LLVMFunctionType::get(
         procReturnType, getMethodParamTypes(ctx->getProto()->getParams()), false);
     auto procOp = builder->create<mlir::LLVM::LLVMFuncOp>(loc, methodSym->getName(), procType);
@@ -40,6 +46,10 @@ std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> 
     }
     visit(ctx->getProto());
     visit(ctx->getBody());
+    if (!methodSym->getReturnType()) {
+      // Void procedure: ensure a return at the end
+      builder->create<mlir::LLVM::ReturnOp>(builder->getUnknownLoc(), mlir::ValueRange{});
+    }
   }
   builder->restoreInsertionPoint(savedInsertPoint);
   return {};

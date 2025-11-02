@@ -1,8 +1,35 @@
 #include "backend/Backend.h"
+#include "symTable/MethodSymbol.h"
 
 namespace gazprea::backend {
 
 std::any Backend::visitFuncProcCall(std::shared_ptr<ast::expressions::FuncProcCallAst> ctx) {
+  const auto methodSym = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  std::vector<mlir::Value> mlirArgs;
+  const auto args = ctx->getArgs();
+  const auto params =
+      std::dynamic_pointer_cast<ast::prototypes::PrototypeAst>(methodSym->getDef())->getParams();
+  for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
+    visit(args[i]);
+    const auto topElement = args[i]->getScope()->getTopElementInStack();
+    params[i]->getSymbol()->value = topElement.second;
+    auto value = topElement.second;
+    mlirArgs.push_back(value);
+  }
+  auto funcOp = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(methodSym->getName());
+  auto callOp = builder->create<mlir::LLVM::CallOp>(loc, funcOp, mlir::ValueRange(mlirArgs));
+
+  // Capture the return value and push to scope stack
+  if (callOp.getNumResults() > 0) {
+    const auto returnValue = callOp.getResult();
+    auto returnAlloca =
+        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), returnValue.getType(), constOne());
+    builder->create<mlir::LLVM::StoreOp>(loc, returnValue, returnAlloca.getResult());
+
+    ctx->getSymbol()->value = returnAlloca.getResult();
+    ctx->getScope()->pushElementToScopeStack(methodSym->getReturnType(), returnAlloca.getResult());
+  }
+
   return {};
 }
 
