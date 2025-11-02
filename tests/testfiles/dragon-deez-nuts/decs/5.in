@@ -1,0 +1,17 @@
+/*
+Test tuple declaration.
+*/
+
+procedure main() returns integer {
+    tuple(integer, integer) a = (3, 6);
+    const b = (98, 'c'); // inferred as tuple
+    tuple(real, real) c = (98, 1); // implicit cast int to real
+    a.1 -> std_output;
+    a.2 -> std_output;
+    b.1 -> std_output;
+    b.2 -> std_output;
+    c.1 -> std_output;
+    c.2 -> std_output;
+    return 0;
+}
+//CHECK_FILE:5.out

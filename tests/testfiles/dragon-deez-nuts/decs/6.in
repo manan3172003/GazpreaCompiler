@@ -1,0 +1,23 @@
+/*
+Test aliasing declaration.
+*/
+typealias integer int;
+typealias boolean bool;
+typealias character char;
+typealias real f32;
+
+procedure main() returns integer {
+    tuple(int, int) a = (3, 6);
+    f32 b = .2;
+    char c = 'c';
+    bool d = false;
+
+    a.1 -> std_output;
+    a.2 -> std_output;
+    b -> std_output;
+    c -> std_output;
+    d -> std_output;
+
+    return 0;
+}
+//CHECK_FILE:6.out

@@ -8,7 +8,7 @@ procedure f(const integer y) {
 }
 
 procedure main() returns integer {
-    const integer x = 5;
+    const integer x = 6;
     call g(x);
     x -> std_output;
     call f(x);

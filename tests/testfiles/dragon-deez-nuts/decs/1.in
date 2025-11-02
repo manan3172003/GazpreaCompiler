@@ -5,8 +5,8 @@ Test integer declaration.
 procedure main() returns integer {
     integer a = 18;
     const b = 22; // inferred as integer
-    a -> std_out;
-    b -> std_out;
+    a -> std_output;
+    b -> std_output;
     return 0;
 }
 //CHECK_FILE:1.out

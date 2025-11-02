@@ -1,0 +1,14 @@
+/*
+Test real declaration.
+*/
+
+procedure main() returns integer {
+    real a = 18.;
+    const b = 22.0; // inferred as real
+    real c = 10; // implicit cast from integer to real
+    a -> std_output;
+    b -> std_output;
+    c -> std_output;
+    return 0;
+}
+//CHECK_FILE:2.out

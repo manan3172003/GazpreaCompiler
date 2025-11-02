@@ -1,0 +1,12 @@
+/*
+Test character declaration.
+*/
+
+procedure main() returns integer {
+    character a = 'b';
+    const b = 'c'; // inferred as character
+    a -> std_output;
+    b -> std_output;
+    return 0;
+}
+//CHECK_FILE:4.out
