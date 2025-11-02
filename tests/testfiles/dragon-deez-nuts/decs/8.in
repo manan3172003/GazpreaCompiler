@@ -1,0 +1,20 @@
+/*
+This test checks if values are initialized in variables on declaration
+*/
+
+procedure main() returns integer {
+    var tuple (integer, integer) t;
+    var integer a;
+    var real b;
+    var character c;
+    c -> std_output;
+    b -> std_output;
+    t.1 = a;
+    t.1 -> std_output;
+    t.2 = 10;
+    t.2 -> std_output;
+    return 0;
+
+}
+// expected output needs to change once escape character's printing is implemented
+//CHECK:00.000000010
