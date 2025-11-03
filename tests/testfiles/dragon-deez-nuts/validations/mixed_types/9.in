@@ -1,0 +1,19 @@
+/*
+This test validates type error: addition between int and tuple.
+Tests: const mix_i_t_add = mi + mt; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    int mi = 7;
+    tuple(int,int) mt = (1, 9);
+
+    const mix_i_t_add = mi + mt; // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 14

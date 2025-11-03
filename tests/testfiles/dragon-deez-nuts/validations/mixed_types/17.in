@@ -1,0 +1,19 @@
+/*
+This test validates type error: equality between bool and char.
+Tests: const mix_b_c_eq = mb == mc; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    bool mb = true;
+    char mc = 'z';
+
+    const mix_b_c_eq = mb == mc; // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 14

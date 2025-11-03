@@ -1,0 +1,18 @@
+/*
+This test validates type error: equality between tuple and int.
+Tests: const mix_t_i_eq = mt == 7; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    tuple(int,int) mt = (1, 9);
+
+    const mix_t_i_eq = mt == 7; // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 13

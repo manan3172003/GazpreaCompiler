@@ -1,0 +1,19 @@
+/*
+This test validates type error: xor operator on integers.
+Tests: const i_xor = a xor b; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    int a = 10;
+    const b = 5;
+
+    const i_xor = a xor b;   // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 14

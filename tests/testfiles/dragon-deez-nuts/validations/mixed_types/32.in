@@ -1,0 +1,18 @@
+/*
+This test validates type error: xor operator between tuple and char.
+Tests: const mix_t_xor_c = mt xor 'z'; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    tuple(int,int) mt = (1, 9);
+
+    const mix_t_xor_c = mt xor 'z'; // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 13

@@ -1,0 +1,19 @@
+/*
+This test validates type error: and operator between real and bool.
+Tests: const mix_r_b_and = mr and mb; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    float mr = 2.5;
+    bool mb = true;
+
+    const mix_r_b_and = mr and mb; // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 14

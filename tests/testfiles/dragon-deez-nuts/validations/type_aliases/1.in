@@ -1,0 +1,10 @@
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    return 0;
+}
+
+//CHECK:

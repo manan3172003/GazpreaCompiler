@@ -1,0 +1,24 @@
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    // Integer - Integer Arithmetic Operations
+    int a = 10;              // a: integer
+    const b = 5;             // b: integer
+
+    const i_add = a + b;     // integer
+    const i_sub = a - b;     // integer
+    const i_mul = a * b;     // integer
+    const i_div = a / b;     // integer
+    const i_mod = a % b;     // integer
+    const i_pow = a ^ b;     // integer
+
+    const i_un_neg = -a;     // integer
+    const i_un_pos = +a;     // integer
+
+    return 0;
+}
+
+//CHECK:

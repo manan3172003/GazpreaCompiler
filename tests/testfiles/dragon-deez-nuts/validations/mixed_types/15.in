@@ -1,0 +1,19 @@
+/*
+This test validates type error: equality between real and tuple.
+Tests: const mix_r_t_eq = mr == mt; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    float mr = 2.5;
+    tuple(int,int) mt = (1, 9);
+
+    const mix_r_t_eq = mr == mt; // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 14

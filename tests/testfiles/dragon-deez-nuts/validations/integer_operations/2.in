@@ -1,0 +1,20 @@
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    // Integer - Integer Comparison Operations
+    int a = 10;              // a: integer
+    const b = 5;             // b: integer
+
+    const i_eq = a == b;     // boolean
+    const i_neq = a != b;    // boolean
+    const i_gt = a > b;      // boolean
+    const i_lt = a < b;      // boolean
+    const i_ge = a >= b;     // boolean
+    const i_le = a <= b;     // boolean
+
+    return 0;
+}
+//CHECK:

@@ -1,0 +1,19 @@
+/*
+This test validates type error: modulo operator on tuples.
+Tests: const t_mod = t1 % t2; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    tuple(int,int) t1 = (1,2);
+    const t2 = (3,4);
+
+    const t_mod = t1 % t2;    // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 14

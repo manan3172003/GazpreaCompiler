@@ -1,0 +1,16 @@
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    // Character - Character Operations
+    char c1 = 'x';           // c1: character
+    const c2 = 'y';          // c2: character
+
+    const c_eq = c1 == c2;   // boolean
+    const c_neq = c1 != c2;  // boolean
+
+    return 0;
+}
+//CHECK:

@@ -1,0 +1,14 @@
+/*
+This test validates type error: not operator on characters.
+Tests: const c_not = not c1; should fail
+*/
+typealias character char;
+procedure main() returns integer {
+    char c1 = 'x';
+
+    const c_not = not c1;    // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 9

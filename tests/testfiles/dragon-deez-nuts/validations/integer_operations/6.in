@@ -1,0 +1,18 @@
+/*
+This test validates type error: not operator on integers.
+Tests: const i_not = not a; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    int a = 10;
+
+    const i_not = not a;   // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 13

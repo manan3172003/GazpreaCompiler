@@ -1,0 +1,19 @@
+/*
+This test validates type error: equality between char and tuple.
+Tests: const mix_c_t_eq = mc == mt; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    char mc = 'z';
+    tuple(int,int) mt = (1, 9);
+
+    const mix_c_t_eq = mc == mt; // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 14

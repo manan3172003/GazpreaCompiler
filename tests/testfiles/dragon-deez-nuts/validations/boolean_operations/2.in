@@ -1,0 +1,14 @@
+/*
+This test validates type error: unary positive operator on boolean.
+Tests: const bo_un_pos = + bo1; should fail
+*/
+typealias boolean bool;
+procedure main() returns integer {
+    bool bo1 = true;
+
+    const bo_un_pos = + bo1;    // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 9

@@ -1,0 +1,22 @@
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+procedure main() returns integer {
+    // Real - Real Arithmetic Operations
+    float r1 = 10.0;         // r1: real
+    const r2 = 2.5;          // r2: real
+
+    const r_add = r1 + r2;   // real
+    const r_sub = r1 - r2;   // real
+    const r_mul = r1 * r2;   // real
+    const r_div = r1 / r2;   // real
+    const r_mod = r1 % r2;   // real
+    const r_pow = r1 ^ r2;   // real
+
+    const r_neg = -r1;       // real
+    const r_pos = +r1;       // real
+
+    return 0;
+}
+//CHECK:

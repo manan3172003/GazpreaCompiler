@@ -1,0 +1,18 @@
+/*
+This test validates type error: or operator between tuple and real.
+Tests: const mix_t_or_r = mt or 2.5; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    tuple(int,int) mt = (1, 9);
+
+    const mix_t_or_r = mt or 2.5; // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 13

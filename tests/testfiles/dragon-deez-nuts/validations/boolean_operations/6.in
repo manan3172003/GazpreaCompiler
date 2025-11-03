@@ -1,0 +1,15 @@
+/*
+This test validates type error: < comparison operator on booleans.
+Tests: const bo_lt = bo1 < bo2; should fail
+*/
+typealias boolean bool;
+procedure main() returns integer {
+    bool bo1 = true;
+    const bo2 = false;
+
+    const bo_lt = bo1 < bo2;    // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 10

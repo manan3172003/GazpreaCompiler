@@ -1,0 +1,15 @@
+/*
+This test validates type error: multiplication operator on characters.
+Tests: const c_mul = c1 * c2; should fail
+*/
+typealias character char;
+procedure main() returns integer {
+    char c1 = 'x';
+    const c2 = 'y';
+
+    const c_mul = c1 * c2;   // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 10

@@ -1,0 +1,27 @@
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    // Mixed Types: int & real
+    int mi = 7;                     // mi: integer
+    float mr = 2.5;                 // mr: real
+
+    const mix_i_r_add = mi + mr; // real
+    const mix_i_r_sub = mi - mr; // real
+    const mix_i_r_mul = mi * mr; // real
+    const mix_i_r_div = mi / mr; // real
+    const mix_i_r_mod = mi % mr; // real
+    const mix_i_r_pow = mi ^ mr; // real
+
+    const mix_i_r_eq  = mi == mr; // boolean
+    const mix_i_r_neq = mi != mr; // boolean
+    const mix_i_r_gt  = mi > mr;  // boolean
+    const mix_i_r_lt  = mi < mr;  // boolean
+    const mix_i_r_ge  = mi >= mr; // boolean
+    const mix_i_r_le  = mi <= mr; // boolean
+
+    return 0;
+}
+//CHECK:

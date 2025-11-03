@@ -1,0 +1,15 @@
+/*
+This test validates type error: power operator on characters.
+Tests: const c_pow = c1 ^ c2; should fail
+*/
+typealias character char;
+procedure main() returns integer {
+    char c1 = 'x';
+    const c2 = 'y';
+
+    const c_pow = c1 ^ c2;   // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 10

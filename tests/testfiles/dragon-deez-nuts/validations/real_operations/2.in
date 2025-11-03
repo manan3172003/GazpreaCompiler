@@ -1,0 +1,20 @@
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    // Real - Real Comparison Operations
+    float r1 = 10.0;         // r1: real
+    const r2 = 2.5;          // r2: real
+
+    const r_eq = r1 == r2;   // boolean
+    const r_neq = r1 != r2;  // boolean
+    const r_gt = r1 > r2;    // boolean
+    const r_lt = r1 < r2;    // boolean
+    const r_ge = r1 >= r2;   // boolean
+    const r_le = r1 <= r2;   // boolean
+
+    return 0;
+}
+//CHECK:

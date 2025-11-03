@@ -1,0 +1,19 @@
+/*
+This test validates type error: addition between int and bool.
+Tests: const mix_i_b_add = mi + mb; should fail
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    int mi = 7;
+    bool mb = true;
+
+    const mix_i_b_add = mi + mb; // should TypeError
+
+    return 0;
+}
+
+//CHECK:TypeError on line 14

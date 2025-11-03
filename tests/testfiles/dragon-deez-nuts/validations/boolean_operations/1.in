@@ -1,0 +1,22 @@
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+typealias character char;
+
+procedure main() returns integer {
+    // Boolean - Boolean Operations
+    bool bo1 = true;           // bo1: boolean
+    const bo2 = false;         // bo2: boolean
+
+    const bo_and = bo1 and bo2; // boolean
+    const bo_or = bo1 or bo2;   // boolean
+    const bo_xor = bo1 xor bo2; // boolean
+    const bo_not = not bo1;     // boolean
+
+    const bo_eq = bo1 == bo2;   // boolean
+    const bo_neq = bo1 != bo2;  // boolean
+
+    return 0;
+}
+
+//CHECK:
