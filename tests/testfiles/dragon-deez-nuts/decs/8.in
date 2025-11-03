@@ -15,4 +15,4 @@ procedure main() returns integer {
     return 0;
 }
 // expected output needs to change once escape character's printing is implemented
-//CHECK:00.000000000
+//CHECK:00000

@@ -23,4 +23,4 @@ procedure main() returns integer {
     return 0;
 }
 
-//CHECK:50.700000eF10.200000tT
+//CHECK:50.7eF10.2tT

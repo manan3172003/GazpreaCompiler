@@ -7,4 +7,4 @@ procedure main() returns integer {
     b -> std_output;
     return 0;
 }
-// CHECK:188.000000
+// CHECK:188

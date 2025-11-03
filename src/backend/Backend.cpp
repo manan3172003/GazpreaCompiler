@@ -23,7 +23,7 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   setupPrintf();
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%d\0", "intFormat");
-  createGlobalString("%f\0", "floatFormat");
+  createGlobalString("%g\0", "floatFormat");
 }
 
 int Backend::emitModule() {

@@ -11,4 +11,4 @@ procedure main() returns integer {
     a.3 -> std_output;
     return 0;
 }
-//CHECK:134.2000007.100000cb
+//CHECK:134.27.1cb

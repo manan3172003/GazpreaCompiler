@@ -20,4 +20,4 @@ procedure main() returns integer {
 
     return 0;
 }
-//CHECK:360.200000cF
+//CHECK:360.2cF
