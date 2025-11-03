@@ -1,8 +1,39 @@
+#include "symTable/TupleTypeSymbol.h"
+#include "symTable/VariableSymbol.h"
+
 #include <backend/Backend.h>
 
 namespace gazprea::backend {
 
 std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst> ctx) {
+  visit(ctx->getExpr());
+  auto [type, valueAddr] = ctx->getScope()->getTopElementInStack();
+  auto variableSymbol =
+      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLVal()->getSymbol());
+  if (not variableSymbol) { // Tuple Unpack Assignment
+    auto tupleUnpackAssignAst =
+        std::dynamic_pointer_cast<ast::statements::TupleUnpackAssignAst>(ctx->getLVal());
+    auto tupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
+        ctx->getExpr()->getInferredSymbolType());
+    for (size_t i = 0; i < tupleUnpackAssignAst->getLVals().size(); i++) {
+      auto lVal = tupleUnpackAssignAst->getLVals()[i];
+      auto lValSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(lVal->getSymbol());
+      auto gepIndices = std::vector<mlir::Value>{
+          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
+
+      auto elementPtr = builder->create<mlir::LLVM::GEPOp>(
+          loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()),
+          getMLIRType(tupleTypeSymbol), valueAddr, gepIndices);
+      copyValue(lValSymbol->getType(), elementPtr, lValSymbol->value);
+      castIfNeeded(lValSymbol->value, tupleTypeSymbol->getResolvedTypes()[i],
+                   lValSymbol->getType());
+    }
+    return {};
+  }
+  copyValue(type, valueAddr, variableSymbol->value);
+  castIfNeeded(variableSymbol->value, ctx->getExpr()->getInferredSymbolType(),
+               variableSymbol->getType());
   return {};
 }
 

@@ -91,6 +91,9 @@ protected:
   void createGlobalString(const char *str, const char *stringName) const;
   void castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
                     std::shared_ptr<symTable::Type> toType);
+  void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);
+  void createGlobalDeclaration(const std::string &typeName, std::shared_ptr<ast::Ast> exprAst,
+                               const std::string &variableName);
 
 private:
   std::shared_ptr<ast::Ast> ast;

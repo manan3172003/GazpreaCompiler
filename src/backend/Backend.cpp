@@ -241,4 +241,97 @@ void Backend::castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type
     builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
   }
 }
+
+void Backend::copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr,
+                        mlir::Value destAddr) {
+  if (type->getName() == "tuple") {
+    auto sTy = getMLIRType(type);
+    const auto fromTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(type);
+    for (size_t i = 0; i < fromTupleTypeSymbol->getResolvedTypes().size(); i++) {
+      auto fromSubType = fromTupleTypeSymbol->getResolvedTypes()[i];
+      auto gepIndices = std::vector<mlir::Value>{
+          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
+      auto elementPtr = builder->create<mlir::LLVM::GEPOp>(
+          loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, fromAddr, gepIndices);
+      auto newElementPtr = builder->create<mlir::LLVM::GEPOp>(
+          loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, destAddr, gepIndices);
+      auto newAddrForElement =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(fromSubType), constOne());
+      copyValue(fromSubType, elementPtr, newAddrForElement);
+      auto loadedValue =
+          builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(fromSubType), newAddrForElement);
+      builder->create<mlir::LLVM::StoreOp>(loc, loadedValue, newElementPtr);
+    }
+  } else {
+    auto value = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(type), fromAddr);
+    builder->create<mlir::LLVM::StoreOp>(loc, value, destAddr);
+  }
+}
+
+void Backend::createGlobalDeclaration(const std::string &typeName,
+                                      std::shared_ptr<ast::Ast> exprAst,
+                                      const std::string &variableName) {
+  if (typeName == "integer") {
+    auto intAst = std::dynamic_pointer_cast<ast::expressions::IntegerLiteralAst>(exprAst);
+    builder->create<mlir::LLVM::GlobalOp>(
+        loc, intTy(),
+        /*isConstant=*/true, mlir::LLVM::Linkage::Internal, variableName,
+        builder->getIntegerAttr(intTy(), intAst->integerValue), 0);
+  } else if (typeName == "real") {
+    auto realAst = std::dynamic_pointer_cast<ast::expressions::RealLiteralAst>(exprAst);
+    builder->create<mlir::LLVM::GlobalOp>(loc, floatTy(),
+                                          /*isConstant=*/true, mlir::LLVM::Linkage::Internal,
+                                          variableName,
+                                          builder->getFloatAttr(floatTy(), realAst->realValue), 0);
+  } else if (typeName == "character") {
+    auto charAst = std::dynamic_pointer_cast<ast::expressions::CharLiteralAst>(exprAst);
+    builder->create<mlir::LLVM::GlobalOp>(
+        loc, charTy(), true, mlir::LLVM::Linkage::Internal, variableName,
+        builder->getIntegerAttr(charTy(), charAst->getValue()[1]), // TODO: Support just characters
+        0);
+  } else if (typeName == "boolean") {
+    auto boolAst = std::dynamic_pointer_cast<ast::expressions::BoolLiteralAst>(exprAst);
+    builder->create<mlir::LLVM::GlobalOp>(
+        loc, boolTy(), true, mlir::LLVM::Linkage::Internal, variableName,
+        builder->getIntegerAttr(boolTy(), boolAst->getValue()), 0);
+  } else if (typeName == "tuple") {
+    auto tupleAst = std::dynamic_pointer_cast<ast::expressions::TupleLiteralAst>(exprAst);
+    auto structType = getMLIRType(tupleAst->getInferredSymbolType());
+
+    // GlobalOp with an initializer region
+    auto globalOp = builder->create<mlir::LLVM::GlobalOp>(
+        loc, structType,
+        /*isConstant=*/true, mlir::LLVM::Linkage::Internal, variableName, mlir::Attribute(),
+        /*alignment=*/0);
+
+    auto &region = globalOp.getInitializerRegion();
+    auto *block = builder->createBlock(&region);
+    builder->setInsertionPointToStart(block);
+
+    mlir::Value structValue = builder->create<mlir::LLVM::UndefOp>(loc, structType);
+
+    for (size_t i = 0; i < tupleAst->getElements().size(); i++) {
+      auto element = tupleAst->getElements()[i];
+      mlir::Value elementValue;
+
+      if (auto intLit = std::dynamic_pointer_cast<ast::expressions::IntegerLiteralAst>(element)) {
+        elementValue = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), intLit->integerValue);
+      } else if (auto realLit =
+                     std::dynamic_pointer_cast<ast::expressions::RealLiteralAst>(element)) {
+        elementValue = builder->create<mlir::LLVM::ConstantOp>(loc, floatTy(), realLit->realValue);
+      } else if (auto charLit =
+                     std::dynamic_pointer_cast<ast::expressions::CharLiteralAst>(element)) {
+        elementValue =
+            builder->create<mlir::LLVM::ConstantOp>(loc, charTy(), charLit->getValue()[1]);
+      } else if (auto boolLit =
+                     std::dynamic_pointer_cast<ast::expressions::BoolLiteralAst>(element)) {
+        elementValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), boolLit->getValue());
+      }
+      structValue = builder->create<mlir::LLVM::InsertValueOp>(loc, structValue, elementValue, i);
+    }
+    builder->create<mlir::LLVM::ReturnOp>(loc, structValue);
+    builder->setInsertionPointToEnd(module.getBody());
+  }
+}
 } // namespace gazprea::backend

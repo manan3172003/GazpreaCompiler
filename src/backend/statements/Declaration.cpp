@@ -4,12 +4,19 @@
 
 namespace gazprea::backend {
 std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationAst> ctx) {
+  if (ctx->getScope()->getScopeType() == symTable::ScopeType::Global) {
+    createGlobalDeclaration(ctx->getExpr()->getInferredSymbolType()->getName(), ctx->getExpr(),
+                            ctx->getName());
+    return {};
+  }
   visit(ctx->getExpr());
-
   auto [type, valueAddr] = ctx->getScope()->getTopElementInStack();
-  ctx->getSymbol()->value = valueAddr;
-  castIfNeeded(valueAddr, ctx->getExpr()->getInferredSymbolType(),
-               std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())->getType());
+  auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
+      loc, ptrTy(), getMLIRType(variableSymbol->getType()), constOne());
+  copyValue(type, valueAddr, newAddr);
+  ctx->getSymbol()->value = newAddr;
+  castIfNeeded(newAddr, ctx->getExpr()->getInferredSymbolType(), variableSymbol->getType());
   return {};
 }
 
