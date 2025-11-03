@@ -6,7 +6,7 @@ namespace gazprea::backend {
 std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationAst> ctx) {
   if (ctx->getScope()->getScopeType() == symTable::ScopeType::Global) {
     createGlobalDeclaration(ctx->getExpr()->getInferredSymbolType()->getName(), ctx->getExpr(),
-                            ctx->getName());
+                            ctx->getSymbol(), ctx->getName());
     return {};
   }
   visit(ctx->getExpr());

@@ -93,6 +93,7 @@ protected:
                     std::shared_ptr<symTable::Type> toType);
   void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);
   void createGlobalDeclaration(const std::string &typeName, std::shared_ptr<ast::Ast> exprAst,
+                               std::shared_ptr<symTable::Symbol> symbol,
                                const std::string &variableName);
 
 private:

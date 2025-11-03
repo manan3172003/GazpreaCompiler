@@ -271,13 +271,22 @@ void Backend::copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAd
 
 void Backend::createGlobalDeclaration(const std::string &typeName,
                                       std::shared_ptr<ast::Ast> exprAst,
+                                      std::shared_ptr<symTable::Symbol> symbol,
                                       const std::string &variableName) {
+  auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(symbol);
   if (typeName == "integer") {
     auto intAst = std::dynamic_pointer_cast<ast::expressions::IntegerLiteralAst>(exprAst);
-    builder->create<mlir::LLVM::GlobalOp>(
-        loc, intTy(),
-        /*isConstant=*/true, mlir::LLVM::Linkage::Internal, variableName,
-        builder->getIntegerAttr(intTy(), intAst->integerValue), 0);
+    if (variableSymbol->getType()->getName() == "real") {
+      builder->create<mlir::LLVM::GlobalOp>(
+          loc, floatTy(),
+          /*isConstant=*/true, mlir::LLVM::Linkage::Internal, variableName,
+          builder->getFloatAttr(floatTy(), intAst->integerValue), 0);
+    } else {
+      builder->create<mlir::LLVM::GlobalOp>(
+          loc, intTy(),
+          /*isConstant=*/true, mlir::LLVM::Linkage::Internal, variableName,
+          builder->getIntegerAttr(intTy(), intAst->integerValue), 0);
+    }
   } else if (typeName == "real") {
     auto realAst = std::dynamic_pointer_cast<ast::expressions::RealLiteralAst>(exprAst);
     builder->create<mlir::LLVM::GlobalOp>(loc, floatTy(),
@@ -297,7 +306,9 @@ void Backend::createGlobalDeclaration(const std::string &typeName,
         builder->getIntegerAttr(boolTy(), boolAst->getValue()), 0);
   } else if (typeName == "tuple") {
     auto tupleAst = std::dynamic_pointer_cast<ast::expressions::TupleLiteralAst>(exprAst);
-    auto structType = getMLIRType(tupleAst->getInferredSymbolType());
+    auto structType = getMLIRType(variableSymbol->getType());
+    auto tupleTypeSym =
+        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(variableSymbol->getType());
 
     // GlobalOp with an initializer region
     auto globalOp = builder->create<mlir::LLVM::GlobalOp>(
@@ -314,9 +325,13 @@ void Backend::createGlobalDeclaration(const std::string &typeName,
     for (size_t i = 0; i < tupleAst->getElements().size(); i++) {
       auto element = tupleAst->getElements()[i];
       mlir::Value elementValue;
-
       if (auto intLit = std::dynamic_pointer_cast<ast::expressions::IntegerLiteralAst>(element)) {
         elementValue = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), intLit->integerValue);
+        if (tupleTypeSym->getResolvedTypes()[i]->getName() == "real" &&
+            element->getInferredSymbolType()->getName() == "integer") {
+          elementValue = builder->create<mlir::LLVM::SIToFPOp>(
+              loc, mlir::Float32Type::get(builder->getContext()), elementValue);
+        }
       } else if (auto realLit =
                      std::dynamic_pointer_cast<ast::expressions::RealLiteralAst>(element)) {
         elementValue = builder->create<mlir::LLVM::ConstantOp>(loc, floatTy(), realLit->realValue);
