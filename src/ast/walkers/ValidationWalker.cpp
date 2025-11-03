@@ -64,7 +64,7 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
   // Check if global declaration - must have only literals
   if (ctx->getScope() && ctx->getScope()->getScopeType() == symTable::ScopeType::Global) {
     if (!isLiteralExpression(ctx->getExpr())) {
-      throw TypeError(ctx->getLineNumber(), "Global declarations can only have literal values");
+      throw GlobalError(ctx->getLineNumber(), "Global declarations can only have literal values");
     }
   }
   return {};
