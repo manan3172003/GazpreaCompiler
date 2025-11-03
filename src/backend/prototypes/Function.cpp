@@ -25,7 +25,7 @@ std::any Backend::visitFunction(std::shared_ptr<ast::prototypes::FunctionAst> ct
     blockArg.clear();
     size_t argIndex = 0;
     for (const auto &param : ctx->getProto()->getParams()) {
-      const auto paramNode = std::dynamic_pointer_cast<ast::prototypes::ProcedureParamAst>(param);
+      const auto paramNode = std::dynamic_pointer_cast<ast::prototypes::FunctionParamAst>(param);
       blockArg[paramNode->getName()] = entry->getArgument(argIndex++);
     }
     visit(ctx->getProto());
