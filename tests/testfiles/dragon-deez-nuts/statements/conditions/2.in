@@ -1,0 +1,23 @@
+/*
+tests if-else with loops statements
+*/
+procedure main() returns integer {
+   if (true) {
+         loop while (true) {
+              5 -> std_output;
+              if (true) {
+                   break;
+              }
+         }
+         1 -> std_output;
+   } else {
+         10 -> std_output;
+         loop {
+              3 -> std_output;
+              break;
+         }
+   }
+   return 0;
+}
+
+//CHECK:51

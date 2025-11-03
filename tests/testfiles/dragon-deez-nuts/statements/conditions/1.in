@@ -1,0 +1,20 @@
+/*
+tests nested if-else statements
+*/
+procedure main() returns integer {
+    if (false) {
+        if (true) {
+            5 -> std_output;
+        }
+    } else {
+        1 -> std_output;
+        if (false) {
+            2 -> std_output;
+        } else {
+            3 -> std_output;
+        }
+    }
+    return 0;
+}
+
+//CHECK:13
