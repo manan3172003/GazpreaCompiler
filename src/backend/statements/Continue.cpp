@@ -7,7 +7,6 @@ std::any Backend::visitContinue(std::shared_ptr<ast::statements::ContinueAst> ct
     return {};
   }
 
-  // Jump to the loop's continue target (condition or body depending on shape)
   auto *continueBlock = loopStack.back().continueBlock;
   builder->create<mlir::cf::BranchOp>(loc, continueBlock);
 

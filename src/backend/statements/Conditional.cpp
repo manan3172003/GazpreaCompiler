@@ -10,6 +10,12 @@ std::any Backend::visitConditional(std::shared_ptr<ast::statements::ConditionalA
 
   auto *currentBlock = builder->getInsertionBlock();
   auto *parentRegion = currentBlock->getParent();
+
+  auto appendBlock = [&](mlir::Block *block) {
+    parentRegion->push_back(block);
+    return block;
+  };
+
   const bool hasElse = static_cast<bool>(ctx->getElseBody());
 
   auto *thenBlock = new mlir::Block();
@@ -19,11 +25,11 @@ std::any Backend::visitConditional(std::shared_ptr<ast::statements::ConditionalA
   builder->setInsertionPointToEnd(currentBlock);
   builder->create<mlir::cf::CondBranchOp>(loc, condValue, thenBlock, elseBlock);
 
-  parentRegion->push_back(thenBlock);
+  appendBlock(thenBlock);
   if (hasElse) {
-    parentRegion->push_back(elseBlock);
+    appendBlock(elseBlock);
   }
-  parentRegion->push_back(afterBlock);
+  appendBlock(afterBlock);
 
   auto blockNeedsTerminator = [](mlir::Block *block) {
     return block && (block->empty() || !block->back().hasTrait<mlir::OpTrait::IsTerminator>());
