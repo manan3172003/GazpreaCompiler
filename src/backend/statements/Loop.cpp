@@ -75,8 +75,11 @@ std::any Backend::visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) {
 
   if (exitBlock->hasNoPredecessors()) {
     builder->setInsertionPointToEnd(exitBlock);
-    builder->create<mlir::LLVM::UnreachableOp>(loc);
+    if (exitBlock->empty() || !exitBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+      builder->create<mlir::LLVM::UnreachableOp>(loc);
+    }
   }
+
   builder->setInsertionPointToStart(exitBlock);
 
   return {};

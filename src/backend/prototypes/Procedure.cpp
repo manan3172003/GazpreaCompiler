@@ -56,8 +56,14 @@ std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> 
       visit(ctx->getProto());
       visit(ctx->getBody());
       if (!methodSym->getReturnType()) {
-        // Void procedure: ensure a return at the end
-        builder->create<mlir::LLVM::ReturnOp>(builder->getUnknownLoc(), mlir::ValueRange{});
+        auto *currentBlock = builder->getInsertionBlock();
+        const bool needsReturn =
+            currentBlock && (currentBlock->empty() ||
+                             !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>());
+        if (needsReturn) {
+          // Void procedure: ensure a return at the end
+          builder->create<mlir::LLVM::ReturnOp>(builder->getUnknownLoc(), mlir::ValueRange{});
+        }
       }
     }
   }
