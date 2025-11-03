@@ -10,8 +10,8 @@ std::any Backend::visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) {
     // For do-while, we always execute the body at least once,
     // then check the condition at the end
     builder->create<mlir::scf::WhileOp>(
-        loc, mlir::TypeRange({boolTy()}), // Loop-carried: breakFlag only
-        mlir::ValueRange({falseVal}),     // Initial: false (no break)
+        loc, mlir::TypeRange{boolTy()}, // Loop-carried: breakFlag only
+        mlir::ValueRange{falseVal},     // Initial: false (no break)
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::ValueRange args) {
           // CONDITION REGION
           // args[0] is breakFlag
@@ -25,7 +25,6 @@ std::any Backend::visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) {
         },
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::ValueRange args) {
           // BODY REGION
-          // args[0] is breakFlag
           loopStack.push_back({args[0], true});
           visit(ctx->getBody());
           loopStack.pop_back();
@@ -47,16 +46,37 @@ std::any Backend::visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) {
                 l, condIsFalse, b.create<mlir::LLVM::ConstantOp>(l, boolTy(), true),
                 args[0]); // Keep existing break flag if true
 
-            b.create<mlir::scf::YieldOp>(l, mlir::ValueRange({newBreakFlag}));
+            b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{newBreakFlag});
+          }
+        });
+  } else if (ctx->getIsInfinite()) {
+    builder->create<mlir::scf::WhileOp>(
+        loc, mlir::TypeRange{boolTy()}, mlir::ValueRange{falseVal},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::ValueRange args) {
+          // CONDITION REGION
+          auto breakFlag = args[0];
+          auto notBreak =
+              b.create<mlir::LLVM::ICmpOp>(l, mlir::LLVM::ICmpPredicate::eq, breakFlag,
+                                           b.create<mlir::LLVM::ConstantOp>(l, boolTy(), false));
+          b.create<mlir::scf::ConditionOp>(l, notBreak, args);
+        },
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::ValueRange args) {
+          // BODY REGION
+          loopStack.push_back({args[0], true});
+          visit(ctx->getBody());
+          loopStack.pop_back();
+
+          if (b.getInsertionBlock()->empty() ||
+              !mlir::isa<mlir::scf::YieldOp>(b.getInsertionBlock()->back())) {
+            b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{args[0]});
           }
         });
   } else {
     builder->create<mlir::scf::WhileOp>(
-        loc, mlir::TypeRange({boolTy()}), // Loop-carried: breakFlag
-        mlir::ValueRange({falseVal}),     // Initial: false (no break)
+        loc, mlir::TypeRange{boolTy()}, // Loop-carried: breakFlag
+        mlir::ValueRange{falseVal},     // Initial: false (no break)
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::ValueRange args) {
           // CONDITION REGION
-          // args[0] is breakFlag
           auto breakFlag = args[0];
 
           visit(ctx->getCondition());
@@ -74,7 +94,6 @@ std::any Backend::visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) {
         },
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::ValueRange args) {
           // BODY REGION
-          // args[0] is breakFlag
           loopStack.push_back({args[0], false});
           visit(ctx->getBody());
           loopStack.pop_back();
@@ -83,7 +102,7 @@ std::any Backend::visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) {
           if (b.getInsertionBlock()->empty() ||
               !mlir::isa<mlir::scf::YieldOp>(b.getInsertionBlock()->back())) {
             // Keep breakFlag as is (false means continue, true means break)
-            b.create<mlir::scf::YieldOp>(l, mlir::ValueRange({args[0]}));
+            b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{args[0]});
           }
         });
   }

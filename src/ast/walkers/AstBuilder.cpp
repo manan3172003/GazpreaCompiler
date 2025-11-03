@@ -256,6 +256,7 @@ std::any AstBuilder::visitElse_stat(GazpreaParser::Else_statContext *ctx) {
 
 std::any AstBuilder::visitInfiniteLoop(GazpreaParser::InfiniteLoopContext *ctx) {
   auto loopAst = std::make_shared<statements::LoopAst>(ctx->getStart());
+  loopAst->setIsInfinite(true);
   auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(visit(ctx->stat()));
   if (stmt->getNodeType() == NodeType::Block) {
     loopAst->setBody(std::static_pointer_cast<statements::BlockAst>(stmt));

@@ -1,8 +1,8 @@
 /*
-tests the behavior of a while loop with a break statement
+tests basic infinite loop handling with break statement
 */
 procedure main() returns integer {
-    loop while (true) {
+    loop {
         5 -> std_output;
         break;
     }
@@ -10,4 +10,4 @@ procedure main() returns integer {
     return 0;
 }
 
-// CHECK:53
+//CHECK:53
