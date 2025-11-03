@@ -88,5 +88,6 @@ public:
                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
                     int lineNumber) const;
   static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);
+  static bool isLiteralExpression(const std::shared_ptr<expressions::ExpressionAst> &expr);
 };
 } // namespace gazprea::ast::walkers

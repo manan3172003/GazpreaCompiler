@@ -61,6 +61,12 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
   if (not typesMatch(declarationType, expressionType))
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
 
+  // Check if global declaration - must have only literals
+  if (ctx->getScope() && ctx->getScope()->getScopeType() == symTable::ScopeType::Global) {
+    if (!isLiteralExpression(ctx->getExpr())) {
+      throw TypeError(ctx->getLineNumber(), "Global declarations can only have literal values");
+    }
+  }
   return {};
 }
 std::any ValidationWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {

@@ -277,4 +277,28 @@ void ValidationWalker::validateTupleAccessInferredTypes(
   }
 }
 
+bool ValidationWalker::isLiteralExpression(
+    const std::shared_ptr<expressions::ExpressionAst> &expr) {
+  if (!expr) {
+    return false;
+  }
+  const auto nodeType = expr->getNodeType();
+  // Check if it's a primitive literal
+  if (nodeType == NodeType::IntegerLiteral || nodeType == NodeType::RealLiteral ||
+      nodeType == NodeType::CharLiteral || nodeType == NodeType::BoolLiteral) {
+    return true;
+  }
+  // Check if it's a tuple literal with all literal elements
+  if (nodeType == NodeType::TupleLiteral) {
+    auto tupleLiteral = std::dynamic_pointer_cast<expressions::TupleLiteralAst>(expr);
+    for (const auto &element : tupleLiteral->getElements()) {
+      if (!isLiteralExpression(element)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
 } // namespace gazprea::ast::walkers
