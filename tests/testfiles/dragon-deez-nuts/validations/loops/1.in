@@ -6,7 +6,7 @@ procedure myProc() returns boolean{
     return true;
 }
 
-procedure main() {
+procedure main() returns integer {
     loop while (myProc()) {
         integer x = 10;
     }

@@ -568,7 +568,8 @@ std::any DefRefWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ct
 }
 std::any DefRefWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
-  auto symbol = symTab->getCurrentScope()->resolveSymbol(ctx->getName());
+  auto symbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(
+      symTab->getCurrentScope()->resolveSymbol(ctx->getName()));
   throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
   ctx->setSymbol(symbol);
   return {};

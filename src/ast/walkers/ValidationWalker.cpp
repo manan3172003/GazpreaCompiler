@@ -24,7 +24,9 @@ std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
 }
 std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
   visit(ctx->getLVal());
+  inAssignment = true;
   visit(ctx->getExpr());
+  inAssignment = false;
 
   const auto exprTypeSymbol = ctx->getExpr()->getInferredSymbolType();
   if (ctx->getLVal()->getNodeType() == NodeType::IdentifierLeft) {
@@ -45,7 +47,9 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
 std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
   const auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   // We're going to have an expression since we'll set defaults in AstBuilder
+  inAssignment = true;
   visit(ctx->getExpr());
+  inAssignment = false;
   if (not ctx->getType()) {
     // setting inferred type here
     variableSymbol->setType(ctx->getExpr()->getInferredSymbolType());
@@ -157,9 +161,7 @@ std::any ValidationWalker::visitContinue(std::shared_ptr<statements::ContinueAst
   return {};
 }
 std::any ValidationWalker::visitConditional(std::shared_ptr<statements::ConditionalAst> ctx) {
-  inConditionalExpression = true;
   visit(ctx->getCondition());
-  inConditionalExpression = false;
 
   if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(), "boolean")) {
     throw TypeError(ctx->getLineNumber(), "If statement condition must be of type boolean");
@@ -191,6 +193,8 @@ std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureA
   if (proto->getName() == "main") {
     if (!proto->getParams().empty())
       throw MainError(ctx->getLineNumber(), "Main cannot have any arguments");
+    if (not proto->getReturnType())
+      throw MainError(ctx->getLineNumber(), "Main needs to return an integer");
     if (proto->getReturnType() &&
         resolvedInferredType(proto->getReturnType())->getName() != "integer")
       throw MainError(ctx->getLineNumber(), "Main needs to return an integer");
@@ -378,11 +382,11 @@ std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncPr
   methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
       symTab->getGlobalScope()->resolveSymbol(methodSymbol->getName()));
   ctx->setSymbol(methodSymbol);
-  if (inConditionalExpression)
-    throw CallError(ctx->getLineNumber(), "Cannot call procedure in control flow expressions");
 
   // Indirect way to check if symbol is a procedure
   if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {
+    if (not inAssignment)
+      throw CallError(ctx->getLineNumber(), "Cannot call procedure here");
     // Check if we call a procedure from a function
     const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
     if (curScope && curScope->getScopeType() == symTable::ScopeType::Function)
@@ -501,8 +505,6 @@ std::any ValidationWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst
 }
 std::any ValidationWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
   const auto dataTypeSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  if (not dataTypeSymbol)
-    throw TypeError(ctx->getLineNumber(), "Symbol is not a variable");
 
   auto astNode = dataTypeSymbol->getDef();
 
@@ -565,9 +567,7 @@ std::any ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx
 std::any ValidationWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
 
   if (ctx->getCondition()) {
-    inConditionalExpression = true;
     visit(ctx->getCondition());
-    inConditionalExpression = false;
     if (!isOfSymbolType(ctx->getCondition()->getInferredSymbolType(), "boolean")) {
       throw TypeError(ctx->getLineNumber(), "Loop condition must be of type boolean");
     }

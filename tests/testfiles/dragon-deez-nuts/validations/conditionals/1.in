@@ -6,7 +6,7 @@ procedure myProc() returns boolean{
     return true;
 }
 
-procedure main() {
+procedure main() returns integer {
     if (myProc()) {
         integer x = 10;
     }
@@ -14,4 +14,4 @@ procedure main() {
     return 0;
 }
 
-//CHECK_FILE:1.out
+//CHECK:CallError on Line 10
