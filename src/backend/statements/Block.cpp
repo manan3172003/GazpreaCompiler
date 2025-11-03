@@ -7,9 +7,9 @@ std::any Backend::visitBlock(std::shared_ptr<ast::statements::BlockAst> ctx) {
     visit(child);
 
     // Stop visiting further statements if a terminator was created
-    if (!builder->getBlock()->empty() &&
-        (mlir::isa<mlir::scf::YieldOp>(builder->getBlock()->back()) ||
-         mlir::isa<mlir::LLVM::ReturnOp>(builder->getBlock()->back()))) {
+    auto *insertionBlock = builder->getInsertionBlock();
+    if (insertionBlock && !insertionBlock->empty() &&
+        insertionBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
       break;
     }
   }

@@ -1,0 +1,16 @@
+procedure main() returns integer {
+    loop while (true) {
+        if (true) {
+            if (true) {
+                5 -> std_output;
+                break;
+            }
+        } else {
+            10 -> std_output;
+            break;
+        }
+    }
+    3 -> std_output;
+    return 0;
+}
+//CHECK:53

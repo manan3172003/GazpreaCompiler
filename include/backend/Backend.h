@@ -103,8 +103,8 @@ private:
   std::unordered_map<std::string, mlir::Value> blockArg;
 
   struct LoopContext {
-    mlir::Value breakFlag;
-    bool isDoWhile = false;
+    mlir::Block *exitBlock = nullptr;
+    mlir::Block *continueBlock = nullptr;
   };
   std::vector<LoopContext> loopStack;
 

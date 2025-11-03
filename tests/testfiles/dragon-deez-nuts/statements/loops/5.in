@@ -1,0 +1,23 @@
+/*
+Test nested loops and conditions with early return
+*/
+procedure f() returns integer {
+    loop while (true) {
+        loop {
+            if (true) {
+                if (true) {
+                    return 5;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+procedure main() returns integer {
+    const integer x = f();
+    x -> std_output;
+    return 0;
+}
+
+//CHECK:5
