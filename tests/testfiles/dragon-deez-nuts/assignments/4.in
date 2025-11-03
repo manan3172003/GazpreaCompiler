@@ -4,4 +4,4 @@ procedure main() returns integer {
     a -> std_output;
     return 0;
 }
-//CHECK_FILE:4.out
+//CHECK:b

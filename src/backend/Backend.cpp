@@ -230,8 +230,8 @@ void Backend::castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type
       auto gepIndices = std::vector<mlir::Value>{
           builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
           builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
-      auto elementPtr = builder->create<mlir::LLVM::GEPOp>(
-          loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, valueAddr, gepIndices);
+      auto elementPtr =
+          builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, valueAddr, gepIndices);
       castIfNeeded(elementPtr, fromSubType, toSubType);
     }
   } else if (fromType->getName() == "integer" && toType->getName() == "real") {
@@ -252,10 +252,9 @@ void Backend::copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAd
       auto gepIndices = std::vector<mlir::Value>{
           builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
           builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
-      auto elementPtr = builder->create<mlir::LLVM::GEPOp>(
-          loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, fromAddr, gepIndices);
-      auto newElementPtr = builder->create<mlir::LLVM::GEPOp>(
-          loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, destAddr, gepIndices);
+      auto elementPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, fromAddr, gepIndices);
+      auto newElementPtr =
+          builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, destAddr, gepIndices);
       auto newAddrForElement =
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(fromSubType), constOne());
       copyValue(fromSubType, elementPtr, newAddrForElement);
@@ -276,6 +275,7 @@ void Backend::createGlobalDeclaration(const std::string &typeName,
   auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(symbol);
   if (typeName == "integer") {
     auto intAst = std::dynamic_pointer_cast<ast::expressions::IntegerLiteralAst>(exprAst);
+    // Do implicit type conversiont here
     if (variableSymbol->getType()->getName() == "real") {
       builder->create<mlir::LLVM::GlobalOp>(
           loc, floatTy(),

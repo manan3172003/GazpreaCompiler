@@ -10,4 +10,4 @@ procedure main() returns integer {
     z -> std_output;
     return 0;
 }
-//CHECK_FILE:4.out
+//CHECK:bcl

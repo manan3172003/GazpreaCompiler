@@ -7,4 +7,4 @@ procedure main() returns integer {
     a.2 ->std_output;
     return 0;
 }
-//CHECK_FILE:6.out
+//CHECK:14.20000079.100000

@@ -20,4 +20,4 @@ procedure main() returns integer {
     z2.2 -> std_output;
     return 0;
 }
-//CHECK_FILE:5.out
+//CHECK:3698c98.0000001.000000151.0000005.000000
