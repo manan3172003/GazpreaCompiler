@@ -84,9 +84,11 @@ public:
   static bool isComparisonOperator(expressions::BinaryOpType opType);
   static bool areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
                              const std::shared_ptr<expressions::ExpressionAst> &right);
-  void checkVarArgs(const std::shared_ptr<prototypes::PrototypeAst> &proto,
-                    const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
-                    int lineNumber) const;
+  void checkArgs(const std::vector<std::shared_ptr<Ast>> &params,
+                 const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
+                 symTable::ScopeType scopeType);
+  static void checkVarArgs(const std::vector<std::shared_ptr<Ast>> &params,
+                           const std::vector<std::shared_ptr<expressions::ArgAst>> &args);
   static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);
   static bool isLiteralExpression(const std::shared_ptr<expressions::ExpressionAst> &expr);
 };

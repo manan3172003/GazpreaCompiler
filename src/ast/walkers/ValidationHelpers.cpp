@@ -222,34 +222,62 @@ bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::Express
          isNumericType(right->getInferredSymbolType());
 }
 
+void ValidationWalker::checkArgs(const std::vector<std::shared_ptr<Ast>> &params,
+                                 const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
+                                 const symTable::ScopeType scopeType) {
+  for (size_t i = 0; i < args.size(); i++) {
+    const auto &arg = args[i];
+    visit(arg);
+
+    if (scopeType == symTable::ScopeType::Function) {
+      const auto &param = std::dynamic_pointer_cast<prototypes::FunctionParamAst>(params[i]);
+      const auto &paramVarSymbol =
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(param->getSymbol());
+      if (not typesMatch(paramVarSymbol->getType(), arg->getInferredSymbolType()))
+        throw TypeError(arg->getLineNumber(), "Argument type mismatch");
+    } else if (scopeType == symTable::ScopeType::Procedure) {
+      const auto &param = std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
+      const auto &paramVarSymbol =
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(param->getSymbol());
+      if (not typesMatch(paramVarSymbol->getType(), arg->getInferredSymbolType()))
+        throw TypeError(arg->getLineNumber(), "Argument type mismatch");
+    }
+  }
+
+  // Check for var parameter aliasing if this is a procedure
+  if (scopeType == symTable::ScopeType::Procedure) {
+    checkVarArgs(params, args);
+  }
+}
+
 // helper to check for var parameter aliasing
-void ValidationWalker::checkVarArgs(const std::shared_ptr<prototypes::PrototypeAst> &proto,
-                                    const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
-                                    int lineNumber) const {
-  auto params = proto->getParams();
+void ValidationWalker::checkVarArgs(const std::vector<std::shared_ptr<Ast>> &params,
+                                    const std::vector<std::shared_ptr<expressions::ArgAst>> &args) {
   // unordered map to track vars
   std::unordered_map<std::string, bool> seenVarMap;
   for (size_t i = 0; i < args.size(); i++) {
-    auto param = std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
-    bool isVar = (param->getQualifier() == Qualifier::Var);
+    const auto param = std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
+    const bool isVar = (param->getQualifier() == Qualifier::Var);
     std::string varIdentifier;
     if (args[i]->getExpr()->getNodeType() == NodeType::Identifier) {
-      auto identifier = std::dynamic_pointer_cast<expressions::IdentifierAst>(args[i]->getExpr());
+      const auto identifier =
+          std::dynamic_pointer_cast<expressions::IdentifierAst>(args[i]->getExpr());
       varIdentifier = identifier->getName();
     } else if (args[i]->getExpr()->getNodeType() == NodeType::TupleAccess) {
       // Tuple access: t[0] - just track the tuple name "t"
-      auto tupleAccess = std::dynamic_pointer_cast<expressions::TupleAccessAst>(args[i]->getExpr());
+      const auto tupleAccess =
+          std::dynamic_pointer_cast<expressions::TupleAccessAst>(args[i]->getExpr());
       varIdentifier = tupleAccess->getTupleName();
     } else {
       // TODO: Handle array slices in future
       continue;
     }
+
     // Check if this identifier was already seen
     if (seenVarMap.find(varIdentifier) != seenVarMap.end()) {
-      if (seenVarMap[varIdentifier] || isVar) {
-        throw AliasingError(lineNumber, "Variable aliasing error: var parameter cannot share "
-                                        "a variable with another parameter");
-      }
+      if (seenVarMap[varIdentifier] || isVar)
+        throw AliasingError(args[i]->getLineNumber(),
+                            "var parameter cannot share a variable with another parameter");
     } else {
       // First time seeing this identifier
       seenVarMap[varIdentifier] = isVar;
