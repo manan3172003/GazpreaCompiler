@@ -1,0 +1,14 @@
+/*
+test forward declaration of procedure
+*/
+procedure f();
+
+procedure main() returns integer {
+    call f();
+    return 0;
+}
+
+procedure f() {
+  5 -> std_output;
+}
+//CHECK:5
