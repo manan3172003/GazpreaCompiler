@@ -1,0 +1,17 @@
+/*
+This test tries to define a function with no param names
+*/
+
+typealias integer int;
+
+function myProc(integer, int) returns boolean;
+
+procedure main() returns int{
+    return 0;
+}
+
+function myProc(integer, int) returns boolean{
+    return true;
+}
+
+//CHECK:SyntaxError on Line 13: Parameter must have name in definition

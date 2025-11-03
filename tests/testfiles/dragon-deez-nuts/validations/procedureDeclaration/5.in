@@ -1,0 +1,17 @@
+/*
+This test tries to define a procedure with no param names
+*/
+
+typealias integer int;
+
+procedure myProc(integer, int);
+
+procedure main() returns int{
+    return 0;
+}
+
+procedure myProc(integer, int) {
+    return;
+}
+
+//CHECK:SyntaxError on Line 13: Parameter must have name in definition

@@ -102,9 +102,12 @@ void DefRefWalker::compareProtoTypes(std::shared_ptr<prototypes::PrototypeAst> p
         throw DefinitionError(cur->getLineNumber(), "Parameter type does not match");
     }
   }
-
-  if (prev->getReturnType() == nullptr && cur->getReturnType() == nullptr)
+  if (scopeType == symTable::ScopeType::Procedure && prev->getReturnType() == nullptr &&
+      cur->getReturnType() == nullptr)
     return;
+  if (scopeType == symTable::ScopeType::Function && prev->getReturnType() == nullptr &&
+      cur->getReturnType() == nullptr)
+    throw DefinitionError(cur->getLineNumber(), "Function must have a return type");
 
   if (prev->getReturnType() && cur->getReturnType()) {
     const auto prevReturnType =
@@ -261,12 +264,20 @@ std::any DefRefWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> 
     // if the previous declaration has a body throw symbol error
     if (prevDecl->getBody())
       throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
-    // if the previous declaration has a body  throw symbol error
+    // if neither the previous nor the current declaration have a body throw symbol error
     if (not prevDecl->getBody() && not ctx->getBody())
       throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
   }
 
   ctx->setScope(symTab->getCurrentScope());
+
+  // Checks if definition has parameter names
+  if (ctx->getBody())
+    for (const auto &param : ctx->getProto()->getParams()) {
+      const auto paramNode = std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(param);
+      if (paramNode->getName().empty())
+        throw SyntaxError(param->getLineNumber(), "Parameter must have name in definition");
+    }
 
   if (not symbol) {
     const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
@@ -305,7 +316,8 @@ std::any DefRefWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> 
   return {};
 }
 std::any DefRefWalker::visitProcedureParams(std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
-  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(), false);
+  if (not ctx->getName().empty())
+    throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(), false);
   ctx->setScope(symTab->getCurrentScope());
   const auto varSymbol =
       std::make_shared<symTable::VariableSymbol>(ctx->getName(), ctx->getQualifier());
@@ -332,7 +344,8 @@ std::any DefRefWalker::visitProcedureCall(std::shared_ptr<statements::ProcedureC
   return {};
 }
 std::any DefRefWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
-  visit(ctx->getExpr());
+  if (ctx->getExpr())
+    visit(ctx->getExpr());
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
@@ -415,8 +428,7 @@ std::any DefRefWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> 
   throwDuplicateSymbolError(ctx, ctx->getAlias(), symTab->getGlobalScope(), true);
   ctx->setScope(symTab->getCurrentScope());
   auto typealiasSymbol = std::make_shared<symTable::TypealiasSymbol>(ctx->getAlias());
-  if (ctx->getType()->getNodeType() == NodeType::TupleType)
-    visit(ctx->getType());
+  visit(ctx->getType());
   typealiasSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   symTab->getGlobalScope()->defineTypeSymbol(typealiasSymbol);
   typealiasSymbol->setDef(ctx);
@@ -425,22 +437,76 @@ std::any DefRefWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> 
 }
 std::any DefRefWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   throwGlobalError(ctx);
-  throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
+  const auto symbol = symTab->getCurrentScope()->getSymbol(ctx->getProto()->getName());
+  const auto oldMethodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(symbol);
+  // if a symbol exists in the same scope with the same name but isn't a method symbol, throw error
+  if (symbol && not oldMethodSymbol)
+    throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
+
+  // if the method symbol is a procedure throw error
+  if (oldMethodSymbol && oldMethodSymbol->getScopeType() == symTable::ScopeType::Procedure)
+    throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
+
+  // if the method symbol is a function
+  if (oldMethodSymbol && oldMethodSymbol->getScopeType() == symTable::ScopeType::Function) {
+    const auto prevDecl =
+        std::dynamic_pointer_cast<prototypes::FunctionAst>(oldMethodSymbol->getDef());
+    // if the previous declaration has a body throw symbol error
+    if (prevDecl->getBody())
+      throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
+    // if neither the previous nor the current declaration have a body throw symbol error
+    if (not prevDecl->getBody() && not ctx->getBody())
+      throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
+  }
+
   ctx->setScope(symTab->getCurrentScope());
-  const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
-      ctx->getProto()->getName(), ctx->getProto()->getProtoType());
-  ctx->getProto()->setSymbol(methodSymbol);
-  // Method Sym points to its prototype AST node which contains the method
-  methodSymbol->setDef(ctx);
-  symTab->getCurrentScope()->defineSymbol(methodSymbol);
-  symTab->pushScope(methodSymbol);
-  visit(ctx->getProto()); // visit the params
-  visit(ctx->getBody());
-  symTab->popScope();
+
+  if (ctx->getBody())
+    for (const auto &param : ctx->getProto()->getParams()) {
+      const auto paramNode = std::dynamic_pointer_cast<prototypes::FunctionParamAst>(param);
+      if (paramNode->getName().empty())
+        throw SyntaxError(param->getLineNumber(), "Parameter must have name in definition");
+    }
+
+  if (not symbol) {
+    const auto methodSymbol = std::make_shared<symTable::MethodSymbol>(
+        ctx->getProto()->getName(), ctx->getProto()->getProtoType());
+    ctx->getProto()->setSymbol(methodSymbol);
+    methodSymbol->setDef(ctx);
+    symTab->getCurrentScope()->defineSymbol(methodSymbol);
+    symTab->pushScope(methodSymbol);
+    visit(ctx->getProto());
+    if (ctx->getBody())
+      visit(ctx->getBody());
+    symTab->popScope();
+
+  } else if (oldMethodSymbol && oldMethodSymbol->getScopeType() == symTable::ScopeType::Function &&
+             ctx->getBody()) {
+    const auto newMethodSymbol = std::make_shared<symTable::MethodSymbol>(
+        ctx->getProto()->getName(), ctx->getProto()->getProtoType());
+    const auto prevDecl =
+        std::dynamic_pointer_cast<prototypes::FunctionAst>(oldMethodSymbol->getDef());
+    ctx->getProto()->setSymbol(newMethodSymbol);
+    prevDecl->getProto()->setSymbol(newMethodSymbol);
+    newMethodSymbol->setDef(ctx);
+    symTab->pushScope(newMethodSymbol);
+
+    // validate prev and current declarations have same prototype
+    // prototypes should match
+    visit(ctx->getProto());
+    compareProtoTypes(prevDecl->getProto(), ctx->getProto(), symTable::ScopeType::Function);
+    visit(ctx->getBody());
+    symTab->popScope();
+
+    // replace the old methodSymbol with the newMethod symbol which has the definition and body
+    (std::dynamic_pointer_cast<symTable::BaseScope>(symTab->getCurrentScope())
+         ->getSymbols())[prevDecl->getProto()->getName()] = newMethodSymbol;
+  }
   return {};
 }
 std::any DefRefWalker::visitFunctionParam(std::shared_ptr<prototypes::FunctionParamAst> ctx) {
-  throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(), false);
+  if (not ctx->getName().empty())
+    throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(), false);
   ctx->setScope(symTab->getCurrentScope());
   const auto varSymbol =
       std::make_shared<symTable::VariableSymbol>(ctx->getName(), ctx->getQualifier());
@@ -458,9 +524,8 @@ std::any DefRefWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> 
   for (const auto &param : ctx->getParams()) {
     visit(param);
   }
-  if (ctx->getReturnType() && ctx->getReturnType()->getNodeType() == NodeType::TupleType) {
+  if (ctx->getReturnType())
     visit(ctx->getReturnType());
-  }
 
   const auto methodSym = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   if (ctx->getReturnType() != nullptr) { // void procedures can have empty type
@@ -492,9 +557,7 @@ std::any DefRefWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst> ct
 }
 std::any DefRefWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
-  if (ctx->getTargetType() && ctx->getTargetType()->getNodeType() == NodeType::TupleType) {
-    visit(ctx->getTargetType());
-  }
+  visit(ctx->getTargetType());
   visit(ctx->getExpression());
   ctx->setResolvedTargetType(resolvedType(ctx->getLineNumber(), ctx->getTargetType()));
   return {};

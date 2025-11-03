@@ -1,0 +1,16 @@
+/*
+This test checks for inconsistent return type between declaration and definition of a function
+*/
+typealias integer int;
+
+function myProc() returns integer;
+
+procedure main() returns integer{
+
+    return 0;
+}
+
+function myProc() returns tuple(int, int) {
+    return 10;
+}
+//CHECK:DefinitionError on Line 13: Return type does not match

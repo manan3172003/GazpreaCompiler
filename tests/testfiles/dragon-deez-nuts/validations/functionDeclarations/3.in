@@ -2,7 +2,7 @@
 This test tries to define a function with same name but different parameter types
 */
 
-procedure myProc(integer x);
+function myProc(integer x) returns character;
 
 procedure main() returns integer{
     call myProc();
@@ -10,6 +10,8 @@ procedure main() returns integer{
     return 0;
 }
 
-procedure myProc(real x) {}
+function myProc(real x) returns character{
+    return 'c';
+}
 
 //CHECK:DefinitionError on Line 13: Parameter type does not match

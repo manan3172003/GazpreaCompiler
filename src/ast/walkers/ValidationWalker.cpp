@@ -199,7 +199,7 @@ std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureA
   if (ctx->getProto()->getReturnType()) {
     // If procedure has a return type, check that we reach a return statement
     const auto blockAst = std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
-    if (!hasReturnInMethod(blockAst)) {
+    if (blockAst && !hasReturnInMethod(blockAst)) {
       throw ReturnError(ctx->getLineNumber(), "Function must have a return statement");
     }
   }
@@ -241,7 +241,6 @@ std::any ValidationWalker::visitProcedureCall(std::shared_ptr<statements::Proced
   return {};
 }
 std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ctx) {
-  visit(ctx->getExpr());
   auto curScope = ctx->getScope();
 
   // Recurse up till we reach MethodSymbol scope
@@ -251,6 +250,12 @@ std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ct
     }
     curScope = curScope->getEnclosingScope();
   }
+  if (curScope->getScopeType() == symTable::ScopeType::Function && not ctx->getExpr())
+    throw TypeError(ctx->getLineNumber(), "Cannot have empty return in a function");
+  if (not ctx->getExpr())
+    return {};
+
+  visit(ctx->getExpr());
 
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(curScope);
 
@@ -344,11 +349,21 @@ std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst
     throw ReturnError(ctx->getLineNumber(), "Function must have a return type");
   }
   const auto blockAst = std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
-  if (!hasReturnInMethod(blockAst)) {
+  if (blockAst && !hasReturnInMethod(blockAst)) {
     throw ReturnError(ctx->getLineNumber(), "Function must have a return statement");
   }
 
-  visit(ctx->getBody());
+  if (not ctx->getBody()) {
+    const auto methodSymbol = symTab->getGlobalScope()->getSymbol(ctx->getProto()->getName());
+    const auto procedureDeclaration =
+        std::dynamic_pointer_cast<prototypes::FunctionAst>(methodSymbol->getDef());
+    if (not procedureDeclaration->getBody())
+      throw DefinitionError(procedureDeclaration->getLineNumber(),
+                            "Function does not have a definition");
+  }
+
+  if (ctx->getBody())
+    visit(ctx->getBody());
   return {};
 }
 std::any ValidationWalker::visitFunctionParam(std::shared_ptr<prototypes::FunctionParamAst> ctx) {
@@ -358,8 +373,11 @@ std::any ValidationWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeA
   return AstWalker::visitPrototype(ctx);
 }
 std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCallAst> ctx) {
-  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
-
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  // need to re-resolve to get defined function
+  methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
+      symTab->getGlobalScope()->resolveSymbol(methodSymbol->getName()));
+  ctx->setSymbol(methodSymbol);
   if (inConditionalExpression)
     throw CallError(ctx->getLineNumber(), "Cannot call procedure in control flow expressions");
 
