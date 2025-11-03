@@ -1,0 +1,14 @@
+/*
+tests tuple return and promotion for methods
+*/
+procedure f() returns tuple(real, real) {
+    return (1, .2);
+}
+
+procedure main() returns integer {
+    const tuple(real, real) t = f();
+    t.1 -> std_output;
+    t.2 -> std_output;
+    return 0;
+}
+//CHECK:10.2

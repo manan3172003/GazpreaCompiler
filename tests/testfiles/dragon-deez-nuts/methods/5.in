@@ -1,0 +1,13 @@
+/*
+tests scalar return and promotion for methods
+*/
+procedure f() returns real {
+    return 2;
+}
+
+procedure main() returns integer {
+    const real t = f();
+    t -> std_output;
+    return 0;
+}
+//CHECK:2
