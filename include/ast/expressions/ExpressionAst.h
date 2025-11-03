@@ -15,6 +15,7 @@ public:
   std::shared_ptr<symTable::Type> getInferredSymbolType() { return inferredSymbolType; }
   void setInferredDataType(std::shared_ptr<types::DataTypeAst> type_) { inferredDataType = type_; };
   std::shared_ptr<types::DataTypeAst> getInferredDataType() { return inferredDataType; }
+  virtual bool isLValue() = 0;
 };
 
 } // namespace gazprea::ast::expressions

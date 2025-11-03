@@ -13,5 +13,7 @@ public:
 
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
+
+  bool isLValue() override { return expr->isLValue(); }
 };
 } // namespace gazprea::ast::expressions

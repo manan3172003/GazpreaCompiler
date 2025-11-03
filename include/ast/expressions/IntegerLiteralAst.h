@@ -9,5 +9,6 @@ public:
       : ExpressionAst(token), integerValue(integerValue) {}
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
+  bool isLValue() override { return false; }
 };
 } // namespace gazprea::ast::expressions
