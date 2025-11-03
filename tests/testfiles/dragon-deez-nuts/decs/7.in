@@ -1,0 +1,26 @@
+/*
+Test aliasing global declaration.
+*/
+typealias integer int;
+typealias boolean bool;
+typealias character char;
+typealias real f32;
+const int z1 = 5;
+const f32 z2 = .7;
+const char z3 = 'e';
+const bool z4 = false;
+const tuple(int, real, char, bool) z5 = (1, .2, 't', true);
+
+procedure main() returns integer {
+    z1 -> std_output;
+    z2 -> std_output;
+    z3 -> std_output;
+    z4 -> std_output;
+    z5.1 -> std_output;
+    z5.2 -> std_output;
+    z5.3 -> std_output;
+    z5.4 -> std_output;
+    return 0;
+}
+
+//CHECK_FILE:7.out

@@ -1,0 +1,7 @@
+procedure main() returns integer {
+    var integer a = 1;
+    a = 2;
+    a -> std_output;
+    return 0;
+}
+//CHECK_FILE:1.out

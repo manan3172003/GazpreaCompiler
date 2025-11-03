@@ -1,0 +1,7 @@
+procedure main() returns integer {
+    var boolean a = false;
+    a = true;
+    a -> std_output;
+    return 0;
+}
+//CHECK_FILE:3.out

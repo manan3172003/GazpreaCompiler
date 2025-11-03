@@ -1,0 +1,14 @@
+procedure main() returns integer {
+    var tuple(integer, real, character) a = (1, 4.2, 'c');
+    a.1 -> std_output;
+    a.1 = 3;
+    a.1 -> std_output;
+    a.2 -> std_output;
+    a.2 = 7.1;
+    a.2 -> std_output;
+    a.3 -> std_output;
+    a.3 = 'b';
+    a.3 -> std_output;
+    return 0;
+}
+//CHECK_FILE:5.out

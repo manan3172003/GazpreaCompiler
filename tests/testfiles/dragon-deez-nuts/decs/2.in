@@ -1,7 +1,8 @@
 /*
 Test real declaration.
 */
-
+const real z1 = 1.;
+const real z2 = 77; // implicit cast on global dec
 procedure main() returns integer {
     real a = 18.;
     const b = 22.0; // inferred as real
@@ -9,6 +10,8 @@ procedure main() returns integer {
     a -> std_output;
     b -> std_output;
     c -> std_output;
+    z1 -> std_output;
+    z2 -> std_output;
     return 0;
 }
 //CHECK_FILE:2.out

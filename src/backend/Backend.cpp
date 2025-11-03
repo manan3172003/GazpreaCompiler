@@ -306,9 +306,9 @@ void Backend::createGlobalDeclaration(const std::string &typeName,
         builder->getIntegerAttr(boolTy(), boolAst->getValue()), 0);
   } else if (typeName == "tuple") {
     auto tupleAst = std::dynamic_pointer_cast<ast::expressions::TupleLiteralAst>(exprAst);
-    auto structType = getMLIRType(variableSymbol->getType());
     auto tupleTypeSym =
         std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(variableSymbol->getType());
+    auto structType = getMLIRType(tupleTypeSym);
 
     // GlobalOp with an initializer region
     auto globalOp = builder->create<mlir::LLVM::GlobalOp>(
@@ -326,22 +326,25 @@ void Backend::createGlobalDeclaration(const std::string &typeName,
       auto element = tupleAst->getElements()[i];
       mlir::Value elementValue;
       if (auto intLit = std::dynamic_pointer_cast<ast::expressions::IntegerLiteralAst>(element)) {
-        elementValue = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), intLit->integerValue);
-        if (tupleTypeSym->getResolvedTypes()[i]->getName() == "real" &&
-            element->getInferredSymbolType()->getName() == "integer") {
-          elementValue = builder->create<mlir::LLVM::SIToFPOp>(
-              loc, mlir::Float32Type::get(builder->getContext()), elementValue);
+        if (tupleTypeSym->getResolvedTypes()[i]->getName() == "real") {
+          elementValue = builder->create<mlir::LLVM::ConstantOp>(
+              loc, floatTy(), builder->getFloatAttr(floatTy(), intLit->integerValue));
+        } else {
+          elementValue = builder->create<mlir::LLVM::ConstantOp>(
+              loc, intTy(), builder->getIntegerAttr(intTy(), intLit->integerValue));
         }
       } else if (auto realLit =
                      std::dynamic_pointer_cast<ast::expressions::RealLiteralAst>(element)) {
-        elementValue = builder->create<mlir::LLVM::ConstantOp>(loc, floatTy(), realLit->realValue);
+        elementValue = builder->create<mlir::LLVM::ConstantOp>(
+            loc, floatTy(), builder->getFloatAttr(floatTy(), realLit->realValue));
       } else if (auto charLit =
                      std::dynamic_pointer_cast<ast::expressions::CharLiteralAst>(element)) {
-        elementValue =
-            builder->create<mlir::LLVM::ConstantOp>(loc, charTy(), charLit->getValue()[1]);
+        elementValue = builder->create<mlir::LLVM::ConstantOp>(
+            loc, charTy(), builder->getIntegerAttr(charTy(), charLit->getValue()[1]));
       } else if (auto boolLit =
                      std::dynamic_pointer_cast<ast::expressions::BoolLiteralAst>(element)) {
-        elementValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), boolLit->getValue());
+        elementValue = builder->create<mlir::LLVM::ConstantOp>(
+            loc, boolTy(), builder->getIntegerAttr(boolTy(), boolLit->getValue()));
       }
       structValue = builder->create<mlir::LLVM::InsertValueOp>(loc, structValue, elementValue, i);
     }

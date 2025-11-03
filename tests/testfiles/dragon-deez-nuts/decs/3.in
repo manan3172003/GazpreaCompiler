@@ -1,12 +1,13 @@
 /*
 Test boolean declaration.
 */
-
+const boolean z = true;
 procedure main() returns integer {
     boolean a = false;
     const b = true; // inferred as boolean
     a -> std_output;
     b -> std_output;
+    z -> std_output;
     return 0;
 }
 //CHECK_FILE:3.out

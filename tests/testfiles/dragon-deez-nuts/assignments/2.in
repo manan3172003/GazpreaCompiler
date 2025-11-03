@@ -1,0 +1,9 @@
+procedure main() returns integer {
+    var real a = 1.;
+    a = 2.;
+    a -> std_output;
+    a = 3; // implicit casting
+    a -> std_output;
+    return 0;
+}
+//CHECK_FILE:2.out

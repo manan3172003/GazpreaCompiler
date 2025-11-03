@@ -1,6 +1,8 @@
 /*
 Test tuple declaration.
 */
+const tuple(integer, integer) z1 = (1, 5);
+const tuple(real, real) z2 = (1, 5); // implicit cast on global dec
 
 procedure main() returns integer {
     tuple(integer, integer) a = (3, 6);
@@ -12,6 +14,10 @@ procedure main() returns integer {
     b.2 -> std_output;
     c.1 -> std_output;
     c.2 -> std_output;
+    z1.1 -> std_output;
+    z1.2 -> std_output;
+    z2.1 -> std_output;
+    z2.2 -> std_output;
     return 0;
 }
 //CHECK_FILE:5.out

@@ -31,9 +31,25 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
     }
     return {};
   }
-  copyValue(type, valueAddr, variableSymbol->value);
-  castIfNeeded(variableSymbol->value, ctx->getExpr()->getInferredSymbolType(),
-               variableSymbol->getType());
+  if (auto tupleElementAssign = std::dynamic_pointer_cast<ast::statements::TupleElementAssignAst>(
+          ctx->getLVal())) { // check if tuple assign
+    auto tupleTy = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(variableSymbol->getType());
+    auto sTy = getMLIRType(tupleTy);
+    auto gepIndices = std::vector<mlir::Value>{
+        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(),
+                                                tupleElementAssign->getFieldIndex() - 1)};
+    auto elementAddr = builder->create<mlir::LLVM::GEPOp>(
+        loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, variableSymbol->value,
+        gepIndices);
+    copyValue(type, valueAddr, elementAddr);
+    castIfNeeded(elementAddr, ctx->getExpr()->getInferredSymbolType(),
+                 tupleTy->getResolvedTypes()[tupleElementAssign->getFieldIndex() - 1]);
+  } else {
+    copyValue(type, valueAddr, variableSymbol->value);
+    castIfNeeded(variableSymbol->value, ctx->getExpr()->getInferredSymbolType(),
+                 variableSymbol->getType());
+  }
   return {};
 }
 
