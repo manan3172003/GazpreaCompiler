@@ -1,0 +1,19 @@
+/*
+test nested loop construction and breaking from inner loops
+*/
+procedure main() returns integer {
+    loop {
+        5 -> std_output;
+        loop while (true) {
+            5 -> std_output;
+            loop {
+                5 -> std_output;
+                break;
+            } while (true);
+            break;
+        }
+        break;
+    }
+    return 0;
+}
+//CHECK:555
