@@ -37,6 +37,9 @@ include("${CMAKE_SOURCE_DIR}/cmake/antlr_generate.cmake")
 # Include project headers.
 include_directories("${CMAKE_SOURCE_DIR}/include")
 
+# Set a variable for the runtime include directory.
+set(RUNTIME_INCLUDE "${CMAKE_SOURCE_DIR}/runtime/include")
+
 # Add the source directory.
 add_subdirectory("${CMAKE_SOURCE_DIR}/src")
 

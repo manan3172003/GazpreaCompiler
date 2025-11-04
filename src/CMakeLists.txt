@@ -14,6 +14,7 @@ add_subdirectory(utils)
 add_subdirectory(backend)
 
 target_include_directories(gazc PUBLIC ${ANTLR_GEN_DIR})
+target_include_directories(gazc PUBLIC ${RUNTIME_INCLUDE})
 
 # Ensure that the antlr4-runtime is available.
 add_dependencies(gazc antlr)

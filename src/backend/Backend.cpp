@@ -1,4 +1,4 @@
-#include "../../runtime/include/run_time_errors.h"
+#include "run_time_errors.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 
