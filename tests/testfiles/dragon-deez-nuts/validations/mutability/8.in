@@ -1,0 +1,23 @@
+/*
+This test tries to mutate a tuple in a procedure with forward declaration
+*/
+
+typealias integer int;
+
+procedure myProc(const tuple(int, character));
+
+procedure main() returns integer {
+    const integer a;
+    const integer b;
+
+    var tuple(int, character) c = (1, 'c');
+    call myProc(c);
+
+    return 0;
+}
+
+procedure myProc(const tuple(int, character) myTup){
+    myTup.1 = 10;
+}
+
+//CHECK:AssignError on Line 20: Cannot re-assign a constant value

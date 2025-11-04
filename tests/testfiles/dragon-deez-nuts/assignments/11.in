@@ -1,0 +1,25 @@
+/*
+Forward declaration assignment
+*/
+typealias integer int;
+
+procedure myProc(var tuple(int, character));
+
+procedure main() returns integer {
+    const integer a;
+    const integer b;
+
+    var tuple(int, character) c = (1, 'c');
+
+    c.1 ->std_output;
+    call myProc(c);
+    c.1 ->std_output;
+
+    return 0;
+}
+
+procedure myProc(var tuple(int, character) myTup){
+    myTup.1 = 10;
+}
+
+//CHECK:110

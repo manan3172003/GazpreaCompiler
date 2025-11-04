@@ -1,0 +1,17 @@
+/*
+const tuple unpacking
+*/
+typealias integer int;
+
+procedure main() returns integer {
+    const integer a;
+    const integer b;
+
+    tuple(int, int) c = (1, 2);
+
+    b, a = c;
+
+    return 0;
+}
+
+//CHECK:AssignError on Line 12: Cannot re-assign a constant value

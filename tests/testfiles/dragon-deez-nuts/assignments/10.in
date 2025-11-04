@@ -1,0 +1,21 @@
+/*
+This test mutates a var outside a procedure
+*/
+
+procedure myFunc(var integer x) returns integer {
+    x = 2;
+    return x;
+}
+
+procedure main() returns integer {
+    var a = 0;
+    var b = 1;
+    a -> std_output;
+    b -> std_output;
+    b = myFunc(a);
+    a -> std_output;
+    b -> std_output;
+    return 0;
+}
+
+//CHECK:0122
