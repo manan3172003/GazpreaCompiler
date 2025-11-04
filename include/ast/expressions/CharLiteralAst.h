@@ -3,13 +3,13 @@
 
 namespace gazprea::ast::expressions {
 class CharLiteralAst final : public ExpressionAst {
-  std::string value;
+  char value;
 
 public:
   explicit CharLiteralAst(antlr4::Token *token) : ExpressionAst(token) {}
 
-  void setValue(const std::string &value_) { value = value_; }
-  std::string getValue() const { return value; }
+  void setValue(char value_) { value = value_; }
+  char getValue() const { return value; }
 
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;

@@ -170,7 +170,7 @@ DefRefWalker::createDefaultLiteral(const std::shared_ptr<symTable::Type> &type,
     return std::make_shared<expressions::RealLiteralAst>(token, 0.0);
   if (type->getName() == "character") {
     auto charLiteral = std::make_shared<expressions::CharLiteralAst>(token);
-    charLiteral->setValue("\\0");
+    charLiteral->setValue('\0');
     return charLiteral;
   }
   if (type->getName() == "boolean") {

@@ -1,0 +1,9 @@
+procedure main() returns integer {
+    const character a = '\0';
+    const character b;
+
+    a == b -> std_output;
+
+    return 0;
+}
+//CHECK:T

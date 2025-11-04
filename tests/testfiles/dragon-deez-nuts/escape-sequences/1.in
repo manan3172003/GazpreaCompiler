@@ -1,0 +1,26 @@
+procedure main() returns integer {
+    const a = '\n';
+    const b = '\t';
+    const c = '\r';
+    const d = '\b';
+    const e = '\\';
+    const f = '\'';
+    const g = '\"';
+    const h = '\0';
+    const i = '\a';
+
+    b -> std_output;
+    c -> std_output;
+
+    d -> std_output; // Test \b
+
+    e -> std_output;
+    f -> std_output;
+    g -> std_output;
+    h -> std_output;
+    i -> std_output;
+    a -> std_output;
+
+    return 0;
+}
+//CHECK_FILE:1.out

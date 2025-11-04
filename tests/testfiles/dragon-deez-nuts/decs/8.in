@@ -37,5 +37,4 @@ procedure main() returns integer {
 
     return 0;
 }
-// expected output needs to change once escape character's printing is implemented
-//CHECK:000000000F0F
+//CHECK_FILE:8.out

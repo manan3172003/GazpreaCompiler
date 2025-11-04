@@ -499,7 +499,10 @@ std::any AstBuilder::visitByExpr(GazpreaParser::ByExprContext *ctx) {
 }
 std::any AstBuilder::visitCharLiteral(GazpreaParser::CharLiteralContext *ctx) {
   const auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
-  charAst->setValue(ctx->CHAR_LIT()->getText());
+  std::string sanitizedLiteral =
+      ctx->CHAR_LIT()->getText().substr(1, ctx->CHAR_LIT()->getText().size() - 2);
+  char charLiteral = convertStringToChar(sanitizedLiteral, ctx->getStart()->getLine());
+  charAst->setValue(charLiteral);
   return std::static_pointer_cast<expressions::ExpressionAst>(charAst);
 }
 std::any AstBuilder::visitRelationalExpr(GazpreaParser::RelationalExprContext *ctx) {
@@ -616,5 +619,37 @@ std::shared_ptr<types::DataTypeAst> AstBuilder::makeType(GazpreaParser::TypeCont
     return std::any_cast<std::shared_ptr<types::TupleTypeAst>>(visit(typeContext->tuple_type()));
   }
   return nullptr;
+}
+
+char AstBuilder::convertStringToChar(const std::string &str, int lineNumber) {
+  if (str.length() == 1) {
+    return str[0];
+  } else if (str[0] == '\\') {
+    switch (str[1]) {
+    case '0':
+      return '\0';
+    case 'a':
+      return '\a';
+    case 'b':
+      return '\b';
+    case 'n':
+      return '\n';
+    case 't':
+      return '\t';
+    case 'r':
+      return '\r';
+    case '\\':
+      return '\\';
+    case '\'':
+      return '\'';
+    case '\"':
+      return '\"';
+    default:
+      throw SyntaxError(lineNumber,
+                        "Escape sequence: \\" + std::string(1, str[1]) + " not supported");
+    }
+  } else {
+    throw SyntaxError(lineNumber, "Invalid character literal: " + str);
+  }
 }
 } // namespace gazprea::ast::walkers

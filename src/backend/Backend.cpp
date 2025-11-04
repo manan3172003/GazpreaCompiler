@@ -33,7 +33,7 @@ int Backend::emitModule() {
 
   visit(ast);
 
-  module.dump();
+  // module.dump();
 
   if (mlir::failed(mlir::verify(module))) {
     module.emitError("module failed to verify");
@@ -657,8 +657,7 @@ void Backend::createGlobalDeclaration(const std::string &typeName,
     auto charAst = std::dynamic_pointer_cast<ast::expressions::CharLiteralAst>(exprAst);
     builder->create<mlir::LLVM::GlobalOp>(
         loc, charTy(), true, mlir::LLVM::Linkage::Internal, variableName,
-        builder->getIntegerAttr(charTy(), charAst->getValue()[1]), // TODO: Support just characters
-        0);
+        builder->getIntegerAttr(charTy(), charAst->getValue()), 0);
   } else if (typeName == "boolean") {
     auto boolAst = std::dynamic_pointer_cast<ast::expressions::BoolLiteralAst>(exprAst);
     builder->create<mlir::LLVM::GlobalOp>(
@@ -700,7 +699,7 @@ void Backend::createGlobalDeclaration(const std::string &typeName,
       } else if (auto charLit =
                      std::dynamic_pointer_cast<ast::expressions::CharLiteralAst>(element)) {
         elementValue = builder->create<mlir::LLVM::ConstantOp>(
-            loc, charTy(), builder->getIntegerAttr(charTy(), charLit->getValue()[1]));
+            loc, charTy(), builder->getIntegerAttr(charTy(), charLit->getValue()));
       } else if (auto boolLit =
                      std::dynamic_pointer_cast<ast::expressions::BoolLiteralAst>(element)) {
         elementValue = builder->create<mlir::LLVM::ConstantOp>(

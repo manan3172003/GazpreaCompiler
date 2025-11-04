@@ -4,8 +4,7 @@ namespace gazprea::backend {
 
 std::any Backend::visitChar(std::shared_ptr<ast::expressions::CharLiteralAst> ctx) {
   auto value = builder->create<mlir::LLVM::ConstantOp>(
-      loc, charTy(),
-      builder->getIntegerAttr(charTy(), ctx->getValue()[1])); // TODO: Support just characters
+      loc, charTy(), builder->getIntegerAttr(charTy(), ctx->getValue()));
   auto valueAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), charTy(), constOne());
   builder->create<mlir::LLVM::StoreOp>(loc, value, valueAddr);
   ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), valueAddr);
