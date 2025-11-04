@@ -1,6 +1,7 @@
 #include "run_time_errors.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
+#include "utils/ValidationUtils.h"
 
 #include <assert.h>
 #include <backend/Backend.h>
@@ -469,6 +470,112 @@ mlir::Value Backend::floatBinaryOperandToValue(ast::expressions::BinaryOpType op
 
   builder->create<mlir::LLVM::StoreOp>(loc, result, newAddr);
   return newAddr;
+}
+
+bool Backend::typesEquivalent(const std::shared_ptr<symTable::Type> &lhs,
+                              const std::shared_ptr<symTable::Type> &rhs) {
+  if (!lhs || !rhs) {
+    return false;
+  }
+  if (lhs == rhs) {
+    return true;
+  }
+  if (lhs->getName() != rhs->getName()) {
+    return false;
+  }
+  if (lhs->getName() != "tuple") {
+    return true;
+  }
+
+  const auto lhsTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(lhs);
+  const auto rhsTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(rhs);
+  if (!lhsTuple || !rhsTuple) {
+    return false;
+  }
+
+  const auto &lhsMembers = lhsTuple->getResolvedTypes();
+  const auto &rhsMembers = rhsTuple->getResolvedTypes();
+  if (lhsMembers.size() != rhsMembers.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < lhsMembers.size(); ++i) {
+    if (!typesEquivalent(lhsMembers[i], rhsMembers[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+mlir::Value Backend::promoteScalarValue(mlir::Value value,
+                                        const std::shared_ptr<symTable::Type> &fromType,
+                                        const std::shared_ptr<symTable::Type> &toType) {
+  const std::string fromName = fromType->getName();
+  const std::string toName = toType->getName();
+  auto targetMlirTy = getMLIRType(toType);
+
+  if (fromName == toName) {
+    return value;
+  }
+
+  switch (utils::getPromotionCode(fromName, toName)) {
+  case utils::BOOL_TO_CHAR:
+  case utils::BOOL_TO_INT:
+    return builder->create<mlir::LLVM::ZExtOp>(loc, targetMlirTy, value);
+  case utils::BOOL_TO_REAL:
+    return builder->create<mlir::LLVM::UIToFPOp>(loc, targetMlirTy, value);
+  case utils::CHAR_TO_BOOL: {
+    auto zero = builder->create<mlir::LLVM::ConstantOp>(loc, charTy(), 0);
+    return builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne, value, zero);
+  }
+  case utils::CHAR_TO_INT:
+    return builder->create<mlir::LLVM::ZExtOp>(loc, targetMlirTy, value);
+  case utils::CHAR_TO_REAL:
+    return builder->create<mlir::LLVM::UIToFPOp>(loc, targetMlirTy, value);
+  case utils::INT_TO_BOOL: {
+    auto zero = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
+    return builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne, value, zero);
+  }
+  case utils::INT_TO_CHAR:
+    return builder->create<mlir::LLVM::TruncOp>(loc, targetMlirTy, value);
+  case utils::INT_TO_REAL:
+    return builder->create<mlir::LLVM::SIToFPOp>(loc, targetMlirTy, value);
+  case utils::REAL_TO_INT:
+    return builder->create<mlir::LLVM::FPToSIOp>(loc, targetMlirTy, value);
+  case utils::IDENTITY:
+    return value;
+  default:
+    return value;
+  }
+}
+
+void Backend::performExplicitCast(mlir::Value srcPtr, std::shared_ptr<symTable::Type> fromType,
+                                  mlir::Value dstPtr, std::shared_ptr<symTable::Type> toType) {
+  if (fromType->getName() == "tuple") {
+    const auto fromTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType);
+    const auto toTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(toType);
+    auto fromStructTy = getMLIRType(fromType);
+    auto toStructTy = getMLIRType(toType);
+    const auto &fromMembers = fromTuple->getResolvedTypes();
+    const auto &toMembers = toTuple->getResolvedTypes();
+
+    for (size_t i = 0; i < fromMembers.size(); ++i) {
+      auto idxZero = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0);
+      auto idxPos = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i);
+      std::vector<mlir::Value> indices{idxZero, idxPos};
+      auto srcElemPtr =
+          builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), fromStructTy, srcPtr, indices);
+      auto dstElemPtr =
+          builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), toStructTy, dstPtr, indices);
+      performExplicitCast(srcElemPtr, fromMembers[i], dstElemPtr, toMembers[i]);
+    }
+    return;
+  } // TODO: Handle other complex types
+
+  // Scalar type casting
+  auto fromMlirType = getMLIRType(fromType);
+  auto loadedValue = builder->create<mlir::LLVM::LoadOp>(loc, fromMlirType, srcPtr);
+  auto castedValue = promoteScalarValue(loadedValue, fromType, toType);
+  builder->create<mlir::LLVM::StoreOp>(loc, castedValue, dstPtr);
 }
 
 void Backend::castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,

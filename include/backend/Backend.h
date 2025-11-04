@@ -139,5 +139,11 @@ private:
                                         std::shared_ptr<symTable::Type> leftType,
                                         std::shared_ptr<symTable::Type> rightType,
                                         mlir::Value leftAddr, mlir::Value rightAddr);
+  static bool typesEquivalent(const std::shared_ptr<symTable::Type> &lhs,
+                              const std::shared_ptr<symTable::Type> &rhs);
+  mlir::Value promoteScalarValue(mlir::Value value, const std::shared_ptr<symTable::Type> &fromType,
+                                 const std::shared_ptr<symTable::Type> &toType);
+  void performExplicitCast(mlir::Value srcPtr, std::shared_ptr<symTable::Type> fromType,
+                           mlir::Value dstPtr, std::shared_ptr<symTable::Type> toType);
 };
 } // namespace gazprea::backend
