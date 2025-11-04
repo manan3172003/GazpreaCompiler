@@ -216,19 +216,16 @@ std::any DefRefWalker::visitDeclaration(std::shared_ptr<statements::DeclarationA
     varSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   }
 
-  if (ctx->getExpr()) {
+  if (not ctx->getExpr() && ctx->getType()) {
+    // Set everything to base (false, '\0', 0, 0.0)
+    // normal primitives (boolean, character, integer, real)
+    // tuples
+    const auto type = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
+    auto defaultExpr = createDefaultLiteral(type, ctx->token);
+    ctx->setExpr(defaultExpr);
     visit(ctx->getExpr());
-  } else {
-    if (not ctx->getExpr() && ctx->getType()) {
-      // Set everything to base (false, '\0', 0, 0.0)
-      // normal primitives (boolean, character, integer, real)
-      // tuples
-      const auto type = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
-      auto defaultExpr = createDefaultLiteral(type, ctx->token);
-      ctx->setExpr(defaultExpr);
-      visit(ctx->getExpr());
-    }
   }
+  visit(ctx->getExpr());
   varSymbol->setDef(ctx);
   symTab->getCurrentScope()->defineSymbol(varSymbol);
   ctx->setSymbol(varSymbol);
