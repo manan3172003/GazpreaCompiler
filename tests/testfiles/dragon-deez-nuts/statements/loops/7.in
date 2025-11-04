@@ -1,0 +1,19 @@
+/*
+tests do while loop with continue
+*/
+typealias integer int;
+typealias character char;
+typealias boolean bool;
+
+procedure main() returns integer {
+    var int x = 0;
+    loop {
+        x -> std_output;
+        x = x + 1;
+        if (x == 1) continue;
+        true -> std_output;
+    } while (x < 3);
+    x -> std_output;
+    return 0;
+}
+//CHECK:01T2T3
