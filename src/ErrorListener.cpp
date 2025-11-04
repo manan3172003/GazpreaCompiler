@@ -62,7 +62,8 @@ void ErrorListener::syntaxError(antlr4::Recognizer *recognizer, antlr4::Token *o
     break;
   }
 
-  default:;
+  default:
+    break;
   }
 
   throw SyntaxError(line, msg);
