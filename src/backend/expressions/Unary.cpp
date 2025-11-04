@@ -4,11 +4,15 @@ namespace gazprea::backend {
 
 std::any Backend::visitUnary(std::shared_ptr<ast::expressions::UnaryAst> ctx) {
   visit(ctx->getExpression());
-  auto [type, valueAddr] = ctx->getExpression()->getScope()->getTopElementInStack();
-  auto newAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(type), constOne());
-  auto value = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(type), valueAddr);
+  auto operandScope = ctx->getExpression()->getScope();
+  auto [type, valueAddr] = operandScope->getTopElementInStack();
+  operandScope->popElementFromScopeStack();
+
   switch (ctx->getUnaryOpType()) {
   case ast::expressions::UnaryOpType::MINUS: {
+    auto newAddr =
+        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(type), constOne());
+    auto value = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(type), valueAddr);
     if (type->getName() == "real") {
       auto negValue = builder->create<mlir::LLVM::FNegOp>(loc, value);
       builder->create<mlir::LLVM::StoreOp>(loc, negValue, newAddr);
@@ -22,6 +26,9 @@ std::any Backend::visitUnary(std::shared_ptr<ast::expressions::UnaryAst> ctx) {
     break;
   }
   case ast::expressions::UnaryOpType::NOT: {
+    auto newAddr =
+        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(type), constOne());
+    auto value = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(type), valueAddr);
     auto notValue = builder->create<mlir::LLVM::XOrOp>(
         loc, value, builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1));
     builder->create<mlir::LLVM::StoreOp>(loc, notValue, newAddr);
