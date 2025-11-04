@@ -10,8 +10,8 @@ procedure main() returns integer {
     (r + i) -> std_output;   // 13.5 (int -> real)
     (i - r) -> std_output;   // 6.5
     (i * r) -> std_output;   // 35.0
-    (i / r) -> std_output;   // 2.857143
+    (i / r) -> std_output;   // 2.85714
 
     return 0;
 }
-//CHECK:13.50000013.5000006.50000035.0000002.857143
+//CHECK:13.513.56.5352.85714

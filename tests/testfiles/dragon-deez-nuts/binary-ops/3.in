@@ -13,4 +13,4 @@ procedure main() returns integer {
 
     return 0;
 }
-//CHECK:12.5000008.50000021.0000005.250000
+//CHECK:12.58.5215.25
