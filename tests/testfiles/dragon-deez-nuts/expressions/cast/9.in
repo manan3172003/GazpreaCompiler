@@ -1,0 +1,10 @@
+typealias integer int;
+typealias character char;
+typealias boolean bool;
+
+procedure main() returns integer {
+    char a = as<char>(false);
+    a -> std_output;
+    return 0;
+}
+//CHECK_FILE:9.out
