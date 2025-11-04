@@ -1,0 +1,21 @@
+/*
+test: cast integer to boolean, character, and real
+*/
+typealias integer int;
+typealias character char;
+typealias boolean bool;
+typealias real float;
+
+procedure main() returns integer {
+    boolean bZero = as<boolean>(0);
+    boolean bVal = as<boolean>(42);
+    character letter = as<character>(65);
+    real rVal = as<real>(3);
+
+    bZero -> std_output;
+    bVal -> std_output;
+    letter -> std_output;
+    rVal -> std_output;
+    return 0;
+}
+//CHECK:FTA3

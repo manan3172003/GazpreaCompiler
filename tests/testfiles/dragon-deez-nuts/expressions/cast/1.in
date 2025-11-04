@@ -1,0 +1,14 @@
+/*
+test: cast character to integer
+*/
+typealias integer int;
+typealias character char;
+typealias boolean bool;
+typealias real float;
+
+procedure main() returns integer {
+    int a = as<int>('c');
+    a -> std_output;
+    return 0;
+}
+//CHECK:99

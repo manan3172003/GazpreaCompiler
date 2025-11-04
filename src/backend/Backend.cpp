@@ -524,8 +524,9 @@ mlir::Value Backend::promoteScalarValue(mlir::Value value,
   case utils::BOOL_TO_REAL:
     return builder->create<mlir::LLVM::UIToFPOp>(loc, targetMlirTy, value);
   case utils::CHAR_TO_BOOL: {
-    auto zero = builder->create<mlir::LLVM::ConstantOp>(loc, charTy(), 0);
-    return builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne, value, zero);
+    auto extended = builder->create<mlir::LLVM::ZExtOp>(loc, intTy(), value);
+    auto zero = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
+    return builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne, extended, zero);
   }
   case utils::CHAR_TO_INT:
     return builder->create<mlir::LLVM::ZExtOp>(loc, targetMlirTy, value);

@@ -1,0 +1,18 @@
+/*
+test: cast tuple with character and boolean promotions
+*/
+typealias integer int;
+typealias boolean bool;
+typealias character char;
+typealias real float;
+
+procedure main() returns integer {
+    tuple(character, boolean, integer) src = ('A', false, 7);
+    tuple(real, integer, integer) dst = as<tuple(real, integer, integer)>(src);
+
+    dst.1 -> std_output;
+    dst.2 -> std_output;
+    dst.3 -> std_output;
+    return 0;
+}
+//CHECK:6507

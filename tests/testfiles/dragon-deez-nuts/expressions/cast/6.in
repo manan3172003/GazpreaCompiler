@@ -1,0 +1,16 @@
+/*
+test: cast tuple with promotable elements
+*/
+typealias integer int;
+typealias boolean bool;
+typealias real float;
+
+procedure main() returns integer {
+    tuple(integer, boolean) src = (2, true);
+    tuple(real, integer) dst = as<tuple(real, integer)>(src);
+
+    dst.1 -> std_output;
+    dst.2 -> std_output;
+    return 0;
+}
+//CHECK:21

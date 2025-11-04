@@ -1,0 +1,25 @@
+/*
+test: cast boolean to other scalar types
+*/
+typealias integer int;
+typealias character char;
+typealias boolean bool;
+typealias real float;
+
+procedure main() returns integer {
+    character cTrue = as<character>(true);
+    character cFalse = as<character>(false);
+    integer iTrue = as<integer>(true);
+    integer iFalse = as<integer>(false);
+    real rTrue = as<real>(true);
+    real rFalse = as<real>(false);
+
+    as<integer>(cTrue) -> std_output;
+    as<integer>(cFalse) -> std_output;
+    iTrue -> std_output;
+    iFalse -> std_output;
+    as<integer>(rTrue) -> std_output;
+    as<integer>(rFalse) -> std_output;
+    return 0;
+}
+//CHECK:101010

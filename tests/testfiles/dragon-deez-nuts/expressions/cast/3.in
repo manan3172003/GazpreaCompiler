@@ -1,0 +1,20 @@
+/*
+test: cast character to boolean and real
+*/
+typealias integer int;
+typealias character char;
+typealias boolean bool;
+typealias real float;
+
+procedure main() returns integer {
+    boolean bA = as<boolean>('A');
+    character zeroChar = as<character>(0);
+    boolean bZero = as<boolean>(zeroChar);
+    real rA = as<real>('A');
+
+    bA -> std_output;
+    bZero -> std_output;
+    rA -> std_output;
+    return 0;
+}
+//CHECK:TF65

@@ -1,0 +1,17 @@
+/*
+test: cast real to integer truncation
+*/
+typealias integer int;
+typealias real float;
+
+procedure main() returns integer {
+    real a = 7.9;
+    real b = 2.4;
+    integer aTrunc = as<integer>(a);
+    integer bTrunc = as<integer>(b);
+
+    aTrunc -> std_output;
+    bTrunc -> std_output;
+    return 0;
+}
+//CHECK:72

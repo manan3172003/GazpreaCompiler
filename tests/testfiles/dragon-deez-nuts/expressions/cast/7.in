@@ -1,0 +1,15 @@
+/*
+test: cast tuple with boolean promotion to integer
+*/
+typealias integer int;
+typealias boolean bool;
+
+procedure main() returns integer {
+    tuple(boolean, integer) src = (true, 5);
+    tuple(integer, integer) dst = as<tuple(integer, integer)>(src);
+
+    dst.1 -> std_output;
+    dst.2 -> std_output;
+    return 0;
+}
+//CHECK:15
