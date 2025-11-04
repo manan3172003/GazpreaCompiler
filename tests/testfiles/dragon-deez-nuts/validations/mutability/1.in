@@ -1,0 +1,11 @@
+/*
+This test checks if you can re-assign a global var
+*/
+
+integer i = 10;
+
+procedure main() returns integer {
+    i = 0;
+    return 0;
+}
+//CHECK:AssignError on Line 8: Cannot re-assign a constant value

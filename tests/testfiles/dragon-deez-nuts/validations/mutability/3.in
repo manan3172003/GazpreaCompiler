@@ -1,0 +1,13 @@
+/*
+const procedure params
+*/
+
+procedure myProc(integer a) {
+    x = 10;
+}
+
+procedure main() returns integer {
+    return 0;
+}
+
+//CHECK:AssignError on Line 6: Cannot re-assign a constant value

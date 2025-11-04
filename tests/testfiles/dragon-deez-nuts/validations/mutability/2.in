@@ -1,0 +1,11 @@
+/*
+This test checks if you can re-assign a const
+*/
+
+procedure main() returns integer {
+    const a = 10;
+    a = 10;
+    return 0;
+}
+
+//CHECK:AssignError on Line 7: Cannot re-assign a constant value

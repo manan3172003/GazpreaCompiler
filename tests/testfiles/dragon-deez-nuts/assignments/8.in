@@ -1,0 +1,19 @@
+/*
+Mutating outer variable in a procedure
+*/
+
+procedure myProc(var integer a) returns integer {
+    const x = a;
+    a = 10;
+    return x;
+}
+
+procedure main() returns integer {
+    var x = 5;
+    const y = myProc(x);
+    x ->std_output;
+    y ->std_output;
+    return 0;
+}
+
+//CHECK:105

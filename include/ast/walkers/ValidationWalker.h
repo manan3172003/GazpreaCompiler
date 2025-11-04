@@ -84,9 +84,9 @@ public:
   static bool isComparisonOperator(expressions::BinaryOpType opType);
   static bool areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
                              const std::shared_ptr<expressions::ExpressionAst> &right);
-  void checkArgs(const std::vector<std::shared_ptr<Ast>> &params,
-                 const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
-                 symTable::ScopeType scopeType);
+  void validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
+                    const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
+                    symTable::ScopeType scopeType);
   static void checkVarArgs(const std::vector<std::shared_ptr<Ast>> &params,
                            const std::vector<std::shared_ptr<expressions::ArgAst>> &args);
   static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);

@@ -1,0 +1,16 @@
+/*
+functions cannot mutate values outside its scope
+*/
+
+function myFunc(integer x) returns integer{
+    x = 5;
+    return x;
+}
+
+procedure main() returns integer {
+    var myvar = 10;
+    myFunc(myvar) -> std_output;
+    return 0;
+}
+
+//CHECK:AssignError on Line 6: Cannot re-assign a constant value

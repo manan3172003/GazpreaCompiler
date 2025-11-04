@@ -46,6 +46,7 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
 }
 std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
   const auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+
   // We're going to have an expression since we'll set defaults in AstBuilder
   inAssignment = true;
   visit(ctx->getExpr());
@@ -65,11 +66,16 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
   if (not typesMatch(declarationType, expressionType))
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
 
+  // do not need to check qualifier
+  // var can be assigned to const, const can be assigned to var
+
   // Check if global declaration - must have only literals
   if (ctx->getScope() && ctx->getScope()->getScopeType() == symTable::ScopeType::Global) {
     if (!isLiteralExpression(ctx->getExpr())) {
       throw GlobalError(ctx->getLineNumber(), "Global declarations can only have literal values");
     }
+    if (ctx->getQualifier() == Qualifier::Var)
+      throw TypeError(ctx->getLineNumber(), "Cannot declare a variable as var in Global Scope");
   }
   return {};
 }
@@ -246,7 +252,7 @@ std::any ValidationWalker::visitProcedureCall(std::shared_ptr<statements::Proced
   // Validate arguments against parameters
   const auto params = protoType->getParams();
   const auto args = ctx->getArgs();
-  checkArgs(params, args, methodSymbol->getScopeType());
+  validateArgs(params, args, methodSymbol->getScopeType());
 
   // Cannot call a procedure inside a function
   const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
@@ -271,25 +277,19 @@ std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ct
   if (not ctx->getExpr())
     return {};
 
-  visit(ctx->getExpr());
+  if (ctx->getExpr())
+    visit(ctx->getExpr());
 
-  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(curScope);
+  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(curScope);
+  const auto methodReturnType = methodSymbol->getReturnType();
+  const auto statReturnType = ctx->getExpr()->getInferredSymbolType();
 
-  if (ctx->getExpr()->getInferredSymbolType()->getName() !=
-      methodSymbol->getReturnType()->getName()) {
-    if (not(ctx->getExpr()->getInferredSymbolType()->getName() == "integer" &&
-            methodSymbol->getReturnType()->getName() == "real"))
-      throw TypeError(ctx->getLineNumber(), "Invalid return type");
-  }
-
-  if (ctx->getExpr()->getInferredSymbolType()->getName() == "tuple") {
-    auto returnExprTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
-        ctx->getExpr()->getInferredSymbolType());
-    auto expectedTuple =
-        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(methodSymbol->getReturnType());
-    if (!isTupleTypeMatch(expectedTuple, returnExprTuple))
-      throw TypeError(ctx->getLineNumber(), "Type mismatch");
-  }
+  if (not methodReturnType && statReturnType)
+    throw TypeError(ctx->getLineNumber(), "Return type mismatch");
+  if (methodReturnType && not statReturnType)
+    throw TypeError(ctx->getLineNumber(), "Return type mismatch");
+  if (not typesMatch(methodReturnType, statReturnType))
+    throw TypeError(ctx->getLineNumber(), "Return type mismatch");
   return {};
 }
 std::any
@@ -410,7 +410,7 @@ std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncPr
   // Validate arguments against parameters
   const auto params = protoType->getParams();
   const auto args = ctx->getArgs();
-  checkArgs(params, args, methodSymbol->getScopeType());
+  validateArgs(params, args, methodSymbol->getScopeType());
 
   // Indirect way to check if symbol is a procedure
   if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {

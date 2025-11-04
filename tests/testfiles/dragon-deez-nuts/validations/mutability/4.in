@@ -1,0 +1,14 @@
+/*
+Test checks if you can pass a const arg in a var param
+*/
+
+procedure myProc(var integer a) {
+    a = 10;
+}
+
+procedure main() returns integer {
+    call myProc(10);
+    return 0;
+}
+
+//CHECK:AssignError on Line 10: l-value must be given to var procedure param

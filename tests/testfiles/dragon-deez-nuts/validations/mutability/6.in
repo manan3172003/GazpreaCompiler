@@ -1,0 +1,10 @@
+/*
+This test tries to mutate a const tuple
+*/
+procedure main() returns integer {
+    const tuple(character, character) myTuple;
+    myTuple.1 = 'a';
+    return 0;
+}
+
+//CHECK:AssignError on Line 6: Cannot re-assign a constant value

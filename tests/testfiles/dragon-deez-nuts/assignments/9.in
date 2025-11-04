@@ -1,0 +1,16 @@
+/*
+This test checks if a var can be passed into a const param
+*/
+
+procedure myProc(integer a) returns integer {
+    return a;
+}
+
+procedure main() returns integer {
+    var x = 5;
+    const y = myProc(x);
+    y ->std_output;
+    return 0;
+}
+
+//CHECK:5

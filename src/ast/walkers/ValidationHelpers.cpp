@@ -9,8 +9,11 @@ namespace gazprea::ast::walkers {
 void ValidationWalker::validateVariableAssignmentTypes(
     std::shared_ptr<statements::IdentifierLeftAst> ctx,
     std::shared_ptr<symTable::Type> exprTypeSymbol) {
-  const auto lValSymbolType =
-      std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())->getType();
+  const auto lValSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  const auto lValSymbolType = lValSymbol->getType();
+  if (lValSymbol->getQualifier() == Qualifier::Const)
+    throw AssignError(ctx->getLineNumber(), "Cannot re-assign a constant value");
+
   if (not typesMatch(lValSymbolType, exprTypeSymbol))
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
 }
@@ -19,6 +22,9 @@ void ValidationWalker::validateTupleElementAssignmentTypes(
     std::shared_ptr<statements::TupleElementAssignAst> ctx,
     std::shared_ptr<symTable::Type> exprTypeSymbol) {
   const auto lValSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (lValSymbol->getQualifier() == Qualifier::Const)
+    throw AssignError(ctx->getLineNumber(), "Cannot re-assign a constant value");
+
   const auto tupleType =
       std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(lValSymbol->getType());
   const auto tupleSubType = tupleType->getResolvedTypes()[ctx->getFieldIndex() - 1];
@@ -222,9 +228,9 @@ bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::Express
          isNumericType(right->getInferredSymbolType());
 }
 
-void ValidationWalker::checkArgs(const std::vector<std::shared_ptr<Ast>> &params,
-                                 const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
-                                 const symTable::ScopeType scopeType) {
+void ValidationWalker::validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
+                                    const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
+                                    const symTable::ScopeType scopeType) {
   for (size_t i = 0; i < args.size(); i++) {
     const auto &arg = args[i];
     visit(arg);
@@ -239,6 +245,10 @@ void ValidationWalker::checkArgs(const std::vector<std::shared_ptr<Ast>> &params
       const auto &param = std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(params[i]);
       const auto &paramVarSymbol =
           std::dynamic_pointer_cast<symTable::VariableSymbol>(param->getSymbol());
+
+      if (paramVarSymbol->getQualifier() == Qualifier::Var && not arg->isLValue())
+        throw TypeError(arg->getLineNumber(), "l-value must be given to var procedure param");
+
       if (not typesMatch(paramVarSymbol->getType(), arg->getInferredSymbolType()))
         throw TypeError(arg->getLineNumber(), "Argument type mismatch");
     }
