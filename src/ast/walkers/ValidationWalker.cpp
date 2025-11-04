@@ -274,21 +274,19 @@ std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ct
   }
   if (curScope->getScopeType() == symTable::ScopeType::Function && not ctx->getExpr())
     throw TypeError(ctx->getLineNumber(), "Cannot have empty return in a function");
-  if (not ctx->getExpr())
-    return {};
 
   if (ctx->getExpr())
     visit(ctx->getExpr());
 
   const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(curScope);
   const auto methodReturnType = methodSymbol->getReturnType();
-  const auto statReturnType = ctx->getExpr()->getInferredSymbolType();
+  const auto statReturnType = ctx->getExpr() ? ctx->getExpr()->getInferredSymbolType() : nullptr;
 
   if (not methodReturnType && statReturnType)
     throw TypeError(ctx->getLineNumber(), "Return type mismatch");
   if (methodReturnType && not statReturnType)
     throw TypeError(ctx->getLineNumber(), "Return type mismatch");
-  if (not typesMatch(methodReturnType, statReturnType))
+  if (methodReturnType && statReturnType && not typesMatch(methodReturnType, statReturnType))
     throw TypeError(ctx->getLineNumber(), "Return type mismatch");
   return {};
 }
