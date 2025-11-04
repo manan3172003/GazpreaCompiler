@@ -1,3 +1,4 @@
+#include "CompileTimeExceptions.h"
 #include "ast/RootAst.h"
 #include "ast/expressions/BinaryAst.h"
 #include "ast/expressions/BoolLiteralAst.h"
@@ -36,7 +37,6 @@
 #include "ast/types/IntegerTypeAst.h"
 #include "ast/types/RealTypeAst.h"
 #include "ast/types/TupleTypeAst.h"
-
 #include <ast/walkers/AstBuilder.h>
 
 namespace gazprea::ast::walkers {
@@ -517,7 +517,9 @@ std::any AstBuilder::visitMulDivRemDstarExpr(GazpreaParser::MulDivRemDstarExprCo
   return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx) {
-  return GazpreaBaseVisitor::visitStringLiteral(ctx);
+  throw TypeError(
+      ctx->getStart()->getLine(),
+      "String literals are not supported - use single quotes '' for character literals");
 }
 std::any AstBuilder::visitFuncProcExpr(GazpreaParser::FuncProcExprContext *ctx) {
   const auto fpCallAst = std::make_shared<expressions::FuncProcCallAst>(ctx->getStart());
