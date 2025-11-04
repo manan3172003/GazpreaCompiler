@@ -13,24 +13,6 @@ void ErrorListener::syntaxError(antlr4::Recognizer *recognizer, antlr4::Token *o
   if (msg.find("missing ';'") != std::string::npos) {
     throw SyntaxError(line, "Missing semicolon ';' - expected ';' at the end of statement");
   }
-  if (msg.find("extraneous input") != std::string::npos) {
-    std::string tokenText = offendingSymbol ? offendingSymbol->getText() : "unknown";
-    if (tokenText == "<EOF>") {
-      throw SyntaxError(
-          line,
-          "Unexpected end of file - mismatched braces or parentheses detected earlier in the file");
-    }
-    throw SyntaxError(line, "Unexpected token '" + tokenText +
-                                "' - found extra input that doesn't belong here");
-  }
-  if (msg.find("mismatched input") != std::string::npos) {
-    std::string tokenText = offendingSymbol ? offendingSymbol->getText() : "unknown";
-    throw SyntaxError(line, "Invalid syntax - unexpected syntax near '" + tokenText + "'");
-  }
-  if (msg.find("no viable alternative") != std::string::npos) {
-    std::string tokenText = offendingSymbol ? offendingSymbol->getText() : "unknown";
-    throw SyntaxError(line, "Invalid syntax at '" + tokenText + "' - unable to parse statement");
-  }
 
   const std::vector<std::string> rule_stack =
       static_cast<antlr4::Parser *>(recognizer)->getRuleInvocationStack();
