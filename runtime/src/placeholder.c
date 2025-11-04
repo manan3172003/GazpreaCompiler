@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 
 // Add function named dummyPrint with signature void(int) to llvm to have this linked in.
 void dummyPrint(int i) {
