@@ -18,7 +18,7 @@ compile:
 	 ./bin/gazc runtime-tests/$(file).in runtime-tests/$(file).ll
 
 run-llvm:
-	lli runtime-tests/$(file).ll
+	lli --dlopen=bin/libgazrt.dylib runtime-tests/$(file).ll
 
 test: build
 	cd tests/ && dragon-runner GazpreaCompileConfig.json -v && cd -

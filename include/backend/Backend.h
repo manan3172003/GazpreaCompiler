@@ -83,6 +83,7 @@ public:
 
 protected:
   void setupPrintf() const;
+  void setupIntPow() const;
   void printFloat(mlir::Value floatValue);
   void printInt(mlir::Value integer);
   void printIntChar(mlir::Value integer);
@@ -124,5 +125,19 @@ private:
   mlir::Type getMLIRType(const std::shared_ptr<symTable::Type> &returnType);
   std::vector<mlir::Type>
   getMethodParamTypes(const std::vector<std::shared_ptr<ast::Ast>> &params) const;
+  // Returns the address of mlir::Value of the result of applying the binary operation
+  mlir::Value binaryOperandToValue(ast::expressions::BinaryOpType op,
+                                   std::shared_ptr<symTable::Type> opType,
+                                   std::shared_ptr<symTable::Type> leftType,
+                                   std::shared_ptr<symTable::Type> rightType,
+                                   /*Address of the left value*/
+                                   mlir::Value leftAddr,
+                                   /*Address of the right value*/
+                                   mlir::Value rightAddr);
+  mlir::Value floatBinaryOperandToValue(ast::expressions::BinaryOpType op,
+                                        std::shared_ptr<symTable::Type> opType,
+                                        std::shared_ptr<symTable::Type> leftType,
+                                        std::shared_ptr<symTable::Type> rightType,
+                                        mlir::Value leftAddr, mlir::Value rightAddr);
 };
 } // namespace gazprea::backend

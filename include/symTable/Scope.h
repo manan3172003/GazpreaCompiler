@@ -35,6 +35,9 @@ public:
   }
   void popElementFromScopeStack() { scopeStack.pop_back(); }
   std::pair<std::shared_ptr<Type>, mlir::Value> getTopElementInStack() { return scopeStack.back(); }
+  std::pair<std::shared_ptr<Type>, mlir::Value> getSecondElementInStack() {
+    return scopeStack.at(scopeStack.size() - 2);
+  }
   std::vector<std::pair<std::shared_ptr<Type>, mlir::Value>> &getScopeStack() { return scopeStack; }
   ScopeType getScopeType() const { return scType; }
   std::string scTypeToString() const;

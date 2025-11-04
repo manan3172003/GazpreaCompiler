@@ -4,3 +4,11 @@
 void dummyPrint(int i) {
   printf("I'm a function! %d\n", i);
 }
+
+int32_t ipow(int32_t base, int32_t exp) {
+  int32_t result = 1;
+  for (int32_t i = 0; i < exp; i++) {
+    result *= base;
+  }
+  return result;
+}

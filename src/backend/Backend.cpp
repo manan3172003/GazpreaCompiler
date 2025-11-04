@@ -1,3 +1,4 @@
+#include "../../runtime/include/run_time_errors.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 
@@ -21,6 +22,7 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
 
   // Some initial setup to get off the ground
   setupPrintf();
+  setupIntPow();
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%d\0", "intFormat");
   createGlobalString("%g\0", "floatFormat");
@@ -89,6 +91,13 @@ void Backend::setupPrintf() const {
 
   // Insert the printf function into the body of the parent module.
   builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printf", llvmFnType);
+}
+
+void Backend::setupIntPow() const {
+  // Signature: i32 ipow(i32 base, i32 exp)
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(intTy(), {intTy(), intTy()},
+                                                      /*isVarArg=*/false);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "ipow", llvmFnType);
 }
 
 void Backend::printFloat(mlir::Value floatValue) {
@@ -217,6 +226,249 @@ Backend::getMethodParamTypes(const std::vector<std::shared_ptr<ast::Ast>> &param
     paramTypes.push_back(ptrTy());
   }
   return paramTypes;
+}
+
+mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
+                                          std::shared_ptr<symTable::Type> opType,
+                                          std::shared_ptr<symTable::Type> leftType,
+                                          std::shared_ptr<symTable::Type> rightType,
+                                          mlir::Value incomingLeftAddr,
+                                          mlir::Value incomingRightAddr) {
+
+  // copy values here so casting does not affect the incoming addresses
+  auto leftAddr =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(leftType), constOne());
+  auto rightAddr =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(rightType), constOne());
+  copyValue(leftType, incomingLeftAddr, leftAddr);
+  copyValue(rightType, incomingRightAddr, rightAddr);
+  if (leftType->getName() == "tuple") { // we assert if one is tuple then the other is also a tuple
+    auto leftTypeSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(leftType);
+    auto rightTypeSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(rightType);
+    if (leftTypeSym->getResolvedTypes().size() != rightTypeSym->getResolvedTypes().size()) {
+      // return true/false based on the operation
+      switch (op) {
+      case ast::expressions::BinaryOpType::EQUAL: {
+        auto newAddr =
+            builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(opType), constOne());
+        auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+        builder->create<mlir::LLVM::StoreOp>(loc, falseValue, newAddr);
+        return newAddr;
+      }
+      case ast::expressions::BinaryOpType::NOT_EQUAL: {
+        auto newAddr =
+            builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(opType), constOne());
+        auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+        builder->create<mlir::LLVM::StoreOp>(loc, trueValue, newAddr);
+        return newAddr;
+      }
+      default:
+        MathError("No other binary operations supported for tuples other than equality checks");
+      }
+    }
+    auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
+        loc, ptrTy(), boolTy(), constOne()); // Can only have bool for tuples
+    auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+    builder->create<mlir::LLVM::StoreOp>(loc, trueValue, newAddr);
+
+    // Check if types are the same
+    auto leftResovledTypes = leftTypeSym->getResolvedTypes();
+    auto rightResolvedTypes = rightTypeSym->getResolvedTypes();
+    for (size_t i = 0; i < leftResovledTypes.size(); ++i) {
+      auto leftTypeName = leftResovledTypes[i]->getName();
+      auto rightTypeName = rightResolvedTypes[i]->getName();
+      if ((rightTypeName == "real" && leftTypeName == "integer") ||
+          (rightTypeName == "integer" && leftTypeName == "real")) {
+        continue;
+      } else if (leftTypeName != rightTypeName) {
+        auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+        builder->create<mlir::LLVM::StoreOp>(loc, falseValue, newAddr);
+        return newAddr;
+      }
+    }
+
+    // Compare individual values
+    for (size_t i = 0; i < leftTypeSym->getResolvedTypes().size(); ++i) {
+      auto gepIndices =
+          std::vector<mlir::Value>{builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0),
+                                   builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), i)};
+      auto leftElementPtr = builder->create<mlir::LLVM::GEPOp>(
+          loc, ptrTy(), getMLIRType(leftTypeSym), leftAddr, gepIndices);
+      auto rightElementPtr = builder->create<mlir::LLVM::GEPOp>(
+          loc, ptrTy(), getMLIRType(rightTypeSym), rightAddr, gepIndices);
+      auto comparationValueAddr = binaryOperandToValue(
+          op, opType, leftTypeSym->getResolvedTypes()[i], rightTypeSym->getResolvedTypes()[i],
+          leftElementPtr, rightElementPtr);
+      builder->create<mlir::scf::IfOp>(
+          loc, builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), comparationValueAddr),
+          [&](mlir::OpBuilder &b, mlir::Location l) {
+            auto curValue = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), newAddr);
+            auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+            auto andValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, trueValue);
+            builder->create<mlir::LLVM::StoreOp>(loc, andValue, newAddr);
+            b.create<mlir::scf::YieldOp>(l);
+          },
+          [&](mlir::OpBuilder &b, mlir::Location l) {
+            auto curValue = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), newAddr);
+            auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+            auto andValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, falseValue);
+            builder->create<mlir::LLVM::StoreOp>(loc, andValue, newAddr);
+            b.create<mlir::scf::YieldOp>(l);
+          });
+    }
+    return newAddr;
+
+  } else { // other primitive types
+    castIfNeeded(leftAddr, leftType, rightType);
+    castIfNeeded(rightAddr, rightType, leftType);
+
+    bool isFloatType = (leftType->getName() == "real" || rightType->getName() == "real");
+    if (isFloatType) {
+      return floatBinaryOperandToValue(op, opType, leftType, rightType, leftAddr, rightAddr);
+    }
+
+    auto newAddr =
+        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(opType), constOne());
+    auto leftValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftType), leftAddr);
+    auto rightValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftType), rightAddr);
+    mlir::Value result;
+
+    switch (op) {
+    case ast::expressions::BinaryOpType::ADD:
+      result = builder->create<mlir::LLVM::AddOp>(loc, leftValue, rightValue);
+      break;
+    case ast::expressions::BinaryOpType::SUBTRACT:
+      result = builder->create<mlir::LLVM::SubOp>(loc, leftValue, rightValue);
+      break;
+    case ast::expressions::BinaryOpType::MULTIPLY:
+      result = builder->create<mlir::LLVM::MulOp>(loc, leftValue, rightValue);
+      break;
+    case ast::expressions::BinaryOpType::DIVIDE:
+      // TODO: check division by zero
+      result = builder->create<mlir::LLVM::SDivOp>(loc, leftValue, rightValue);
+      break;
+    case ast::expressions::BinaryOpType::EQUAL:
+      result = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, leftValue,
+                                                   rightValue);
+      break;
+    case ast::expressions::BinaryOpType::NOT_EQUAL:
+      result = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne, leftValue,
+                                                   rightValue);
+      break;
+    case ast::expressions::BinaryOpType::LESS_THAN:
+      result = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt, leftValue,
+                                                   rightValue);
+      break;
+    case ast::expressions::BinaryOpType::GREATER_THAN:
+      result = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sgt, leftValue,
+                                                   rightValue);
+      break;
+    case ast::expressions::BinaryOpType::LESS_EQUAL:
+      result = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sle, leftValue,
+                                                   rightValue);
+      break;
+    case ast::expressions::BinaryOpType::GREATER_EQUAL:
+      result = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sge, leftValue,
+                                                   rightValue);
+      break;
+    case ast::expressions::BinaryOpType::REM:
+      result = builder->create<mlir::LLVM::SRemOp>(loc, leftValue, rightValue);
+      break;
+    case ast::expressions::BinaryOpType::POWER: {
+      auto ipowFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("ipow");
+      result =
+          builder
+              ->create<mlir::LLVM::CallOp>(loc, ipowFunc, mlir::ValueRange{leftValue, rightValue})
+              .getResult();
+      break;
+    }
+    case ast::expressions::BinaryOpType::AND:
+      result = builder->create<mlir::LLVM::AndOp>(loc, leftValue, rightValue);
+      break;
+    case ast::expressions::BinaryOpType::OR:
+      result = builder->create<mlir::LLVM::OrOp>(loc, leftValue, rightValue);
+      break;
+    case ast::expressions::BinaryOpType::XOR:
+      result = builder->create<mlir::LLVM::XOrOp>(loc, leftValue, rightValue);
+      break;
+    default:
+      MathError("Unmatched binary op type");
+      break;
+    }
+
+    builder->create<mlir::LLVM::StoreOp>(loc, result, newAddr);
+    return newAddr;
+  }
+};
+
+mlir::Value Backend::floatBinaryOperandToValue(ast::expressions::BinaryOpType op,
+                                               std::shared_ptr<symTable::Type> opType,
+                                               std::shared_ptr<symTable::Type> leftType,
+                                               std::shared_ptr<symTable::Type> rightType,
+                                               mlir::Value leftAddr, mlir::Value rightAddr) {
+  std::shared_ptr<symTable::Type> operandType;
+  if (leftType->getName() == "real" || rightType->getName() == "real") {
+    operandType = leftType->getName() == "real" ? leftType : rightType;
+  } else {
+    operandType = leftType;
+  }
+
+  auto newAddr =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(opType), constOne());
+  auto leftValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(operandType), leftAddr);
+  auto rightValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(operandType), rightAddr);
+  mlir::Value result;
+
+  switch (op) {
+  case ast::expressions::BinaryOpType::ADD:
+    result = builder->create<mlir::LLVM::FAddOp>(loc, leftValue, rightValue);
+    break;
+  case ast::expressions::BinaryOpType::SUBTRACT:
+    result = builder->create<mlir::LLVM::FSubOp>(loc, leftValue, rightValue);
+    break;
+  case ast::expressions::BinaryOpType::MULTIPLY:
+    result = builder->create<mlir::LLVM::FMulOp>(loc, leftValue, rightValue);
+    break;
+  case ast::expressions::BinaryOpType::DIVIDE:
+    result = builder->create<mlir::LLVM::FDivOp>(loc, leftValue, rightValue);
+    break;
+  case ast::expressions::BinaryOpType::EQUAL:
+    result = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::oeq, leftValue,
+                                                 rightValue);
+    break;
+  case ast::expressions::BinaryOpType::NOT_EQUAL:
+    result = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::one, leftValue,
+                                                 rightValue);
+    break;
+  case ast::expressions::BinaryOpType::LESS_THAN:
+    result = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::olt, leftValue,
+                                                 rightValue);
+    break;
+  case ast::expressions::BinaryOpType::GREATER_THAN:
+    result = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::ogt, leftValue,
+                                                 rightValue);
+    break;
+  case ast::expressions::BinaryOpType::LESS_EQUAL:
+    result = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::ole, leftValue,
+                                                 rightValue);
+    break;
+  case ast::expressions::BinaryOpType::GREATER_EQUAL:
+    result = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::oge, leftValue,
+                                                 rightValue);
+    break;
+  case ast::expressions::BinaryOpType::POWER:
+    result = builder->create<mlir::LLVM::PowOp>(loc, leftValue, rightValue);
+    break;
+  case ast::expressions::BinaryOpType::REM:
+    result = builder->create<mlir::LLVM::FRemOp>(loc, leftValue, rightValue);
+    break;
+  default:
+    MathError("Unmatched binary op type");
+    break;
+  }
+
+  builder->create<mlir::LLVM::StoreOp>(loc, result, newAddr);
+  return newAddr;
 }
 
 void Backend::castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
