@@ -1,0 +1,23 @@
+/*
+Test real comparison operations
+*/
+procedure main() returns integer {
+    // Real comparisons
+    real a = 10.5;
+    real b = 5.5;
+    real c = 10.5;
+
+    (a == b) -> std_output;  // F
+    (a == c) -> std_output;  // T
+    (a != b) -> std_output;  // T
+    (a != c) -> std_output;  // F
+    (a > b) -> std_output;   // T
+    (a < b) -> std_output;   // F
+    (a >= b) -> std_output;  // T
+    (a >= c) -> std_output;  // T
+    (a <= b) -> std_output;  // F
+    (a <= c) -> std_output;  // T
+
+    return 0;
+}
+//CHECK:FTTFTFTTFT

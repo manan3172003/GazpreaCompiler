@@ -1,0 +1,17 @@
+/*
+Test character comparison operations
+*/
+procedure main() returns integer {
+    // Character comparisons
+    character a = 'a';
+    character b = 'b';
+    character c = 'a';
+
+    (a == b) -> std_output;  // F
+    (a == c) -> std_output;  // T
+    (a != b) -> std_output;  // T
+    (a != c) -> std_output;  // F
+
+    return 0;
+}
+//CHECK:FTTF

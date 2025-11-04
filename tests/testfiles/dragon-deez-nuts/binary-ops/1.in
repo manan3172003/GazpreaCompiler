@@ -1,0 +1,18 @@
+/*
+Test integer arithmetic operations
+*/
+procedure main() returns integer {
+    // Integer arithmetic
+    integer a = 10;
+    integer b = 3;
+
+    (a + b) -> std_output;   // 13
+    (a - b) -> std_output;   // 7
+    (a * b) -> std_output;   // 30
+    (a / b) -> std_output;   // 3
+    (a % b) -> std_output;   // 1
+    (a ^ b) -> std_output;   // 1000
+
+    return 0;
+}
+//CHECK:13730311000

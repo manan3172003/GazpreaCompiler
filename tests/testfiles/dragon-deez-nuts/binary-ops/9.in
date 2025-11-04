@@ -1,0 +1,20 @@
+/*
+Test boolean equality operations
+*/
+procedure main() returns integer {
+    // Boolean equality
+    boolean t = true;
+    boolean f = false;
+
+    (t == t) -> std_output;  // T
+    (t == f) -> std_output;  // F
+    (f == t) -> std_output;  // F
+    (f == f) -> std_output;  // T
+    (t != t) -> std_output;  // F
+    (t != f) -> std_output;  // T
+    (f != t) -> std_output;  // T
+    (f != f) -> std_output;  // F
+
+    return 0;
+}
+//CHECK:TFFTFTTF

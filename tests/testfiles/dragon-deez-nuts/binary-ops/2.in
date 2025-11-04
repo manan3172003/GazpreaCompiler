@@ -1,0 +1,23 @@
+/*
+Test integer comparison operations
+*/
+procedure main() returns integer {
+    // Integer comparisons
+    integer a = 10;
+    integer b = 5;
+    integer c = 10;
+
+    (a == b) -> std_output;  // F
+    (a == c) -> std_output;  // T
+    (a != b) -> std_output;  // T
+    (a != c) -> std_output;  // F
+    (a > b) -> std_output;   // T
+    (a < b) -> std_output;   // F
+    (a >= b) -> std_output;  // T
+    (a >= c) -> std_output;  // T
+    (a <= b) -> std_output;  // F
+    (a <= c) -> std_output;  // T
+
+    return 0;
+}
+//CHECK:FTTFTFTTFT

@@ -1,0 +1,17 @@
+/*
+Test mixed integer-real operations (implicit casting)
+*/
+procedure main() returns integer {
+    // Mixed integer-real arithmetic
+    integer i = 10;
+    real r = 3.5;
+
+    (i + r) -> std_output;   // 13.5 (int -> real)
+    (r + i) -> std_output;   // 13.5 (int -> real)
+    (i - r) -> std_output;   // 6.5
+    (i * r) -> std_output;   // 35.0
+    (i / r) -> std_output;   // 2.857143
+
+    return 0;
+}
+//CHECK:13.50000013.5000006.50000035.0000002.857143

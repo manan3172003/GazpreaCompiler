@@ -1,0 +1,16 @@
+/*
+Test unary ops operations
+*/
+procedure main() returns integer {
+    integer a = 10;
+    boolean t = true;
+    boolean f = false;
+
+    -a -> std_output; // -10
+    +(-a) -> std_output; // -10
+    not t -> std_output; // F
+    not f -> std_output; // T
+
+    return 0;
+}
+//CHECK:-10-10FT

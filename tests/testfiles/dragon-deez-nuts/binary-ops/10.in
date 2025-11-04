@@ -1,0 +1,22 @@
+/*
+Test tuple equality operations
+*/
+procedure main() returns integer {
+    // Tuple equality
+    tuple(integer, integer) a = (1, 4);
+    tuple(integer, integer) b = (5, 6);
+    tuple(integer, real) c = (1, 4);
+    tuple(integer, real, character) d = (1, 4, 'c');
+
+    (a == b) -> std_output; // F
+    (a == c) -> std_output; // T
+    (a != b) -> std_output; // T
+    (a != c) -> std_output; // F
+    (a != d) -> std_output; // T
+    (c != c) -> std_output; // F
+    (d == d) -> std_output; // T
+    (a == a) -> std_output; // T
+
+    return 0;
+}
+//CHECK:FTTFTFTT

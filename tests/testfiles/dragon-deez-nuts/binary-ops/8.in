@@ -1,0 +1,19 @@
+/*
+Test mixed integer-real comparison operations (implicit casting)
+*/
+procedure main() returns integer {
+    // Mixed integer-real comparisons
+    integer i = 10;
+    real r = 10.0;
+    real s = 9.5;
+
+    (i == r) -> std_output;  // T (10 == 10.0)
+    (i != r) -> std_output;  // F
+    (i > s) -> std_output;   // T (10 > 9.5)
+    (i < s) -> std_output;   // F
+    (i >= r) -> std_output;  // T
+    (i <= r) -> std_output;  // T
+
+    return 0;
+}
+//CHECK:TFTFTT

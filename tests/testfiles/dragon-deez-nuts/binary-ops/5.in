@@ -1,0 +1,29 @@
+/*
+Test boolean operations
+*/
+procedure main() returns integer {
+    // Boolean operations
+    boolean t = true;
+    boolean f = false;
+
+    // AND operations
+    (t and t) -> std_output;  // T
+    (t and f) -> std_output;  // F
+    (f and t) -> std_output;  // F
+    (f and f) -> std_output;  // F
+
+    // OR operations
+    (t or t) -> std_output;   // T
+    (t or f) -> std_output;   // T
+    (f or t) -> std_output;   // T
+    (f or f) -> std_output;   // F
+
+    // XOR operations
+    (t xor t) -> std_output;  // F
+    (t xor f) -> std_output;  // T
+    (f xor t) -> std_output;  // T
+    (f xor f) -> std_output;  // F
+
+    return 0;
+}
+//CHECK:TFFFTTTFFTTF
