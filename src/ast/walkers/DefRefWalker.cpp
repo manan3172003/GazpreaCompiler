@@ -158,6 +158,41 @@ DefRefWalker::resolvedType(int lineNumber, const std::shared_ptr<types::DataType
   return type;
 }
 
+std::shared_ptr<expressions::ExpressionAst>
+DefRefWalker::createDefaultLiteral(const std::shared_ptr<symTable::Type> &type,
+                                   antlr4::Token *token) {
+  if (!type) {
+    return nullptr;
+  }
+  if (type->getName() == "integer")
+    return std::make_shared<expressions::IntegerLiteralAst>(token, 0);
+  if (type->getName() == "real")
+    return std::make_shared<expressions::RealLiteralAst>(token, 0.0);
+  if (type->getName() == "character") {
+    auto charLiteral = std::make_shared<expressions::CharLiteralAst>(token);
+    charLiteral->setValue("\\0");
+    return charLiteral;
+  }
+  if (type->getName() == "boolean") {
+    auto boolLiteral = std::make_shared<expressions::BoolLiteralAst>(token);
+    boolLiteral->setValue(false);
+    return boolLiteral;
+  }
+  if (type->getName() == "tuple") {
+    auto tupleLiteral = std::make_shared<expressions::TupleLiteralAst>(token);
+    const auto tupleTypeAst = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(type);
+
+    for (const auto &elementType : tupleTypeAst->getResolvedTypes()) {
+      auto elementDefault = createDefaultLiteral(elementType, token);
+      if (elementDefault) {
+        tupleLiteral->addElement(elementDefault);
+      }
+    }
+    return tupleLiteral;
+  }
+  return nullptr;
+}
+
 std::any DefRefWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   ctx->setScope(symTab->getGlobalScope());
   for (const auto &child : ctx->children) {
@@ -174,9 +209,6 @@ std::any DefRefWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst
 std::any DefRefWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
   throwDuplicateSymbolError(ctx, ctx->getName(), symTab->getCurrentScope(), false);
   ctx->setScope(symTab->getCurrentScope());
-  if (ctx->getExpr()) {
-    visit(ctx->getExpr());
-  }
   const auto varSymbol =
       std::make_shared<symTable::VariableSymbol>(ctx->getName(), ctx->getQualifier());
   if (ctx->getType()) {
@@ -184,6 +216,19 @@ std::any DefRefWalker::visitDeclaration(std::shared_ptr<statements::DeclarationA
     varSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   }
 
+  if (ctx->getExpr()) {
+    visit(ctx->getExpr());
+  } else {
+    if (not ctx->getExpr() && ctx->getType()) {
+      // Set everything to base (false, '\0', 0, 0.0)
+      // normal primitives (boolean, character, integer, real)
+      // tuples
+      const auto type = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
+      auto defaultExpr = createDefaultLiteral(type, ctx->token);
+      ctx->setExpr(defaultExpr);
+      visit(ctx->getExpr());
+    }
+  }
   varSymbol->setDef(ctx);
   symTab->getCurrentScope()->defineSymbol(varSymbol);
   ctx->setSymbol(varSymbol);

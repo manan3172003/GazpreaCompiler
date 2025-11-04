@@ -1,18 +1,41 @@
 /*
 This test checks if values are initialized in variables on declaration
 */
+typealias integer int;
+typealias int i32;
+typealias character char;
+typealias real float;
+typealias boolean bool;
+typealias tuple(char, bool) myCharTuple;
 
 procedure main() returns integer {
     var tuple (integer, integer) t;
     var integer a;
     var real b;
     var character c;
+
+    const int var1;
+    const i32 var2;
+    const char var3;
+    const float var4;
+    const bool var5;
+    const myCharTuple var6;
+
     c -> std_output;
     b -> std_output;
     a -> std_output;
     t.1 -> std_output;
     t.2 -> std_output;
+
+    var1 -> std_output;
+    var2 -> std_output;
+    var3 -> std_output;
+    var4 -> std_output;
+    var5 -> std_output;
+    var6.1 -> std_output;
+    var6.2 -> std_output;
+
     return 0;
 }
 // expected output needs to change once escape character's printing is implemented
-//CHECK:00000
+//CHECK:000000000F0F

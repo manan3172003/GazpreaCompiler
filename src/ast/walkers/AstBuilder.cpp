@@ -389,16 +389,6 @@ std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
   if (ctx->expr()) {
     declAst->setExpr(
         std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
-  } else {
-    // Set everything to base (false, '\0', 0, 0.0)
-    // normal primitives (boolean, character, integer, real)
-    // tuples
-    if (declAst->getType()) {
-      auto defaultExpr = createDefaultLiteral(declAst->getType(), ctx->getStart());
-      if (defaultExpr) {
-        declAst->setExpr(defaultExpr);
-      }
-    }
   }
 
   return std::static_pointer_cast<statements::StatementAst>(declAst);
@@ -621,39 +611,6 @@ std::shared_ptr<types::DataTypeAst> AstBuilder::makeType(GazpreaParser::TypeCont
   }
   if (typeContext->tuple_type()) {
     return std::any_cast<std::shared_ptr<types::TupleTypeAst>>(visit(typeContext->tuple_type()));
-  }
-  return nullptr;
-}
-
-std::shared_ptr<expressions::ExpressionAst>
-AstBuilder::createDefaultLiteral(const std::shared_ptr<types::DataTypeAst> &typeAst,
-                                 antlr4::Token *token) {
-  if (!typeAst) {
-    return nullptr;
-  }
-  if (typeAst->getNodeType() == NodeType::IntegerType) {
-    return std::make_shared<expressions::IntegerLiteralAst>(token, 0);
-  } else if (typeAst->getNodeType() == NodeType::RealType) {
-    return std::make_shared<expressions::RealLiteralAst>(token, 0.0);
-  } else if (typeAst->getNodeType() == NodeType::CharType) {
-    auto charLiteral = std::make_shared<expressions::CharLiteralAst>(token);
-    charLiteral->setValue("\\0");
-    return charLiteral;
-  } else if (typeAst->getNodeType() == NodeType::BoolType) {
-    auto boolLiteral = std::make_shared<expressions::BoolLiteralAst>(token);
-    boolLiteral->setValue(false);
-    return boolLiteral;
-  } else if (typeAst->getNodeType() == NodeType::TupleType) {
-    auto tupleLiteral = std::make_shared<expressions::TupleLiteralAst>(token);
-    auto tupleTypeAst = std::dynamic_pointer_cast<types::TupleTypeAst>(typeAst);
-
-    for (const auto &elementType : tupleTypeAst->getTypes()) {
-      auto elementDefault = createDefaultLiteral(elementType, token);
-      if (elementDefault) {
-        tupleLiteral->addElement(elementDefault);
-      }
-    }
-    return tupleLiteral;
   }
   return nullptr;
 }
