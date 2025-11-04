@@ -1,0 +1,17 @@
+/*
+Checks unary op
+*/
+
+procedure main() returns integer {
+    const integer a = 10;
+    const integer b = 9;
+    const boolean c = true;
+    const boolean d = false;
+
+    (a - (-b)) -> std_output;
+    (c and not d) -> std_output;
+
+    return 0;
+}
+
+//CHECK:19T
