@@ -10,7 +10,7 @@ Updated by: Quinn Pham (qpham@ualberta.ca)
 ### Modified by:
 - Armaan Katyal (katyal1@ualberta.ca)
 - Manan Jain (mjain2@ualberta.ca)
-- Mansoor anis (manis@ualberta.ca)
+- Mansoor Anis (manis@ualberta.ca)
 - Kunal Rao (ksrao@ualberta.ca)
 
 # Usage

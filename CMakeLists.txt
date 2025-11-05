@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(GazpreaBase)
+project(Gazprea)
 
 # Ensure tool dependencies.
 include(ExternalProject) # Required to download and build external projects (i.e. ANTLR).
