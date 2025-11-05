@@ -6,6 +6,24 @@
 
 namespace gazprea::ast::walkers {
 
+bool ValidationWalker::isScalar(const std::shared_ptr<symTable::Type> &type) {
+  if (type->getName() == "integer")
+    return true;
+  if (type->getName() == "real")
+    return true;
+  if (type->getName() == "character")
+    return true;
+  if (type->getName() == "boolean")
+    return true;
+  return false;
+}
+
+bool ValidationWalker::isTuple(const std::shared_ptr<symTable::Type> &type) {
+  if (type->getName() == "tuple")
+    return true;
+  return false;
+}
+
 void ValidationWalker::validateVariableAssignmentTypes(
     std::shared_ptr<statements::IdentifierLeftAst> ctx,
     std::shared_ptr<symTable::Type> exprTypeSymbol) {

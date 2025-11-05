@@ -192,6 +192,8 @@ std::any ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ct
     throw StatementError(ctx->getLineNumber(), "Output statement not allowed in functions");
   }
   visit(ctx->getExpression());
+  if (ctx->getExpression()->getInferredSymbolType()->getName() == "tuple")
+    throw TypeError(ctx->getLineNumber(), "Cannot print a tuple");
   return {};
 }
 std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
@@ -452,27 +454,32 @@ std::any ValidationWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst
 }
 std::any ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   visit(ctx->getExpression());
-  if (ctx->getExpression()->getInferredDataType()->getNodeType() == NodeType::TupleType) {
+  const auto exprType = ctx->getExpression()->getInferredSymbolType();
+  const auto targetType = ctx->getResolvedTargetType();
+
+  if (isTuple(exprType) && isTuple(targetType)) {
     const auto targetTupleTypeSymbol =
-        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getResolvedTargetType());
-    const auto curTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
-        ctx->getExpression()->getInferredSymbolType());
+        std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(targetType);
+    const auto curTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(exprType);
     const auto targetSubTypes = targetTupleTypeSymbol->getResolvedTypes();
     const auto curSubTypes = curTupleTypeSymbol->getResolvedTypes();
+
     if (curSubTypes.size() != targetSubTypes.size())
       throw SizeError(ctx->getLineNumber(), "Tuple sizes do not match");
     for (size_t i = 0; i < curSubTypes.size(); i++) {
-      if (!utils::isPromotable(curSubTypes[i]->getName(), targetSubTypes[i]->getName())) {
+      if (not utils::isPromotable(curSubTypes[i]->getName(), targetSubTypes[i]->getName())) {
         throw TypeError(ctx->getLineNumber(), "Tuple sub type not promotable");
       }
     }
-  } else {
+  } else if (isScalar(exprType) && isScalar(targetType)) {
     // check scalar is promotable
     const auto promoteTo = ctx->getResolvedTargetType()->getName();
     const auto promoteFrom = ctx->getExpression()->getInferredSymbolType()->getName();
-    if (!utils::isPromotable(promoteFrom, promoteTo)) {
+    if (not utils::isPromotable(promoteFrom, promoteTo)) {
       throw TypeError(ctx->getLineNumber(), "Type not promotable");
     }
+  } else {
+    throw TypeError(ctx->getLineNumber(), "Illegal cast");
   }
   ctx->setInferredSymbolType(ctx->getResolvedTargetType());
   ctx->setInferredDataType(ctx->getExpression()->getInferredDataType());

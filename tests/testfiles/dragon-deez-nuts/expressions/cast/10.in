@@ -1,0 +1,9 @@
+/*
+This test tries to cast a scalar to a tuple
+*/
+procedure main() returns integer {
+  const t = as<tuple(integer, boolean)>('A');
+  return 0;
+}
+
+//CHECK:TypeError on Line 5
