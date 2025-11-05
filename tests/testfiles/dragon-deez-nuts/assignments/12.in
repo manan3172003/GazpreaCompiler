@@ -1,0 +1,16 @@
+/*
+This test checks if var tuple can be passed in var procedure param
+*/
+
+procedure proc(var tuple(character, character) tupl) {
+    return;
+}
+
+
+procedure main() returns integer {
+    var tuple(character, character) myTuple;
+    call proc(myTuple);
+    return 0;
+}
+
+//CHECK:

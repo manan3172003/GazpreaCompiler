@@ -1,0 +1,19 @@
+/*
+Procedure call should throw aliasing error
+*/
+
+procedure p(var integer a, var integer b, const integer c, const integer d) {
+   integer x = 0;
+}
+
+procedure main() returns integer {
+  var integer x = 0;
+  var integer y = 0;
+  var integer z = 0;
+
+  call p(x, x, y, y);
+
+  return 0;
+}
+
+//CHECK:AliasingError on Line 14

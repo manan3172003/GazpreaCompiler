@@ -1,0 +1,32 @@
+/*
+This test tries to mutate an element of a var tuple
+*/
+
+typealias character char;
+typealias tuple(character, boolean) myTuple;
+
+procedure proc(var char x, const character c) returns real {
+    x = c;
+    return 0;
+}
+
+procedure main() returns integer {
+    var x = 0.0;
+    var myTuple tup1 = ('x', false);
+    tup1.1->std_output;
+    '\n'->std_output;
+    tup1.2->std_output;
+    '\n'->std_output;
+
+    call proc(tup1.1, '0');
+    tup1.1->std_output;
+    '\n'->std_output;
+
+    x = proc(tup1.1, 'a');
+    tup1.1->std_output;
+    '\n'->std_output;
+
+    return 0;
+}
+
+//CHECK_FILE:9.out
