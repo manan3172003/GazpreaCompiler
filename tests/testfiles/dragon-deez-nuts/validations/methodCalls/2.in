@@ -1,0 +1,12 @@
+/*
+This test checks if the number of args matches the number of params in procedure calls
+*/
+
+procedure p(integer a, integer b) returns integer { return a+b; }
+
+procedure main() returns integer {
+  p(1) -> std_output;   // wrong #args
+  return 0;
+}
+
+//CHECK:TypeError on Line 8

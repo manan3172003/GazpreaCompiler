@@ -86,7 +86,7 @@ public:
                              const std::shared_ptr<expressions::ExpressionAst> &right);
   void validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
-                    symTable::ScopeType scopeType);
+                    symTable::ScopeType scopeType, int lineNumber);
   static void checkVarArgs(const std::vector<std::shared_ptr<Ast>> &params,
                            const std::vector<std::shared_ptr<expressions::ArgAst>> &args);
   static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);

@@ -252,7 +252,7 @@ std::any ValidationWalker::visitProcedureCall(std::shared_ptr<statements::Proced
   // Validate arguments against parameters
   const auto params = protoType->getParams();
   const auto args = ctx->getArgs();
-  validateArgs(params, args, methodSymbol->getScopeType());
+  validateArgs(params, args, methodSymbol->getScopeType(), ctx->getLineNumber());
 
   // Cannot call a procedure inside a function
   const auto curScope = getEnclosingFuncProcScope(ctx->getScope());
@@ -408,7 +408,7 @@ std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncPr
   // Validate arguments against parameters
   const auto params = protoType->getParams();
   const auto args = ctx->getArgs();
-  validateArgs(params, args, methodSymbol->getScopeType());
+  validateArgs(params, args, methodSymbol->getScopeType(), ctx->getLineNumber());
 
   // Indirect way to check if symbol is a procedure
   if (methodSymbol->getScopeType() == symTable::ScopeType::Procedure) {

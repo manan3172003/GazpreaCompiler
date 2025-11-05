@@ -230,7 +230,12 @@ bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::Express
 
 void ValidationWalker::validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
                                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
-                                    const symTable::ScopeType scopeType) {
+                                    const symTable::ScopeType scopeType, const int lineNumber) {
+  if (args.empty() && params.empty())
+    return;
+  if (args.size() != params.size())
+    throw TypeError(lineNumber, "Arguments size doesn't match the parameters size");
+
   for (size_t i = 0; i < args.size(); i++) {
     const auto &arg = args[i];
     visit(arg);
