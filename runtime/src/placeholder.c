@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include "run_time_errors.h"
 
 // Add function named dummyPrint with signature void(int) to llvm to have this linked in.
 void dummyPrint(int i) {
@@ -12,4 +13,8 @@ int32_t ipow(int32_t base, int32_t exp) {
     result *= base;
   }
   return result;
+}
+
+void throwDivisionByZeroError() {
+    MathError("Division by zero");
 }

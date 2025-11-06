@@ -85,6 +85,7 @@ public:
 protected:
   void setupPrintf() const;
   void setupIntPow() const;
+  void setupThrowDivisionByZeroError() const;
   void printFloat(mlir::Value floatValue);
   void printInt(mlir::Value integer);
   void printIntChar(mlir::Value integer);

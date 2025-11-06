@@ -24,6 +24,7 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   // Some initial setup to get off the ground
   setupPrintf();
   setupIntPow();
+  setupThrowDivisionByZeroError();
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%d\0", "intFormat");
   createGlobalString("%g\0", "floatFormat");
@@ -99,6 +100,13 @@ void Backend::setupIntPow() const {
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(intTy(), {intTy(), intTy()},
                                                       /*isVarArg=*/false);
   builder->create<mlir::LLVM::LLVMFuncOp>(loc, "ipow", llvmFnType);
+}
+
+void Backend::setupThrowDivisionByZeroError() const {
+  // Signature: void throwDivisionByZeroError()
+  auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "throwDivisionByZeroError", llvmFnType);
 }
 
 void Backend::printFloat(mlir::Value floatValue) {
@@ -269,8 +277,13 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
     }
     auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
         loc, ptrTy(), boolTy(), constOne()); // Can only have bool for tuples
-    auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
-    builder->create<mlir::LLVM::StoreOp>(loc, trueValue, newAddr);
+    mlir::Value cumalativeResult;
+    if (op == ast::expressions::BinaryOpType::EQUAL) {
+      cumalativeResult = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+    } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+      cumalativeResult = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+    }
+    builder->create<mlir::LLVM::StoreOp>(loc, cumalativeResult, newAddr);
 
     // Check if types are the same
     auto leftResovledTypes = leftTypeSym->getResolvedTypes();
@@ -282,8 +295,13 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
           (rightTypeName == "integer" && leftTypeName == "real")) {
         continue;
       } else if (leftTypeName != rightTypeName) {
-        auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
-        builder->create<mlir::LLVM::StoreOp>(loc, falseValue, newAddr);
+        if (op == ast::expressions::BinaryOpType::EQUAL) {
+          auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+          builder->create<mlir::LLVM::StoreOp>(loc, falseValue, newAddr);
+        } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+          auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+          builder->create<mlir::LLVM::StoreOp>(loc, trueValue, newAddr);
+        }
         return newAddr;
       }
     }
@@ -305,15 +323,25 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
           [&](mlir::OpBuilder &b, mlir::Location l) {
             auto curValue = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), newAddr);
             auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
-            auto andValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, trueValue);
-            builder->create<mlir::LLVM::StoreOp>(loc, andValue, newAddr);
+            mlir::Value newCumalativeValue;
+            if (op == ast::expressions::BinaryOpType::EQUAL) {
+              newCumalativeValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, trueValue);
+            } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+              newCumalativeValue = builder->create<mlir::LLVM::OrOp>(loc, curValue, trueValue);
+            }
+            builder->create<mlir::LLVM::StoreOp>(loc, newCumalativeValue, newAddr);
             b.create<mlir::scf::YieldOp>(l);
           },
           [&](mlir::OpBuilder &b, mlir::Location l) {
             auto curValue = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), newAddr);
             auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
-            auto andValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, falseValue);
-            builder->create<mlir::LLVM::StoreOp>(loc, andValue, newAddr);
+            mlir::Value newCumalativeValue;
+            if (op == ast::expressions::BinaryOpType::EQUAL) {
+              newCumalativeValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, falseValue);
+            } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+              newCumalativeValue = builder->create<mlir::LLVM::OrOp>(loc, curValue, falseValue);
+            }
+            builder->create<mlir::LLVM::StoreOp>(loc, newCumalativeValue, newAddr);
             b.create<mlir::scf::YieldOp>(l);
           });
     }
@@ -344,10 +372,18 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
     case ast::expressions::BinaryOpType::MULTIPLY:
       result = builder->create<mlir::LLVM::MulOp>(loc, leftValue, rightValue);
       break;
-    case ast::expressions::BinaryOpType::DIVIDE:
-      // TODO: check division by zero
+    case ast::expressions::BinaryOpType::DIVIDE: {
+      auto isZeroCond = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq,
+                                                            rightValue, constZero());
+      builder->create<mlir::scf::IfOp>(loc, isZeroCond, [&](mlir::OpBuilder &b, mlir::Location l) {
+        auto throwDivByZeroFunc =
+            module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("throwDivisionByZeroError");
+        b.create<mlir::LLVM::CallOp>(l, throwDivByZeroFunc, mlir::ValueRange{});
+        b.create<mlir::scf::YieldOp>(l);
+      });
       result = builder->create<mlir::LLVM::SDivOp>(loc, leftValue, rightValue);
       break;
+    }
     case ast::expressions::BinaryOpType::EQUAL:
       result = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, leftValue,
                                                    rightValue);
@@ -430,9 +466,20 @@ mlir::Value Backend::floatBinaryOperandToValue(ast::expressions::BinaryOpType op
   case ast::expressions::BinaryOpType::MULTIPLY:
     result = builder->create<mlir::LLVM::FMulOp>(loc, leftValue, rightValue);
     break;
-  case ast::expressions::BinaryOpType::DIVIDE:
+  case ast::expressions::BinaryOpType::DIVIDE: {
+    auto floatZero =
+        builder->create<mlir::LLVM::ConstantOp>(loc, getMLIRType(operandType), llvm::APFloat(0.0f));
+    auto isZeroCond = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::oeq,
+                                                          rightValue, floatZero);
+    builder->create<mlir::scf::IfOp>(loc, isZeroCond, [&](mlir::OpBuilder &b, mlir::Location l) {
+      auto throwDivByZeroFunc =
+          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("throwDivisionByZeroError");
+      b.create<mlir::LLVM::CallOp>(l, throwDivByZeroFunc, mlir::ValueRange{});
+      b.create<mlir::scf::YieldOp>(l);
+    });
     result = builder->create<mlir::LLVM::FDivOp>(loc, leftValue, rightValue);
     break;
+  }
   case ast::expressions::BinaryOpType::EQUAL:
     result = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::oeq, leftValue,
                                                  rightValue);
