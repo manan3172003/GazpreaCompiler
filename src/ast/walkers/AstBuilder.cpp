@@ -361,7 +361,7 @@ std::any AstBuilder::visitTupleElementLVal(GazpreaParser::TupleElementLValContex
   std::string accessToken = ctx->TUPLE_ACCESS()->getText();
   size_t pos = accessToken.find('.');
   lVal->setTupleName(accessToken.substr(0, pos));
-  lVal->setFieldIndex(std::stoi(accessToken.substr(pos + 1)));
+  lVal->setFieldIndex(getInt(accessToken.substr(pos + 1), ctx->getStart()->getLine()));
 
   return std::static_pointer_cast<statements::AssignLeftAst>(lVal);
 }
@@ -456,7 +456,7 @@ std::any AstBuilder::visitUnaryExpr(GazpreaParser::UnaryExprContext *ctx) {
 }
 std::any AstBuilder::visitFloatLiteral(GazpreaParser::FloatLiteralContext *ctx) {
   auto realAst = std::make_shared<expressions::RealLiteralAst>(
-      ctx->getStart(), std::stof(ctx->FLOAT_LIT()->getText()));
+      ctx->getStart(), getFloat(ctx->FLOAT_LIT()->getText(), ctx->getStart()->getLine()));
   return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any AstBuilder::visitAppendExpr(GazpreaParser::AppendExprContext *ctx) {
@@ -467,7 +467,7 @@ std::any AstBuilder::visitTupleAccessExpr(GazpreaParser::TupleAccessExprContext 
   std::string accessToken = ctx->TUPLE_ACCESS()->getText();
   size_t pos = accessToken.find('.');
   tupleExpression->setTupleName(accessToken.substr(0, pos));
-  tupleExpression->setFieldIndex(std::stoi(accessToken.substr(pos + 1)));
+  tupleExpression->setFieldIndex(getInt(accessToken.substr(pos + 1), ctx->getStart()->getLine()));
   return std::static_pointer_cast<expressions::ExpressionAst>(tupleExpression);
 }
 std::any AstBuilder::visitIdentifier(GazpreaParser::IdentifierContext *ctx) {
@@ -480,18 +480,18 @@ std::any AstBuilder::visitAddSubExpr(GazpreaParser::AddSubExprContext *ctx) {
 }
 std::any AstBuilder::visitIntLiteral(GazpreaParser::IntLiteralContext *ctx) {
   const auto intAst = std::make_shared<expressions::IntegerLiteralAst>(
-      ctx->getStart(), std::stoi(ctx->INT_LIT()->getText()));
+      ctx->getStart(), getInt(ctx->INT_LIT()->getText(), ctx->getStart()->getLine()));
   return std::static_pointer_cast<expressions::ExpressionAst>(intAst);
 }
 std::any
 AstBuilder::visitScientificFloatLiteral(GazpreaParser::ScientificFloatLiteralContext *ctx) {
   auto realAst = std::make_shared<expressions::RealLiteralAst>(
-      ctx->getStart(), std::stof(ctx->SCIENTIFIC_FLOAT()->getText()));
+      ctx->getStart(), getFloat(ctx->SCIENTIFIC_FLOAT()->getText(), ctx->getStart()->getLine()));
   return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any AstBuilder::visitDotFloatLiteral(GazpreaParser::DotFloatLiteralContext *ctx) {
   auto realAst = std::make_shared<expressions::RealLiteralAst>(
-      ctx->getStart(), std::stof(ctx->DOT_FLOAT()->getText()));
+      ctx->getStart(), getFloat(ctx->DOT_FLOAT()->getText(), ctx->getStart()->getLine()));
   return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any AstBuilder::visitByExpr(GazpreaParser::ByExprContext *ctx) {
@@ -510,7 +510,8 @@ std::any AstBuilder::visitRelationalExpr(GazpreaParser::RelationalExprContext *c
 }
 std::any AstBuilder::visitFloatDotLiteral(GazpreaParser::FloatDotLiteralContext *ctx) {
   auto realAst = std::make_shared<expressions::RealLiteralAst>(
-      ctx->getStart(), std::stof(ctx->FLOAT_DOT()->getText().substr(0, -1)));
+      ctx->getStart(),
+      getFloat(ctx->FLOAT_DOT()->getText().substr(0, -1), ctx->getStart()->getLine()));
   return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any AstBuilder::visitTupleLiteral(GazpreaParser::TupleLiteralContext *ctx) {
@@ -650,6 +651,25 @@ char AstBuilder::convertStringToChar(const std::string &str, int lineNumber) {
     }
   } else {
     throw SyntaxError(lineNumber, "Invalid character literal: " + str);
+  }
+}
+int AstBuilder::getInt(std::string str, int lineNumber) {
+  try {
+    return std::stoi(str);
+  } catch (const std::out_of_range &e) {
+    throw LiteralError(lineNumber, "Integer out of bounds");
+  } catch (const std::invalid_argument &e) {
+    throw SyntaxError(lineNumber, "Integer value invalid");
+  }
+}
+
+float AstBuilder::getFloat(std::string str, int lineNumber) {
+  try {
+    return std::stof(str);
+  } catch (const std::out_of_range &e) {
+    throw LiteralError(lineNumber, "Float out of bounds");
+  } catch (const std::invalid_argument &e) {
+    throw SyntaxError(lineNumber, "Float value invalid");
   }
 }
 } // namespace gazprea::ast::walkers

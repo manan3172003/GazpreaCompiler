@@ -1,0 +1,10 @@
+/*
+Out of bounds float declaration
+*/
+procedure main() returns integer {
+    real inf_val_r = 42.e+39;
+    inf_val_r -> std_output;
+
+    return 0;
+}
+//CHECK: LiteralError on Line 5

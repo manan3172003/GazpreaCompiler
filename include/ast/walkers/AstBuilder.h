@@ -73,5 +73,7 @@ private:
   std::any createBinaryExpr(antlr4::tree::ParseTree *leftCtx, const std::string &op,
                             antlr4::tree::ParseTree *rightCtx, antlr4::Token *token);
   char convertStringToChar(const std::string &str, int lineNumber);
+  int getInt(std::string str, int lineNumber);
+  float getFloat(std::string str, int lineNumber);
 };
 } // namespace gazprea::ast::walkers

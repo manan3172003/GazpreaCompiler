@@ -1,0 +1,10 @@
+/*
+Out of bounds integer declaration
+*/
+procedure main() returns integer {
+    integer inf_val = 2147483649;
+    inf_val -> std_output;
+
+    return 0;
+}
+//CHECK: LiteralError on Line 5
