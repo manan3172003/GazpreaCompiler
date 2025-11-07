@@ -210,6 +210,7 @@ std::any AstBuilder::visitOutput_stat(GazpreaParser::Output_statContext *ctx) {
   return std::static_pointer_cast<statements::StatementAst>(outputAst);
 }
 std::any AstBuilder::visitInput_stat(GazpreaParser::Input_statContext *ctx) {
+  throw SyntaxError(ctx->getStart()->getLine(), "Input statement not allowed");
   auto lVal = std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left()));
 
   auto inputAst = std::make_shared<statements::InputAst>(ctx->getStart());
