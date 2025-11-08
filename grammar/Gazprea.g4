@@ -90,7 +90,7 @@ dec_stat
 
 tuple_type: TUPLE LPAREN type_list RPAREN;
 
-type_list: type (COMMA type)*;
+type_list: type (COMMA type)+;
 
 type
     : BOOLEAN

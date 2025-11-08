@@ -1,0 +1,9 @@
+/*
+This test tries to make a tuple of size 1
+*/
+procedure main() returns integer {
+    tuple(integer) a = (1, 3);
+    return 0;
+}
+
+//CHECK:SyntaxError on Line 5
