@@ -93,12 +93,14 @@ tuple_type: TUPLE LPAREN type_list RPAREN;
 type_list: type (COMMA type)+;
 
 type
-    : BOOLEAN
-    | CHARACTER
-    | INTEGER
-    | REAL
-    | tuple_type
-    | ID
+    : BOOLEAN #booleanType
+    | CHARACTER #charType
+    | INTEGER #intType
+    | REAL #realType
+    | tuple_type #tupType
+    | type LBRACKET (expr | MULT) RBRACKET (LBRACKET (expr | MULT) RBRACKET) #twoDimArray
+    | type LBRACKET (expr | MULT) RBRACKET #oneDimArray
+    | ID #aliasType
     ;
 
 qualifier
@@ -109,7 +111,14 @@ qualifier
 expr
     : LPAREN expr RPAREN #parenExpr
     | TUPLE_ACCESS #tupleAccessExpr
-    | expr DDOT expr #rangeExpr
+    | expr LBRACKET expr RBRACKET #arrayAccessExpr
+    | expr DDOT expr #sliceRangeExpr
+    | DDOT expr #sliceEndExpr
+    | expr DDOT #sliceStartExpr
+    | SLICE_INT #intSliceEndExpr
+    | INT_SLICE #intSliceStartExpr
+    | INT_SLICE_INT #intSliceRangeExpr
+    | DDOT #sliceAllExpr
     | <assoc=right> op=(PLUS | MINUS | NOT) expr #unaryExpr
     | <assoc=right> expr POWER expr #powerExpr
     | expr op=(MULT | DIV | REM | DSTAR) expr #mulDivRemDstarExpr
@@ -122,6 +131,8 @@ expr
     | expr APPEND expr #appendExpr
     | AS '<' type '>' LPAREN expr RPAREN #castExpr
     | tuple_lit #tupleLiteral
+    | matrix_lit #matrixLiteral
+    | array_lit #arrayLiteral
     | INT_LIT #intLiteral
     | SCIENTIFIC_FLOAT #scientificFloatLiteral
     | DOT_FLOAT #dotFloatLiteral
@@ -135,6 +146,10 @@ expr
     ;
 
 tuple_lit: LPAREN tuple_elements RPAREN;
+array_lit: LBRACKET array_elements? RBRACKET;
+matrix_lit: LBRACKET (array_lit (COMMA array_lit)*)? RBRACKET;
+// matrix_lit: LBRACKET ((LBRACKET elements (COMMA elements )* RBRACKET) (COMMA (LBRACKET elements (COMMA elements )* RBRACKET))*)? RBRACKET;
+array_elements: expr (COMMA expr)*;
 tuple_elements: expr (COMMA expr)+;
 
 // Keywords
@@ -206,6 +221,9 @@ SC: ';';
 
 // Literals
 TUPLE_ACCESS: ID DOT INT_LIT;
+INT_SLICE_INT: INT_LIT DDOT INT_LIT;
+INT_SLICE: INT_LIT DDOT;
+SLICE_INT: DDOT INT_LIT;
 SCIENTIFIC_FLOAT
     : (DIGIT+ '.' DIGIT* | '.' DIGIT+) EXPONENT
     | DIGIT+ EXPONENT
