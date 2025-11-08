@@ -116,12 +116,18 @@ expr
     | DDOT expr #sliceEndExpr
     | expr DDOT #sliceStartExpr
     | SLICE_INT #intSliceEndExpr
-    | INT_SLICE #intSliceStartExpr
+    | expr SLICE_INT #exprIntSliceEndExpr
+    | INT_SLICE expr? #intSliceStartExpr
     | INT_SLICE_INT #intSliceRangeExpr
+    | SLICE_ID #idSliceEndExpr
+    | expr SLICE_ID #exprIdSliceEndExpr
+    | ID_SLICE expr? #idSliceStartExpr
+    | ID_SLICE_ID #idSliceRangeExpr
     | DDOT #sliceAllExpr
     | <assoc=right> op=(PLUS | MINUS | NOT) expr #unaryExpr
     | <assoc=right> expr POWER expr #powerExpr
-    | expr op=(MULT | DIV | REM | DSTAR) expr #mulDivRemDstarExpr
+    | expr op=(MULT | DIV | REM) expr #mulDivRemExpr
+    | expr DSTAR expr #dstarExpr
     | expr op=(PLUS | MINUS) expr #addSubExpr
     | expr BY expr #byExpr
     | expr op=(LT | LTE | GT | GTE) expr #relationalExpr
@@ -131,8 +137,8 @@ expr
     | expr APPEND expr #appendExpr
     | AS '<' type '>' LPAREN expr RPAREN #castExpr
     | tuple_lit #tupleLiteral
-    | matrix_lit #matrixLiteral
     | array_lit #arrayLiteral
+    | matrix_lit #matrixLiteral
     | INT_LIT #intLiteral
     | SCIENTIFIC_FLOAT #scientificFloatLiteral
     | DOT_FLOAT #dotFloatLiteral
@@ -224,6 +230,9 @@ TUPLE_ACCESS: ID DOT INT_LIT;
 INT_SLICE_INT: INT_LIT DDOT INT_LIT;
 INT_SLICE: INT_LIT DDOT;
 SLICE_INT: DDOT INT_LIT;
+ID_SLICE_ID: ID DDOT ID;
+ID_SLICE: ID DDOT;
+SLICE_ID: DDOT ID;
 SCIENTIFIC_FLOAT
     : (DIGIT+ '.' DIGIT* | '.' DIGIT+) EXPONENT
     | DIGIT+ EXPONENT
