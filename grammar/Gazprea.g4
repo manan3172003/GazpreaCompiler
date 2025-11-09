@@ -24,6 +24,15 @@ stat
     | output_stat
     | input_stat
     | procedure_call_stat
+    | string_built_in_stat
+    ;
+
+// TODO: Can string builtin operations done on string expressions
+string_built_in_stat
+    : assign_left DCONCAT LPAREN args? RPAREN SC
+    | assign_left DPUSH LPAREN args? RPAREN SC
+    | IDCONCAT LPAREN args? RPAREN SC
+    | IDPUSH LPAREN args? RPAREN SC
     ;
 
 procedure_stat
@@ -72,10 +81,12 @@ assign_stat
     | assign_left (COMMA assign_left)+ EQUAL expr SC #tupleUnpackAssign
     ;
 
-// TODO: For part 2, when new assignments and inputs are introduced, insert them here
 assign_left
     : ID #idLVal
     | TUPLE_ACCESS #tupleElementLVal
+    | STRUCT_ACCESS #structFieldLVal
+    | assign_left LBRACKET array_access_expr RBRACKET #arrayElementLVal
+    | assign_left LBRACKET array_access_expr RBRACKET LBRACKET array_access_expr RBRACKET #twoDimArrayElementLVal
     ;
 
 dec_stat
@@ -88,13 +99,25 @@ tuple_type: TUPLE LPAREN type_list RPAREN;
 
 type_list: type (COMMA type)+;
 
+vector_type: VECTOR LT type GT;
+
+struct_type: STRUCT typename=ID LPAREN field_list RPAREN;
+
+field_list: field (COMMA field)*;
+
+field: type ID;
+
 type
     : BOOLEAN #booleanType
     | CHARACTER #charType
     | INTEGER #intType
     | REAL #realType
+    | STRING #stringType
     | tuple_type #tupType
+    | vector_type #vectorType
+    | struct_type #structType
     | type LBRACKET (expr | MULT) RBRACKET (LBRACKET (expr | MULT) RBRACKET) #twoDimArray
+    | type LBRACKET (expr | MULT) COMMA (expr | MULT) RBRACKET #twoDimArrayAlt
     | type LBRACKET (expr | MULT) RBRACKET #oneDimArray
     | ID #aliasType
     ;
@@ -107,6 +130,7 @@ qualifier
 expr
     : LPAREN expr RPAREN #parenExpr
     | TUPLE_ACCESS #tupleAccessExpr
+    | STRUCT_ACCESS #structAccessExpr
     | expr LBRACKET array_access_expr RBRACKET #arrayAccessExpr
     | expr DDOT expr #generatorExpr
     | <assoc=right> op=(PLUS | MINUS | NOT) expr #unaryExpr
@@ -130,7 +154,12 @@ expr
     | INT_LIT #intLiteral
     | (TRUE | FALSE) #boolLiteral
     | ID #identifier
-    | ID LPAREN args? RPAREN #funcProcExpr
+    | ID LPAREN args? RPAREN #funcProcExpr // This also handles construction of structs
+    | expr DOT ID LPAREN args? RPAREN #builtinFuncExpr
+    | LENGTH LPAREN expr RPAREN #lengthExpr
+    | SHAPE LPAREN expr RPAREN #shapeExpr
+    | REVERSE LPAREN expr RPAREN #reverseExpr
+    | FORMAT LPAREN expr RPAREN #formatExpr
     ;
 
 array_access_expr
@@ -138,6 +167,7 @@ array_access_expr
     | DDOT expr #sliceEndExpr
     | expr DDOT #sliceStartExpr
     | DDOT #sliceAllExpr
+    | expr #singleIndexExpr
     ;
 
 tuple_lit: LPAREN tuple_elements RPAREN;
@@ -198,6 +228,7 @@ STREAM_STATE: 'stream_state';
 STRING: 'string';
 TRUE: 'true';
 TUPLE: 'tuple';
+STRUCT: 'struct';
 TYPEALIAS: 'typealias';
 VAR: 'var';
 VECTOR: 'vector';
@@ -232,13 +263,12 @@ COMMA: ',';
 SC: ';';
 
 // Literals
-//INT_SLICE_INT: INT_LIT DDOT INT_LIT;
-//INT_SLICE: INT_LIT DDOT;
-//SLICE_INT: DDOT INT_LIT;
-//ID_SLICE_ID: ID DDOT ID;
-//ID_SLICE: ID DDOT;
-//SLICE_ID: DDOT ID;
+IDCONCAT: ID '.concat';
+DCONCAT: '.concat';
+IDPUSH: ID '.push';
+DPUSH: '.push';
 TUPLE_ACCESS: ID DOT DIGIT+;
+STRUCT_ACCESS: ID DOT ID;
 EXPONENT: [eE] (PLUS | MINUS)? DIGIT+;
 CHAR_LIT: '\'' CHAR '\'';
 STRING_LIT: '"' SCHAR_SEQ? '"';
@@ -249,7 +279,6 @@ ID: (LETTER | '_' ) (LETTER | DIGIT | '_')*;
 fragment CHAR: ~['\\\r\n] | SimpleEscapeSequence;
 fragment LETTER: [a-zA-Z];
 DIGIT: [0-9];
-//fragment EXPONENT: [eE] [+-]? DIGIT+;
 fragment SimpleEscapeSequence: '\\' [0batnr"'\\];
 fragment SCHAR_SEQ: SCHAR+;
 fragment SCHAR
