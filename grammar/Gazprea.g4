@@ -4,7 +4,7 @@ file: global_stat* EOF;
 
 
 global_stat
-    : dec_stat // TODO: Do global decs require const keyword or we can infer?
+    : dec_stat
     | typealias_stat
     | function_stat
     | procedure_stat
@@ -26,7 +26,6 @@ stat
     | procedure_call_stat
     ;
 
-// TODO: Can procedure only be defined in a global scope?
 procedure_stat
     : PROCEDURE ID LPAREN procedure_params? RPAREN (RETURNS type)? SC
     | PROCEDURE ID LPAREN procedure_params? RPAREN (RETURNS type)? block_stat
@@ -56,9 +55,6 @@ input_stat: assign_left '<-' STD_INPUT SC;
 
 return_stat: RETURN expr? SC;
 
-// TODO: Calrify if this is analogous
-// if (i == 1) loop {i -> std_output;}
-// if (i == 1) while (i < 10){print (10);}
 if_stat: IF LPAREN expr RPAREN stat else_stat?;
 else_stat: ELSE stat;
 
@@ -79,7 +75,7 @@ assign_stat
 // TODO: For part 2, when new assignments and inputs are introduced, insert them here
 assign_left
     : ID #idLVal
-    | tuple_access #tupleElementLVal
+    | TUPLE_ACCESS #tupleElementLVal
     ;
 
 dec_stat
@@ -110,20 +106,9 @@ qualifier
 
 expr
     : LPAREN expr RPAREN #parenExpr
-    | tuple_access #tupleAccessExpr
-    | expr LBRACKET expr RBRACKET #arrayAccessExpr
-    | expr DDOT expr #sliceRangeExpr
-//    | DDOT expr #sliceEndExpr
-//    | expr DDOT #sliceStartExpr
-//    | SLICE_INT #intSliceEndExpr
-//    | expr SLICE_INT #exprIntSliceEndExpr
-//    | INT_SLICE expr? #intSliceStartExpr
-//    | INT_SLICE_INT #intSliceRangeExpr
-//    | SLICE_ID #idSliceEndExpr
-//    | expr SLICE_ID #exprIdSliceEndExpr
-//    | ID_SLICE expr? #idSliceStartExpr
-//    | ID_SLICE_ID #idSliceRangeExpr
-//    | DDOT #sliceAllExpr
+    | TUPLE_ACCESS #tupleAccessExpr
+    | expr LBRACKET array_access_expr RBRACKET #arrayAccessExpr
+    | expr DDOT expr #generatorExpr
     | <assoc=right> op=(PLUS | MINUS | NOT) expr #unaryExpr
     | <assoc=right> expr POWER expr #powerExpr
     | expr op=(MULT | DIV | REM) expr #mulDivRemExpr
@@ -139,45 +124,45 @@ expr
     | tuple_lit #tupleLiteral
     | array_lit #arrayLiteral
     | matrix_lit #matrixLiteral
-    | scientific_float #scientificFloatLiteral
-//    | dot_float #dotFloatLiteral
-//    | float_dot #floatDotLiteral
-//    | float_lit #floatLiteral
+    | float_parse #scientificFloatLiteral
     | STRING_LIT #stringLiteral
     | CHAR_LIT #charLiteral
-    | int_lit #intLiteral
+    | INT_LIT #intLiteral
     | (TRUE | FALSE) #boolLiteral
     | ID #identifier
-    | ID LPAREN args? RPAREN #funcProcExpr // TODO: Type check on procedure assign & decl & unary
+    | ID LPAREN args? RPAREN #funcProcExpr
+    ;
+
+array_access_expr
+    : expr DDOT expr #sliceRangeExpr
+    | DDOT expr #sliceEndExpr
+    | expr DDOT #sliceStartExpr
+    | DDOT #sliceAllExpr
     ;
 
 tuple_lit: LPAREN tuple_elements RPAREN;
 array_lit: LBRACKET array_elements? RBRACKET;
 matrix_lit: LBRACKET (array_lit (COMMA array_lit)*)? RBRACKET;
-// matrix_lit: LBRACKET ((LBRACKET elements (COMMA elements )* RBRACKET) (COMMA (LBRACKET elements (COMMA elements )* RBRACKET))*)? RBRACKET;
 array_elements: expr (COMMA expr)*;
 tuple_elements: expr (COMMA expr)+;
 
-tuple_access: ID DOT int_lit;
-
-scientific_float
-    : float_lit EXPONENT int_lit
-    | int_lit EXPONENT int_lit
-    | dot_float
-    | float_dot
-    | float_lit
+float_parse
+    : (float_lit | dot_float | float_dot) EXPONENT #scientificFloat
+    | INT_LIT EXPONENT #scientificFloatNoDecimal
+    | dot_float #dotFloat
+    | float_dot #floatDot
+    | float_lit #floatLiteral
     ;
+
 dot_float
-    : DOT int_lit // .14
+    : DOT INT_LIT // .14
     ;
 float_dot
-    : int_lit DOT // 3. (requires digits before dot)
+    : INT_LIT DOT // 3. (requires digits before dot)
     ;
 float_lit
-    : int_lit DOT int_lit // 3.14
+    : INT_LIT DOT INT_LIT // 3.14
     ;
-
-int_lit: DIGIT+;
 
 // Keywords
 AND: 'and';
@@ -253,9 +238,11 @@ SC: ';';
 //ID_SLICE_ID: ID DDOT ID;
 //ID_SLICE: ID DDOT;
 //SLICE_ID: DDOT ID;
-EXPONENT: ('e'|'E') (PLUS|MINUS)?;
+TUPLE_ACCESS: ID DOT DIGIT+;
+EXPONENT: [eE] (PLUS | MINUS)? DIGIT+;
 CHAR_LIT: '\'' CHAR '\'';
 STRING_LIT: '"' SCHAR_SEQ? '"';
+INT_LIT: DIGIT+;
 
 // Identifiers
 ID: (LETTER | '_' ) (LETTER | DIGIT | '_')*;
