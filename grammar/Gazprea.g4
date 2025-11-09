@@ -79,7 +79,7 @@ assign_stat
 // TODO: For part 2, when new assignments and inputs are introduced, insert them here
 assign_left
     : ID #idLVal
-    | TUPLE_ACCESS #tupleElementLVal
+    | tuple_access #tupleElementLVal
     ;
 
 dec_stat
@@ -110,20 +110,20 @@ qualifier
 
 expr
     : LPAREN expr RPAREN #parenExpr
-    | TUPLE_ACCESS #tupleAccessExpr
+    | tuple_access #tupleAccessExpr
     | expr LBRACKET expr RBRACKET #arrayAccessExpr
     | expr DDOT expr #sliceRangeExpr
-    | DDOT expr #sliceEndExpr
-    | expr DDOT #sliceStartExpr
-    | SLICE_INT #intSliceEndExpr
-    | expr SLICE_INT #exprIntSliceEndExpr
-    | INT_SLICE expr? #intSliceStartExpr
-    | INT_SLICE_INT #intSliceRangeExpr
-    | SLICE_ID #idSliceEndExpr
-    | expr SLICE_ID #exprIdSliceEndExpr
-    | ID_SLICE expr? #idSliceStartExpr
-    | ID_SLICE_ID #idSliceRangeExpr
-    | DDOT #sliceAllExpr
+//    | DDOT expr #sliceEndExpr
+//    | expr DDOT #sliceStartExpr
+//    | SLICE_INT #intSliceEndExpr
+//    | expr SLICE_INT #exprIntSliceEndExpr
+//    | INT_SLICE expr? #intSliceStartExpr
+//    | INT_SLICE_INT #intSliceRangeExpr
+//    | SLICE_ID #idSliceEndExpr
+//    | expr SLICE_ID #exprIdSliceEndExpr
+//    | ID_SLICE expr? #idSliceStartExpr
+//    | ID_SLICE_ID #idSliceRangeExpr
+//    | DDOT #sliceAllExpr
     | <assoc=right> op=(PLUS | MINUS | NOT) expr #unaryExpr
     | <assoc=right> expr POWER expr #powerExpr
     | expr op=(MULT | DIV | REM) expr #mulDivRemExpr
@@ -139,13 +139,13 @@ expr
     | tuple_lit #tupleLiteral
     | array_lit #arrayLiteral
     | matrix_lit #matrixLiteral
-    | INT_LIT #intLiteral
-    | SCIENTIFIC_FLOAT #scientificFloatLiteral
-    | DOT_FLOAT #dotFloatLiteral
-    | FLOAT_DOT #floatDotLiteral
-    | FLOAT_LIT #floatLiteral
+    | scientific_float #scientificFloatLiteral
+//    | dot_float #dotFloatLiteral
+//    | float_dot #floatDotLiteral
+//    | float_lit #floatLiteral
     | STRING_LIT #stringLiteral
     | CHAR_LIT #charLiteral
+    | int_lit #intLiteral
     | (TRUE | FALSE) #boolLiteral
     | ID #identifier
     | ID LPAREN args? RPAREN #funcProcExpr // TODO: Type check on procedure assign & decl & unary
@@ -157,6 +157,27 @@ matrix_lit: LBRACKET (array_lit (COMMA array_lit)*)? RBRACKET;
 // matrix_lit: LBRACKET ((LBRACKET elements (COMMA elements )* RBRACKET) (COMMA (LBRACKET elements (COMMA elements )* RBRACKET))*)? RBRACKET;
 array_elements: expr (COMMA expr)*;
 tuple_elements: expr (COMMA expr)+;
+
+tuple_access: ID DOT int_lit;
+
+scientific_float
+    : float_lit EXPONENT int_lit
+    | int_lit EXPONENT int_lit
+    | dot_float
+    | float_dot
+    | float_lit
+    ;
+dot_float
+    : DOT int_lit // .14
+    ;
+float_dot
+    : int_lit DOT // 3. (requires digits before dot)
+    ;
+float_lit
+    : int_lit DOT int_lit // 3.14
+    ;
+
+int_lit: DIGIT+;
 
 // Keywords
 AND: 'and';
@@ -226,27 +247,13 @@ COMMA: ',';
 SC: ';';
 
 // Literals
-TUPLE_ACCESS: ID DOT INT_LIT;
-INT_SLICE_INT: INT_LIT DDOT INT_LIT;
-INT_SLICE: INT_LIT DDOT;
-SLICE_INT: DDOT INT_LIT;
-ID_SLICE_ID: ID DDOT ID;
-ID_SLICE: ID DDOT;
-SLICE_ID: DDOT ID;
-SCIENTIFIC_FLOAT
-    : (DIGIT+ '.' DIGIT* | '.' DIGIT+) EXPONENT
-    | DIGIT+ EXPONENT
-    ;
-DOT_FLOAT
-    : '.' DIGIT+ // .14
-    ;
-FLOAT_DOT
-    : DIGIT+ '.' // 3. (requires digits before dot)
-    ;
-FLOAT_LIT
-    : DIGIT+ '.' DIGIT+ // 3.14
-    ;
-INT_LIT: DIGIT+;
+//INT_SLICE_INT: INT_LIT DDOT INT_LIT;
+//INT_SLICE: INT_LIT DDOT;
+//SLICE_INT: DDOT INT_LIT;
+//ID_SLICE_ID: ID DDOT ID;
+//ID_SLICE: ID DDOT;
+//SLICE_ID: DDOT ID;
+EXPONENT: ('e'|'E') (PLUS|MINUS)?;
 CHAR_LIT: '\'' CHAR '\'';
 STRING_LIT: '"' SCHAR_SEQ? '"';
 
@@ -254,8 +261,8 @@ STRING_LIT: '"' SCHAR_SEQ? '"';
 ID: (LETTER | '_' ) (LETTER | DIGIT | '_')*;
 fragment CHAR: ~['\\\r\n] | SimpleEscapeSequence;
 fragment LETTER: [a-zA-Z];
-fragment DIGIT: [0-9];
-fragment EXPONENT: [eE] [+-]? DIGIT+;
+DIGIT: [0-9];
+//fragment EXPONENT: [eE] [+-]? DIGIT+;
 fragment SimpleEscapeSequence: '\\' [0batnr"'\\];
 fragment SCHAR_SEQ: SCHAR+;
 fragment SCHAR
