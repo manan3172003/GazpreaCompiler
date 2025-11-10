@@ -1,0 +1,14 @@
+/*
+Procedure call should not throw aliasing error
+*/
+
+procedure swap(var integer a, var integer b) { var integer t = a; a = b; b = t; }
+
+procedure main() returns integer {
+  var integer q = 4;
+  var tuple(integer, integer) t = (q, 5);
+  call swap(t.1, t.2);   // both arguments use different lvalue
+  return 0;
+}
+
+//CHECK:

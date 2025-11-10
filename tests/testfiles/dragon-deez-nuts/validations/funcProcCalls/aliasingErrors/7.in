@@ -1,0 +1,19 @@
+/*
+Procedure call should throw aliasing error
+*/
+
+procedure swap(var integer a, var integer b, const integer x ) {
+    var integer t = a;
+    a = b;
+    b = t;
+}
+
+procedure main() returns integer {
+  var integer q = 4;
+  var tuple(integer, integer) t = (q, 5);
+  call swap(t.1, t.2, t.1);
+
+  return 0;
+}
+
+//CHECK:AliasingError on Line 14:
