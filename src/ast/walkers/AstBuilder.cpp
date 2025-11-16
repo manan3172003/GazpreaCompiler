@@ -70,11 +70,8 @@ std::any AstBuilder::visitGlobal_stat(GazpreaParser::Global_statContext *ctx) {
 std::any AstBuilder::visitTypealias_stat(GazpreaParser::Typealias_statContext *ctx) {
   auto typealiasAst = std::make_shared<statements::TypealiasAst>(ctx->getStart());
   typealiasAst->setAlias(ctx->ID()->getText());
-  if (ctx->type()->tuple_type())
-    typealiasAst->setType(
-        std::any_cast<std::shared_ptr<types::TupleTypeAst>>(visit(ctx->type()->tuple_type())));
-  else
-    typealiasAst->setType(makeType(ctx->type(), ctx->getStart()));
+  auto type = std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type()));
+  typealiasAst->setType(type);
 
   return std::static_pointer_cast<Ast>(typealiasAst);
 }
@@ -376,12 +373,8 @@ std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
   } else
     declAst->setQualifier(Qualifier::Const);
   if (ctx->type()) {
-    if (ctx->type()->tuple_type()) {
-      declAst->setType(
-          std::any_cast<std::shared_ptr<types::TupleTypeAst>>(visit(ctx->type()->tuple_type())));
-    } else {
-      declAst->setType(makeType(ctx->type(), ctx->getStart()));
-    }
+    auto type = std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type()));
+    declAst->setType(type);
   } else {
     declAst->setType(nullptr);
   }
@@ -400,13 +393,10 @@ std::any AstBuilder::visitTuple_type(GazpreaParser::Tuple_typeContext *ctx) {
   for (auto const type : ctx->type_list()->type()) {
     tupleType->addType(makeType(type, ctx->getStart()));
   }
-  return tupleType;
+  return std::static_pointer_cast<types::DataTypeAst>(tupleType);
 }
 std::any AstBuilder::visitType_list(GazpreaParser::Type_listContext *ctx) {
   return GazpreaBaseVisitor::visitType_list(ctx);
-}
-std::any AstBuilder::visitType(GazpreaParser::TypeContext *ctx) {
-  return GazpreaBaseVisitor::visitType(ctx);
 }
 std::any AstBuilder::visitQualifier(GazpreaParser::QualifierContext *ctx) {
   return GazpreaBaseVisitor::visitQualifier(ctx);
@@ -456,9 +446,7 @@ std::any AstBuilder::visitUnaryExpr(GazpreaParser::UnaryExprContext *ctx) {
   return std::static_pointer_cast<expressions::ExpressionAst>(unaryExpression);
 }
 std::any AstBuilder::visitFloatLiteral(GazpreaParser::FloatLiteralContext *ctx) {
-  auto realAst = std::make_shared<expressions::RealLiteralAst>(
-      ctx->getStart(), getFloat(ctx->FLOAT_LIT()->getText(), ctx->getStart()->getLine()));
-  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
+  return visit(ctx->float_lit());
 }
 std::any AstBuilder::visitAppendExpr(GazpreaParser::AppendExprContext *ctx) {
   return GazpreaBaseVisitor::visitAppendExpr(ctx);
@@ -486,14 +474,7 @@ std::any AstBuilder::visitIntLiteral(GazpreaParser::IntLiteralContext *ctx) {
 }
 std::any
 AstBuilder::visitScientificFloatLiteral(GazpreaParser::ScientificFloatLiteralContext *ctx) {
-  auto realAst = std::make_shared<expressions::RealLiteralAst>(
-      ctx->getStart(), getFloat(ctx->SCIENTIFIC_FLOAT()->getText(), ctx->getStart()->getLine()));
-  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
-}
-std::any AstBuilder::visitDotFloatLiteral(GazpreaParser::DotFloatLiteralContext *ctx) {
-  auto realAst = std::make_shared<expressions::RealLiteralAst>(
-      ctx->getStart(), getFloat(ctx->DOT_FLOAT()->getText(), ctx->getStart()->getLine()));
-  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
+  return visit(ctx->float_parse());
 }
 std::any AstBuilder::visitByExpr(GazpreaParser::ByExprContext *ctx) {
   return GazpreaBaseVisitor::visitByExpr(ctx);
@@ -509,16 +490,56 @@ std::any AstBuilder::visitCharLiteral(GazpreaParser::CharLiteralContext *ctx) {
 std::any AstBuilder::visitRelationalExpr(GazpreaParser::RelationalExprContext *ctx) {
   return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1), ctx->getStart());
 }
-std::any AstBuilder::visitFloatDotLiteral(GazpreaParser::FloatDotLiteralContext *ctx) {
+
+std::any AstBuilder::visitScientificFloat(GazpreaParser::ScientificFloatContext *ctx) {
+  std::shared_ptr<expressions::ExpressionAst> exprAst;
+  if (ctx->float_lit()) {
+    exprAst = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->float_lit()));
+  } else if (ctx->dot_float()) {
+    exprAst = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->dot_float()));
+  } else if (ctx->float_dot()) {
+    exprAst = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->float_dot()));
+  }
+
+  auto realAst = std::static_pointer_cast<expressions::RealLiteralAst>(exprAst);
+
+  realAst->realValue =
+      realAst->realValue * getFloat("1" + ctx->EXPONENT()->getText(), ctx->getStart()->getLine());
+  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
+}
+std::any
+AstBuilder::visitScientificFloatNoDecimal(GazpreaParser::ScientificFloatNoDecimalContext *ctx) {
   auto realAst = std::make_shared<expressions::RealLiteralAst>(
       ctx->getStart(),
-      getFloat(ctx->FLOAT_DOT()->getText().substr(0, -1), ctx->getStart()->getLine()));
+      getFloat(ctx->INT_LIT()->getText() + ctx->EXPONENT()->getText(), ctx->getStart()->getLine()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
+}
+std::any AstBuilder::visitDotFloat(GazpreaParser::DotFloatContext *ctx) {
+  return visit(ctx->dot_float());
+}
+std::any AstBuilder::visitFloatDot(GazpreaParser::FloatDotContext *ctx) {
+  return visit(ctx->float_dot());
+}
+std::any AstBuilder::visitDot_float(GazpreaParser::Dot_floatContext *ctx) {
+  auto realAst = std::make_shared<expressions::RealLiteralAst>(
+      ctx->getStart(), getFloat("0." + ctx->INT_LIT()->getText(), ctx->getStart()->getLine()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
+}
+std::any AstBuilder::visitFloat_dot(GazpreaParser::Float_dotContext *ctx) {
+  auto realAst = std::make_shared<expressions::RealLiteralAst>(
+      ctx->getStart(), getFloat(ctx->INT_LIT()->getText(), ctx->getStart()->getLine()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
+}
+std::any AstBuilder::visitFloat_lit(GazpreaParser::Float_litContext *ctx) {
+  auto realAst = std::make_shared<expressions::RealLiteralAst>(
+      ctx->getStart(), getFloat(ctx->INT_LIT(0)->getText() + "." + ctx->INT_LIT(1)->getText(),
+                                ctx->getStart()->getLine()));
   return std::static_pointer_cast<expressions::ExpressionAst>(realAst);
 }
 std::any AstBuilder::visitTupleLiteral(GazpreaParser::TupleLiteralContext *ctx) {
   return visit(ctx->tuple_lit());
 }
-std::any AstBuilder::visitMulDivRemDstarExpr(GazpreaParser::MulDivRemDstarExprContext *ctx) {
+std::any AstBuilder::visitMulDivRemExpr(GazpreaParser::MulDivRemExprContext *ctx) {
   return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx) {
@@ -535,9 +556,6 @@ std::any AstBuilder::visitFuncProcExpr(GazpreaParser::FuncProcExprContext *ctx) 
   }
   return std::static_pointer_cast<expressions::ExpressionAst>(fpCallAst);
 }
-std::any AstBuilder::visitRangeExpr(GazpreaParser::RangeExprContext *ctx) {
-  return GazpreaBaseVisitor::visitRangeExpr(ctx);
-}
 std::any AstBuilder::visitEqualityExpr(GazpreaParser::EqualityExprContext *ctx) {
   return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1), ctx->getStart());
 }
@@ -552,6 +570,103 @@ std::any AstBuilder::visitTuple_lit(GazpreaParser::Tuple_litContext *ctx) {
   }
 
   return std::static_pointer_cast<expressions::ExpressionAst>(tupleLiteral);
+}
+
+std::shared_ptr<types::DataTypeAst> AstBuilder::makeType(GazpreaParser::TypeContext *typeContext,
+                                                         antlr4::Token *token) {
+  auto type = std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(typeContext));
+  return type;
+}
+std::any AstBuilder::visitString_built_in_stat(GazpreaParser::String_built_in_statContext *ctx) {
+  return GazpreaBaseVisitor::visitString_built_in_stat(ctx);
+}
+std::any AstBuilder::visitStructFieldLVal(GazpreaParser::StructFieldLValContext *ctx) {
+  return GazpreaBaseVisitor::visitStructFieldLVal(ctx);
+}
+std::any AstBuilder::visitArrayElementLVal(GazpreaParser::ArrayElementLValContext *ctx) {
+  return GazpreaBaseVisitor::visitArrayElementLVal(ctx);
+}
+std::any
+AstBuilder::visitTwoDimArrayElementLVal(GazpreaParser::TwoDimArrayElementLValContext *ctx) {
+  return GazpreaBaseVisitor::visitTwoDimArrayElementLVal(ctx);
+}
+std::any AstBuilder::visitField_list(GazpreaParser::Field_listContext *ctx) {
+  return GazpreaBaseVisitor::visitField_list(ctx);
+}
+std::any AstBuilder::visitField(GazpreaParser::FieldContext *ctx) {
+  return GazpreaBaseVisitor::visitField(ctx);
+}
+std::any AstBuilder::visitVectorType(GazpreaParser::VectorTypeContext *ctx) {
+  return GazpreaBaseVisitor::visitVectorType(ctx);
+}
+std::any AstBuilder::visitTwoDimArray(GazpreaParser::TwoDimArrayContext *ctx) {
+  return GazpreaBaseVisitor::visitTwoDimArray(ctx);
+}
+std::any AstBuilder::visitTwoDimArrayAlt(GazpreaParser::TwoDimArrayAltContext *ctx) {
+  return GazpreaBaseVisitor::visitTwoDimArrayAlt(ctx);
+}
+std::any AstBuilder::visitOneDimArray(GazpreaParser::OneDimArrayContext *ctx) {
+  return GazpreaBaseVisitor::visitOneDimArray(ctx);
+}
+std::any AstBuilder::visitArrayLiteral(GazpreaParser::ArrayLiteralContext *ctx) {
+  return GazpreaBaseVisitor::visitArrayLiteral(ctx);
+}
+std::any AstBuilder::visitMatrixLiteral(GazpreaParser::MatrixLiteralContext *ctx) {
+  return GazpreaBaseVisitor::visitMatrixLiteral(ctx);
+}
+std::any AstBuilder::visitFormatExpr(GazpreaParser::FormatExprContext *ctx) {
+  return GazpreaBaseVisitor::visitFormatExpr(ctx);
+}
+std::any AstBuilder::visitStructAccessExpr(GazpreaParser::StructAccessExprContext *ctx) {
+  return GazpreaBaseVisitor::visitStructAccessExpr(ctx);
+}
+std::any AstBuilder::visitLengthExpr(GazpreaParser::LengthExprContext *ctx) {
+  return GazpreaBaseVisitor::visitLengthExpr(ctx);
+}
+std::any AstBuilder::visitReverseExpr(GazpreaParser::ReverseExprContext *ctx) {
+  return GazpreaBaseVisitor::visitReverseExpr(ctx);
+}
+std::any AstBuilder::visitArrayAccessExpr(GazpreaParser::ArrayAccessExprContext *ctx) {
+  return GazpreaBaseVisitor::visitArrayAccessExpr(ctx);
+}
+std::any AstBuilder::visitGeneratorExpr(GazpreaParser::GeneratorExprContext *ctx) {
+  return GazpreaBaseVisitor::visitGeneratorExpr(ctx);
+}
+std::any AstBuilder::visitBuiltinFuncExpr(GazpreaParser::BuiltinFuncExprContext *ctx) {
+  return GazpreaBaseVisitor::visitBuiltinFuncExpr(ctx);
+}
+std::any AstBuilder::visitDstarExpr(GazpreaParser::DstarExprContext *ctx) {
+  return GazpreaBaseVisitor::visitDstarExpr(ctx);
+}
+std::any AstBuilder::visitShapeExpr(GazpreaParser::ShapeExprContext *ctx) {
+  return GazpreaBaseVisitor::visitShapeExpr(ctx);
+}
+std::any AstBuilder::visitSliceRangeExpr(GazpreaParser::SliceRangeExprContext *ctx) {
+  return GazpreaBaseVisitor::visitSliceRangeExpr(ctx);
+}
+std::any AstBuilder::visitSliceEndExpr(GazpreaParser::SliceEndExprContext *ctx) {
+  return GazpreaBaseVisitor::visitSliceEndExpr(ctx);
+}
+std::any AstBuilder::visitSliceStartExpr(GazpreaParser::SliceStartExprContext *ctx) {
+  return GazpreaBaseVisitor::visitSliceStartExpr(ctx);
+}
+std::any AstBuilder::visitSliceAllExpr(GazpreaParser::SliceAllExprContext *ctx) {
+  return GazpreaBaseVisitor::visitSliceAllExpr(ctx);
+}
+std::any AstBuilder::visitSingleIndexExpr(GazpreaParser::SingleIndexExprContext *ctx) {
+  return GazpreaBaseVisitor::visitSingleIndexExpr(ctx);
+}
+std::any AstBuilder::visitArray_lit(GazpreaParser::Array_litContext *ctx) {
+  return GazpreaBaseVisitor::visitArray_lit(ctx);
+}
+std::any AstBuilder::visitMatrix_lit(GazpreaParser::Matrix_litContext *ctx) {
+  return GazpreaBaseVisitor::visitMatrix_lit(ctx);
+}
+std::any AstBuilder::visitArray_elements(GazpreaParser::Array_elementsContext *ctx) {
+  return GazpreaBaseVisitor::visitArray_elements(ctx);
+}
+std::any AstBuilder::visitTuple_elements(GazpreaParser::Tuple_elementsContext *ctx) {
+  return GazpreaBaseVisitor::visitTuple_elements(ctx);
 }
 
 // Helper function implementations
@@ -602,25 +717,41 @@ std::any AstBuilder::createBinaryExpr(antlr4::tree::ParseTree *leftCtx, const st
   return std::static_pointer_cast<expressions::ExpressionAst>(binaryAst);
 }
 
-std::shared_ptr<types::DataTypeAst> AstBuilder::makeType(GazpreaParser::TypeContext *typeContext,
-                                                         antlr4::Token *token) {
-  if (typeContext->INTEGER())
-    return std::make_shared<types::IntegerTypeAst>(token);
-  if (typeContext->REAL())
-    return std::make_shared<types::RealTypeAst>(token);
-  if (typeContext->CHARACTER())
-    return std::make_shared<types::CharacterTypeAst>(token);
-  if (typeContext->BOOLEAN())
-    return std::make_shared<types::BooleanTypeAst>(token);
-  if (typeContext->ID()) {
-    auto aliasType = std::make_shared<types::AliasTypeAst>(token);
-    aliasType->setAlias(typeContext->ID()->getText());
-    return aliasType;
-  }
-  if (typeContext->tuple_type()) {
-    return std::any_cast<std::shared_ptr<types::TupleTypeAst>>(visit(typeContext->tuple_type()));
-  }
-  return nullptr;
+std::any AstBuilder::visitVector_type(GazpreaParser::Vector_typeContext *ctx) {
+  return GazpreaBaseVisitor::visitVector_type(ctx);
+}
+std::any AstBuilder::visitStruct_type(GazpreaParser::Struct_typeContext *ctx) {
+  return GazpreaBaseVisitor::visitStruct_type(ctx);
+}
+std::any AstBuilder::visitCharType(GazpreaParser::CharTypeContext *ctx) {
+  return std::static_pointer_cast<types::DataTypeAst>(
+      std::make_shared<types::CharacterTypeAst>(ctx->getStart()));
+}
+std::any AstBuilder::visitBooleanType(GazpreaParser::BooleanTypeContext *ctx) {
+  return std::static_pointer_cast<types::DataTypeAst>(
+      std::make_shared<types::BooleanTypeAst>(ctx->getStart()));
+}
+std::any AstBuilder::visitRealType(GazpreaParser::RealTypeContext *ctx) {
+  return std::static_pointer_cast<types::DataTypeAst>(
+      std::make_shared<types::RealTypeAst>(ctx->getStart()));
+}
+std::any AstBuilder::visitTupType(GazpreaParser::TupTypeContext *ctx) {
+  return visit(ctx->tuple_type());
+}
+std::any AstBuilder::visitStructType(GazpreaParser::StructTypeContext *ctx) {
+  return GazpreaBaseVisitor::visitStructType(ctx);
+}
+std::any AstBuilder::visitIntType(GazpreaParser::IntTypeContext *ctx) {
+  return std::static_pointer_cast<types::DataTypeAst>(
+      std::make_shared<types::IntegerTypeAst>(ctx->getStart()));
+}
+std::any AstBuilder::visitStringType(GazpreaParser::StringTypeContext *ctx) {
+  return GazpreaBaseVisitor::visitStringType(ctx);
+}
+std::any AstBuilder::visitAliasType(GazpreaParser::AliasTypeContext *ctx) {
+  auto aliasType = std::make_shared<types::AliasTypeAst>(ctx->getStart());
+  aliasType->setAlias(ctx->ID()->getText());
+  return std::static_pointer_cast<types::DataTypeAst>(aliasType);
 }
 
 char AstBuilder::convertStringToChar(const std::string &str, int lineNumber) {

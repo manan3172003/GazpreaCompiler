@@ -222,6 +222,7 @@ RETURN: 'return';
 RETURNS: 'returns';
 REVERSE: 'reverse';
 ROWS: 'rows';
+SHAPE: 'shape';
 STD_INPUT: 'std_input';
 STD_OUTPUT: 'std_output';
 STREAM_STATE: 'stream_state';
