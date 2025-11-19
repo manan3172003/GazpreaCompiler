@@ -577,8 +577,8 @@ std::shared_ptr<types::DataTypeAst> AstBuilder::makeType(GazpreaParser::TypeCont
   auto type = std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(typeContext));
   return type;
 }
-std::any AstBuilder::visitString_built_in_stat(GazpreaParser::String_built_in_statContext *ctx) {
-  return GazpreaBaseVisitor::visitString_built_in_stat(ctx);
+std::any AstBuilder::visitBuilt_in_stat(GazpreaParser::Built_in_statContext *ctx) {
+  return GazpreaBaseVisitor::visitBuilt_in_stat(ctx);
 }
 std::any AstBuilder::visitStructFieldLVal(GazpreaParser::StructFieldLValContext *ctx) {
   return GazpreaBaseVisitor::visitStructFieldLVal(ctx);

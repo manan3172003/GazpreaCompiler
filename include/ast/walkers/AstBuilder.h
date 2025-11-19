@@ -64,7 +64,7 @@ public:
   std::any visitTuple_lit(GazpreaParser::Tuple_litContext *ctx) override;
 
   // Part 2 refactor
-  std::any visitString_built_in_stat(GazpreaParser::String_built_in_statContext *ctx) override;
+  std::any visitBuilt_in_stat(GazpreaParser::Built_in_statContext *ctx) override;
   std::any visitStructFieldLVal(GazpreaParser::StructFieldLValContext *ctx) override;
   std::any visitArrayElementLVal(GazpreaParser::ArrayElementLValContext *ctx) override;
   std::any visitTwoDimArrayElementLVal(GazpreaParser::TwoDimArrayElementLValContext *ctx) override;

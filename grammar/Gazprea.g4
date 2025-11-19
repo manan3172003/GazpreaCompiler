@@ -24,15 +24,20 @@ stat
     | output_stat
     | input_stat
     | procedure_call_stat
-    | string_built_in_stat
+    | built_in_stat
     ;
 
 // TODO: Can string builtin operations done on string expressions
-string_built_in_stat
+built_in_stat
     : assign_left DCONCAT LPAREN args? RPAREN SC
+    | expr DCONCAT LPAREN args? RPAREN SC
     | assign_left DPUSH LPAREN args? RPAREN SC
+    | expr DPUSH LPAREN args? RPAREN SC
+    | assign_left DLEN LPAREN RPAREN SC
+    | expr DLEN LPAREN RPAREN SC
     | IDCONCAT LPAREN args? RPAREN SC
     | IDPUSH LPAREN args? RPAREN SC
+    | IDLEN LPAREN RPAREN SC
     ;
 
 procedure_stat
@@ -212,6 +217,7 @@ FUNCTION: 'function';
 IF: 'if';
 IN: 'in';
 INTEGER: 'integer';
+LEN: 'len';
 LENGTH: 'length';
 LOOP: 'loop';
 NOT: 'not';
@@ -268,6 +274,8 @@ IDCONCAT: ID '.concat';
 DCONCAT: '.concat';
 IDPUSH: ID '.push';
 DPUSH: '.push';
+IDLEN: ID DOT LEN;
+DLEN: DOT LEN;
 TUPLE_ACCESS: ID DOT DIGIT+;
 STRUCT_ACCESS: ID DOT ID;
 EXPONENT: [eE] (PLUS | MINUS)? DIGIT+;
