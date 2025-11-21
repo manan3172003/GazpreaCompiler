@@ -604,26 +604,58 @@ std::any AstBuilder::visitVectorType(GazpreaParser::VectorTypeContext *ctx) {
 std::any AstBuilder::visitTwoDimArray(GazpreaParser::TwoDimArrayContext *ctx) {
   auto arrayTypeAst = std::make_shared<types::ArrayTypeAst>(ctx->getStart());
   arrayTypeAst->setType(std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type())));
-  auto sizeExpr1 = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(0)));
-  auto sizeExpr2 = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(1)));
-  arrayTypeAst->pushSize(sizeExpr1);
-  arrayTypeAst->pushSize(sizeExpr2);
+  if (ctx->expr(0)) {
+    auto sizeExpr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(0)));
+    arrayTypeAst->pushSize(sizeExpr);
+  } else {
+    auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
+    charAst->setValue('*');
+    arrayTypeAst->pushSize(charAst);
+  }
+  if (ctx->expr(1)) {
+    auto sizeExpr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(1)));
+    arrayTypeAst->pushSize(sizeExpr);
+  } else {
+    auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
+    charAst->setValue('*');
+    arrayTypeAst->pushSize(charAst);
+  }
   return std::static_pointer_cast<types::DataTypeAst>(arrayTypeAst);
 }
 std::any AstBuilder::visitTwoDimArrayAlt(GazpreaParser::TwoDimArrayAltContext *ctx) {
   auto arrayTypeAst = std::make_shared<types::ArrayTypeAst>(ctx->getStart());
   arrayTypeAst->setType(std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type())));
-  auto sizeExpr1 = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(0)));
-  auto sizeExpr2 = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(1)));
-  arrayTypeAst->pushSize(sizeExpr1);
-  arrayTypeAst->pushSize(sizeExpr2);
+  if (ctx->expr(0)) {
+    auto sizeExpr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(0)));
+    arrayTypeAst->pushSize(sizeExpr);
+  } else {
+    auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
+    charAst->setValue('*');
+    arrayTypeAst->pushSize(charAst);
+  }
+  if (ctx->expr(1)) {
+    auto sizeExpr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(1)));
+    arrayTypeAst->pushSize(sizeExpr);
+  } else {
+    auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
+    charAst->setValue('*');
+    arrayTypeAst->pushSize(charAst);
+  }
   return std::static_pointer_cast<types::DataTypeAst>(arrayTypeAst);
 }
 std::any AstBuilder::visitOneDimArray(GazpreaParser::OneDimArrayContext *ctx) {
+  // TODO: throw error for int[* + * *][*] = [];
   auto arrayTypeAst = std::make_shared<types::ArrayTypeAst>(ctx->getStart());
   arrayTypeAst->setType(std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type())));
-  auto sizeExpr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
-  arrayTypeAst->pushSize(sizeExpr);
+  if (ctx->expr()) {
+    auto sizeExpr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+    arrayTypeAst->pushSize(sizeExpr);
+  } else {
+    auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
+    charAst->setValue('*');
+    arrayTypeAst->pushSize(charAst);
+  }
+
   return std::static_pointer_cast<types::DataTypeAst>(arrayTypeAst);
 }
 std::any AstBuilder::visitArrayLiteral(GazpreaParser::ArrayLiteralContext *ctx) {
@@ -676,10 +708,12 @@ std::any AstBuilder::visitSingleIndexExpr(GazpreaParser::SingleIndexExprContext 
 }
 std::any AstBuilder::visitArray_lit(GazpreaParser::Array_litContext *ctx) {
   auto arrayLiteralAst = std::make_shared<expressions::ArrayLiteralAst>(ctx->getStart());
-  for (auto child : ctx->array_elements()->children) {
-    if (child->getText() != ",")
-      arrayLiteralAst->addElement(
-          std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(child)));
+  if (ctx->array_elements()) {
+    for (auto child : ctx->array_elements()->children) {
+      if (child->getText() != ",")
+        arrayLiteralAst->addElement(
+            std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(child)));
+    }
   }
   return std::static_pointer_cast<expressions::ExpressionAst>(arrayLiteralAst);
 }
