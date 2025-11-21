@@ -14,6 +14,8 @@ struct Location {
 };
 enum class NodeType {
   AliasType,
+  ArrayLiteral,
+  ArrayType,
   Arg,
   Assignment,
   BinaryExpression,

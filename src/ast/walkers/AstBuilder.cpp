@@ -1,5 +1,6 @@
 #include "CompileTimeExceptions.h"
 #include "ast/RootAst.h"
+#include "ast/expressions/ArrayLiteralAst.h"
 #include "ast/expressions/BinaryAst.h"
 #include "ast/expressions/BoolLiteralAst.h"
 #include "ast/expressions/CastAst.h"
@@ -32,6 +33,7 @@
 #include "ast/statements/TupleUnpackAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
 #include "ast/types/AliasTypeAst.h"
+#include "ast/types/ArrayTypeAst.h"
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/IntegerTypeAst.h"
@@ -600,16 +602,32 @@ std::any AstBuilder::visitVectorType(GazpreaParser::VectorTypeContext *ctx) {
   return GazpreaBaseVisitor::visitVectorType(ctx);
 }
 std::any AstBuilder::visitTwoDimArray(GazpreaParser::TwoDimArrayContext *ctx) {
-  return GazpreaBaseVisitor::visitTwoDimArray(ctx);
+  auto arrayTypeAst = std::make_shared<types::ArrayTypeAst>(ctx->getStart());
+  arrayTypeAst->setType(std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type())));
+  auto sizeExpr1 = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(0)));
+  auto sizeExpr2 = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(1)));
+  arrayTypeAst->pushSize(sizeExpr1);
+  arrayTypeAst->pushSize(sizeExpr2);
+  return std::static_pointer_cast<types::DataTypeAst>(arrayTypeAst);
 }
 std::any AstBuilder::visitTwoDimArrayAlt(GazpreaParser::TwoDimArrayAltContext *ctx) {
-  return GazpreaBaseVisitor::visitTwoDimArrayAlt(ctx);
+  auto arrayTypeAst = std::make_shared<types::ArrayTypeAst>(ctx->getStart());
+  arrayTypeAst->setType(std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type())));
+  auto sizeExpr1 = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(0)));
+  auto sizeExpr2 = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(1)));
+  arrayTypeAst->pushSize(sizeExpr1);
+  arrayTypeAst->pushSize(sizeExpr2);
+  return std::static_pointer_cast<types::DataTypeAst>(arrayTypeAst);
 }
 std::any AstBuilder::visitOneDimArray(GazpreaParser::OneDimArrayContext *ctx) {
-  return GazpreaBaseVisitor::visitOneDimArray(ctx);
+  auto arrayTypeAst = std::make_shared<types::ArrayTypeAst>(ctx->getStart());
+  arrayTypeAst->setType(std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type())));
+  auto sizeExpr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  arrayTypeAst->pushSize(sizeExpr);
+  return std::static_pointer_cast<types::DataTypeAst>(arrayTypeAst);
 }
 std::any AstBuilder::visitArrayLiteral(GazpreaParser::ArrayLiteralContext *ctx) {
-  return GazpreaBaseVisitor::visitArrayLiteral(ctx);
+  return visit(ctx->array_lit());
 }
 std::any AstBuilder::visitMatrixLiteral(GazpreaParser::MatrixLiteralContext *ctx) {
   return GazpreaBaseVisitor::visitMatrixLiteral(ctx);
@@ -657,7 +675,13 @@ std::any AstBuilder::visitSingleIndexExpr(GazpreaParser::SingleIndexExprContext 
   return GazpreaBaseVisitor::visitSingleIndexExpr(ctx);
 }
 std::any AstBuilder::visitArray_lit(GazpreaParser::Array_litContext *ctx) {
-  return GazpreaBaseVisitor::visitArray_lit(ctx);
+  auto arrayLiteralAst = std::make_shared<expressions::ArrayLiteralAst>(ctx->getStart());
+  for (auto child : ctx->array_elements()->children) {
+    if (child->getText() != ",")
+      arrayLiteralAst->addElement(
+          std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(child)));
+  }
+  return std::static_pointer_cast<expressions::ExpressionAst>(arrayLiteralAst);
 }
 std::any AstBuilder::visitMatrix_lit(GazpreaParser::Matrix_litContext *ctx) {
   return GazpreaBaseVisitor::visitMatrix_lit(ctx);

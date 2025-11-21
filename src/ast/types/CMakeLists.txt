@@ -6,6 +6,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/BooleanTypeAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleTypeAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/AliasTypeAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ArrayTypeAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_types_src})
