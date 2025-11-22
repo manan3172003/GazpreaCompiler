@@ -54,7 +54,8 @@ enum class NodeType {
   TupleType,
   TupleUnpackAssign,
   Typealias,
-  UnaryExpression
+  UnaryExpression,
+  VectorType
 };
 
 enum class Qualifier {

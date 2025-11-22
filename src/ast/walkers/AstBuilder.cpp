@@ -39,6 +39,8 @@
 #include "ast/types/IntegerTypeAst.h"
 #include "ast/types/RealTypeAst.h"
 #include "ast/types/TupleTypeAst.h"
+#include "ast/types/VectorTypeAst.h"
+
 #include <ast/walkers/AstBuilder.h>
 
 namespace gazprea::ast::walkers {
@@ -599,7 +601,7 @@ std::any AstBuilder::visitField(GazpreaParser::FieldContext *ctx) {
   return GazpreaBaseVisitor::visitField(ctx);
 }
 std::any AstBuilder::visitVectorType(GazpreaParser::VectorTypeContext *ctx) {
-  return GazpreaBaseVisitor::visitVectorType(ctx);
+  return visit(ctx->vector_type());
 }
 std::any AstBuilder::visitTwoDimArray(GazpreaParser::TwoDimArrayContext *ctx) {
   auto arrayTypeAst = std::make_shared<types::ArrayTypeAst>(ctx->getStart());
@@ -776,7 +778,9 @@ std::any AstBuilder::createBinaryExpr(antlr4::tree::ParseTree *leftCtx, const st
 }
 
 std::any AstBuilder::visitVector_type(GazpreaParser::Vector_typeContext *ctx) {
-  return GazpreaBaseVisitor::visitVector_type(ctx);
+  const auto vectorType = std::make_shared<types::VectorTypeAst>(ctx->getStart());
+  vectorType->setElementType(makeType(ctx->type(), ctx->getStart()));
+  return std::static_pointer_cast<types::DataTypeAst>(vectorType);
 }
 std::any AstBuilder::visitStruct_type(GazpreaParser::Struct_typeContext *ctx) {
   return GazpreaBaseVisitor::visitStruct_type(ctx);
