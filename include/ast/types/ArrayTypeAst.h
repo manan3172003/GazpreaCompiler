@@ -6,7 +6,7 @@
 
 namespace gazprea::ast::types {
 
-class ArrayTypeAst : public DataTypeAst {
+class ArrayTypeAst final: public DataTypeAst {
   std::shared_ptr<DataTypeAst> type;
   std::vector<std::shared_ptr<expressions::ExpressionAst>> static_sizes = {};
 
