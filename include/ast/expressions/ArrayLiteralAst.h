@@ -3,7 +3,7 @@
 
 namespace gazprea::ast::expressions {
 
-class ArrayLiteralAst final: public ExpressionAst {
+class ArrayLiteralAst final : public ExpressionAst {
   std::vector<std::shared_ptr<ExpressionAst>> elements;
 
 public:
