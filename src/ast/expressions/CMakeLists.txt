@@ -11,6 +11,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/CharLiteralAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/BoolLiteralAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/FuncProcCallAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/StringLiteralAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleLiteralAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ArrayLiteralAst.cpp"
 )

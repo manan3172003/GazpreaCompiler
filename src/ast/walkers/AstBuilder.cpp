@@ -9,6 +9,7 @@
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerLiteralAst.h"
 #include "ast/expressions/RealLiteralAst.h"
+#include "ast/expressions/StringLiteralAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
@@ -548,9 +549,9 @@ std::any AstBuilder::visitMulDivRemExpr(GazpreaParser::MulDivRemExprContext *ctx
   return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx) {
-  throw TypeError(
-      ctx->getStart()->getLine(),
-      "String literals are not supported - use single quotes '' for character literals");
+  const auto stringAst = std::make_shared<expressions::StringLiteralAst>(ctx->getStart());
+  stringAst->setValue(ctx->STRING_LIT()->getText());
+  return std::static_pointer_cast<expressions::ExpressionAst>(stringAst);
 }
 std::any AstBuilder::visitFuncProcExpr(GazpreaParser::FuncProcExprContext *ctx) {
   const auto fpCallAst = std::make_shared<expressions::FuncProcCallAst>(ctx->getStart());
@@ -816,7 +817,10 @@ std::any AstBuilder::visitIntType(GazpreaParser::IntTypeContext *ctx) {
       std::make_shared<types::IntegerTypeAst>(ctx->getStart()));
 }
 std::any AstBuilder::visitStringType(GazpreaParser::StringTypeContext *ctx) {
-  return GazpreaBaseVisitor::visitStringType(ctx);
+  // String is a vector of characters in Gazprea
+  const auto vectorType = std::make_shared<types::VectorTypeAst>(ctx->getStart());
+  vectorType->setElementType(std::make_shared<types::CharacterTypeAst>(ctx->getStart()));
+  return std::static_pointer_cast<types::DataTypeAst>(vectorType);
 }
 std::any AstBuilder::visitAliasType(GazpreaParser::AliasTypeContext *ctx) {
   auto aliasType = std::make_shared<types::AliasTypeAst>(ctx->getStart());
