@@ -1,0 +1,5 @@
+procedure main() returns integer {
+    var integer[5][1] a = [[1], [2], [3], [4, true], [6]];
+    return 0;
+}
+// CHECK:TypeError on Line 2: Type mismatch in array
