@@ -2,6 +2,7 @@
 
 #include "ast/Ast.h"
 #include "ast/RootAst.h"
+#include "ast/expressions/ArrayLiteralAst.h"
 #include "ast/expressions/BinaryAst.h"
 #include "ast/expressions/BoolLiteralAst.h"
 #include "ast/expressions/CastAst.h"
@@ -34,6 +35,7 @@
 #include "ast/statements/TupleUnpackAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
 #include "ast/types/AliasTypeAst.h"
+#include "ast/types/ArrayTypeAst.h"
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/RealTypeAst.h"
@@ -98,11 +100,13 @@ public:
   virtual std::any visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {
     return {};
   }
+  virtual std::any visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) { return {}; }
 
   virtual std::any visitAliasType(std::shared_ptr<types::AliasTypeAst> ctx) { return {}; }
   virtual std::any visitIntegerType(std::shared_ptr<types::IntegerTypeAst> ctx) { return {}; }
   virtual std::any visitRealType(std::shared_ptr<types::RealTypeAst> ctx) { return {}; }
   virtual std::any visitCharacterType(std::shared_ptr<types::CharacterTypeAst> ctx) { return {}; }
   virtual std::any visitBooleanType(std::shared_ptr<types::BooleanTypeAst> ctx) { return {}; }
+  virtual std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) { return {}; }
 };
 } // namespace gazprea::ast::walkers

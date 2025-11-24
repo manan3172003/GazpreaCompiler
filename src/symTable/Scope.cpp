@@ -1,3 +1,4 @@
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
 #include <sstream>
@@ -61,6 +62,10 @@ std::shared_ptr<Symbol> GlobalScope::resolveType(const std::string &type) {
   if (typeSym->getType()->getName() == "tuple") {
     auto tupleTypeSym = std::dynamic_pointer_cast<TupleTypeSymbol>(typeSym->getType());
     return tupleTypeSym;
+  }
+
+  if (typeSym->getType()->getName().substr(0, 5) == "array") {
+    return std::dynamic_pointer_cast<ArrayTypeSymbol>(typeSym->getType());
   }
 
   return resolveType(typeSym->getType()->getName());

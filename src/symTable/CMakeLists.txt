@@ -10,6 +10,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleTypeSymbol.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TypealiasSymbol.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/MethodSymbol.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ArrayTypeSymbol.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_symtable_src})

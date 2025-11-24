@@ -1,5 +1,6 @@
 #include "CompileTimeExceptions.h"
 #include "ast/types/AliasTypeAst.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
 #include "symTable/VariableSymbol.h"
@@ -142,6 +143,10 @@ DefRefWalker::resolvedType(int lineNumber, const std::shared_ptr<types::DataType
     const auto aliasTypeNode = std::dynamic_pointer_cast<types::AliasTypeAst>(dataType);
     const auto aliasSymType = globalScope->resolveType(aliasTypeNode->getAlias());
     type = std::dynamic_pointer_cast<symTable::Type>(aliasSymType);
+    break;
+  }
+  case NodeType::ArrayType: {
+    type = std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
     break;
   }
   case NodeType::TupleType: {
@@ -466,6 +471,14 @@ std::any DefRefWalker::visitBooleanType(std::shared_ptr<types::BooleanTypeAst> c
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
+std::any DefRefWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) {
+  auto arrayTypeSymbol = std::make_shared<symTable::ArrayTypeSymbol>("array");
+  arrayTypeSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
+  arrayTypeSymbol->setDef(ctx);
+  ctx->setSymbol(arrayTypeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
 std::any DefRefWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   throwDuplicateSymbolError(ctx, ctx->getAlias(), symTab->getGlobalScope(), true);
   ctx->setScope(symTab->getCurrentScope());
@@ -628,6 +641,13 @@ std::any DefRefWalker::visitInteger(std::shared_ptr<expressions::IntegerLiteralA
   return {};
 }
 std::any DefRefWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) {
+  for (const auto &element : ctx->getElements()) {
+    visit(element);
+  }
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }

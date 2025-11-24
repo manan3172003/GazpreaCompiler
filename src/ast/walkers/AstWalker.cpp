@@ -87,6 +87,10 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
     return visitCharacterType(std::static_pointer_cast<types::CharacterTypeAst>(ast));
   case NodeType::BoolType:
     return visitBooleanType(std::static_pointer_cast<types::BooleanTypeAst>(ast));
+  case NodeType::ArrayType:
+    return visitArrayType(std::static_pointer_cast<types::ArrayTypeAst>(ast));
+  case NodeType::ArrayLiteral:
+    return visitArray(std::static_pointer_cast<expressions::ArrayLiteralAst>(ast));
   default:
     return {};
   }
