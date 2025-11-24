@@ -9,7 +9,6 @@
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerLiteralAst.h"
 #include "ast/expressions/RealLiteralAst.h"
-#include "ast/expressions/StringLiteralAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
@@ -552,11 +551,9 @@ std::any AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx
   const auto arrayAst = std::make_shared<expressions::ArrayLiteralAst>(ctx->getStart());
   std::string stringText = ctx->STRING_LIT()->getText();
   std::string sanitizedString = stringText.substr(1, stringText.size() - 2);
-  // Convert each character in the string to a CharLiteralAst
   size_t i = 0;
   while (i < sanitizedString.length()) {
     std::string charStr;
-    // Handle escape sequences
     if (sanitizedString[i] == '\\' && i + 1 < sanitizedString.length()) {
       charStr = sanitizedString.substr(i, 2);
       i += 2;
@@ -564,11 +561,9 @@ std::any AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx
       charStr = sanitizedString.substr(i, 1);
       i += 1;
     }
-    // Create a CharLiteralAst for this character
     const auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
     char charValue = convertStringToChar(charStr, ctx->getStart()->getLine());
     charAst->setValue(charValue);
-    // Add the character to the array
     arrayAst->addElement(std::static_pointer_cast<expressions::ExpressionAst>(charAst));
   }
 
