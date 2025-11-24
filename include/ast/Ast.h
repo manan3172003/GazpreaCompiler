@@ -49,6 +49,7 @@ enum class NodeType {
   Return,
   Root,
   StructAccess,
+  StructDeclaration,
   StructElementAssign,
   StructType,
   TupleAccess,

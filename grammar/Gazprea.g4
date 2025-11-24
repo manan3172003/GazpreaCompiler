@@ -100,8 +100,10 @@ assign_left
 dec_stat
     : qualifier? type  ID (EQUAL expr)? SC
     | qualifier type? ID EQUAL expr SC
+    | struct_dec_stat
     ;
 
+struct_dec_stat: struct_type SC;
 
 tuple_type: TUPLE LPAREN type_list RPAREN;
 

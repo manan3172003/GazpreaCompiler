@@ -30,6 +30,7 @@
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/ProcedureCallAst.h"
 #include "ast/statements/ReturnAst.h"
+#include "ast/statements/StructDeclarationAst.h"
 #include "ast/statements/StructElementAssignAst.h"
 #include "ast/statements/TupleElementAssignAst.h"
 #include "ast/statements/TupleUnpackAssignAst.h"
@@ -371,6 +372,11 @@ std::any AstBuilder::visitTupleElementLVal(GazpreaParser::TupleElementLValContex
   return std::static_pointer_cast<statements::AssignLeftAst>(lVal);
 }
 std::any AstBuilder::visitDec_stat(GazpreaParser::Dec_statContext *ctx) {
+  // handles struct type declaration
+  if (ctx->struct_dec_stat()) {
+    return visit(ctx->struct_dec_stat());
+  }
+
   auto declAst = std::make_shared<statements::DeclarationAst>(ctx->getStart());
   if (ctx->qualifier()) {
     if (ctx->qualifier()->CONST())
@@ -763,6 +769,14 @@ std::any AstBuilder::visitArray_elements(GazpreaParser::Array_elementsContext *c
 }
 std::any AstBuilder::visitTuple_elements(GazpreaParser::Tuple_elementsContext *ctx) {
   return GazpreaBaseVisitor::visitTuple_elements(ctx);
+}
+std::any AstBuilder::visitStruct_dec_stat(GazpreaParser::Struct_dec_statContext *ctx) {
+  const auto structDeclaration =
+      std::make_shared<statements::StructDeclarationAst>(ctx->getStart());
+  const auto structType = std::dynamic_pointer_cast<types::StructTypeAst>(
+      std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->struct_type())));
+  structDeclaration->setType(structType);
+  return std::static_pointer_cast<statements::StatementAst>(structDeclaration);
 }
 
 // Helper function implementations

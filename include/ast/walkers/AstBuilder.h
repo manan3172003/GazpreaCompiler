@@ -113,6 +113,7 @@ public:
   std::any visitDot_float(GazpreaParser::Dot_floatContext *ctx) override;
   std::any visitFloat_dot(GazpreaParser::Float_dotContext *ctx) override;
   std::any visitFloat_lit(GazpreaParser::Float_litContext *ctx) override;
+  std::any visitStruct_dec_stat(GazpreaParser::Struct_dec_statContext *ctx) override;
 
 private:
   static expressions::BinaryOpType stringToBinaryOpType(const std::string &op);
