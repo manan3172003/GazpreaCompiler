@@ -640,7 +640,10 @@ std::any AstBuilder::visitVectorType(GazpreaParser::VectorTypeContext *ctx) {
 }
 std::any AstBuilder::visitTwoDimArray(GazpreaParser::TwoDimArrayContext *ctx) {
   auto arrayTypeAst = std::make_shared<types::ArrayTypeAst>(ctx->getStart());
-  arrayTypeAst->setType(std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type())));
+  auto baseType = std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(ctx->type()));
+  auto innerArrayType = std::make_shared<types::ArrayTypeAst>(ctx->getStart());
+  innerArrayType->setType(baseType);
+  arrayTypeAst->setType(innerArrayType);
   if (ctx->expr(0)) {
     auto sizeExpr = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(0)));
     arrayTypeAst->pushSize(sizeExpr);

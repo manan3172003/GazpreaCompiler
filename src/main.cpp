@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     gazprea::ast::walkers::ValidationWalker validationWalker(symTab);
     validationWalker.visit(rootAst);
 
-    // std::cout << rootAst->toStringTree("") << std::endl;
+    std::cout << rootAst->toStringTree("") << std::endl;
 
     std::ofstream os(argv[2]);
     gazprea::backend::Backend backend(rootAst);

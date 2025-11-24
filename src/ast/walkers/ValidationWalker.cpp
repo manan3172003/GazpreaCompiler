@@ -59,6 +59,12 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
         std::dynamic_pointer_cast<symTable::Symbol>(ctx->getExpr()->getInferredSymbolType()));
   }
 
+  if (auto arrayTypeSymbol =
+          std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType())) {
+    arrayTypeCheck(ctx->getLineNumber(),
+                   std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(ctx->getExpr()),
+                   arrayTypeSymbol);
+  }
   // type check
   const auto declarationType =
       std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());

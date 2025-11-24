@@ -90,6 +90,8 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
     return true;
   if (isOfSymbolType(destination, "boolean") && isOfSymbolType(source, "boolean"))
     return true;
+  if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "array"))
+    return true;
   if (isOfSymbolType(destination, "tuple") && isOfSymbolType(source, "tuple")) {
     const auto destTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(destination);
     const auto sourceTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(source);
@@ -113,10 +115,20 @@ bool ValidationWalker::isTupleTypeMatch(
   return true;
 }
 
-bool ValidationWalker::isArrayElementTypeMatch(
-  const std::shared_ptr<symTable::ArrayTypeSymbol> &destination,
-  const std::shared_ptr<symTable::Type> &source) {
-  return destination->getType()->getName() == source->getName();
+void ValidationWalker::arrayTypeCheck(
+    int lineNumber, const std::shared_ptr<expressions::ArrayLiteralAst> &arrayLiteral,
+    const std::shared_ptr<symTable::ArrayTypeSymbol> &arrayTypeSymbol) {
+  for (const auto &element : arrayLiteral->getElements()) {
+    if (not typesMatch(arrayTypeSymbol->getType(), element->getInferredSymbolType()))
+      throw TypeError(lineNumber, "Type mismatch in array");
+    if (auto subElement = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(element)) {
+      if (auto subElementTypeSymbol =
+              std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayTypeSymbol->getType()))
+        arrayTypeCheck(lineNumber, subElement, subElementTypeSymbol);
+      else
+        throw TypeError(lineNumber, "Invalid 2D array type");
+    }
+  }
 }
 
 bool ValidationWalker::isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
@@ -124,7 +136,11 @@ bool ValidationWalker::isOfSymbolType(const std::shared_ptr<symTable::Type> &sym
   if (!symbolType)
     throw std::runtime_error("SymbolType should not be null\n");
 
-  return symbolType->getName() == typeName;
+  auto symbolName = symbolType->getName();
+  if (typeName == "array" && symbolName.substr(0, 5) == "array")
+    return true;
+
+  return symbolName == typeName;
 }
 
 std::shared_ptr<symTable::Scope>
