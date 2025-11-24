@@ -9,6 +9,7 @@
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerLiteralAst.h"
 #include "ast/expressions/RealLiteralAst.h"
+#include "ast/expressions/StructAccessAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
@@ -29,6 +30,7 @@
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/ProcedureCallAst.h"
 #include "ast/statements/ReturnAst.h"
+#include "ast/statements/StructElementAssignAst.h"
 #include "ast/statements/TupleElementAssignAst.h"
 #include "ast/statements/TupleUnpackAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
@@ -606,7 +608,15 @@ std::any AstBuilder::visitBuilt_in_stat(GazpreaParser::Built_in_statContext *ctx
   return GazpreaBaseVisitor::visitBuilt_in_stat(ctx);
 }
 std::any AstBuilder::visitStructFieldLVal(GazpreaParser::StructFieldLValContext *ctx) {
-  return GazpreaBaseVisitor::visitStructFieldLVal(ctx);
+  auto lVal = std::make_shared<statements::StructElementAssignAst>(ctx->getStart());
+
+  // visit and create lVal ast
+  std::string accessToken = ctx->STRUCT_ACCESS()->getText();
+  size_t pos = accessToken.find('.');
+  lVal->setStructName(accessToken.substr(0, pos));
+  lVal->setElementName(accessToken.substr(pos + 1));
+
+  return std::static_pointer_cast<statements::AssignLeftAst>(lVal);
 }
 std::any AstBuilder::visitArrayElementLVal(GazpreaParser::ArrayElementLValContext *ctx) {
   return GazpreaBaseVisitor::visitArrayElementLVal(ctx);
@@ -691,7 +701,12 @@ std::any AstBuilder::visitFormatExpr(GazpreaParser::FormatExprContext *ctx) {
   return GazpreaBaseVisitor::visitFormatExpr(ctx);
 }
 std::any AstBuilder::visitStructAccessExpr(GazpreaParser::StructAccessExprContext *ctx) {
-  return GazpreaBaseVisitor::visitStructAccessExpr(ctx);
+  const auto structExpression = std::make_shared<expressions::StructAccessAst>(ctx->getStart());
+  std::string accessToken = ctx->STRUCT_ACCESS()->getText();
+  size_t pos = accessToken.find('.');
+  structExpression->setStructName(accessToken.substr(0, pos));
+  structExpression->setElementName(accessToken.substr(pos + 1));
+  return std::static_pointer_cast<expressions::ExpressionAst>(structExpression);
 }
 std::any AstBuilder::visitLengthExpr(GazpreaParser::LengthExprContext *ctx) {
   return GazpreaBaseVisitor::visitLengthExpr(ctx);

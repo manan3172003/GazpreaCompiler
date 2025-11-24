@@ -13,6 +13,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/FuncProcCallAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleLiteralAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ArrayLiteralAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/StructAccessAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_expressions_src})

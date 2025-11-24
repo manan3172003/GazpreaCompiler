@@ -16,6 +16,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleElementAssignAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleUnpackAssignAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ProcedureCallAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/StructElementAssignAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_statements_src})

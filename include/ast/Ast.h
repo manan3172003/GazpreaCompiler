@@ -48,6 +48,8 @@ enum class NodeType {
   IteratorLoop,
   Return,
   Root,
+  StructAccess,
+  StructElementAssign,
   StructType,
   TupleAccess,
   TupleElementAssign,
