@@ -38,6 +38,7 @@
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/IntegerTypeAst.h"
 #include "ast/types/RealTypeAst.h"
+#include "ast/types/StructTypeAst.h"
 #include "ast/types/TupleTypeAst.h"
 #include "ast/types/VectorTypeAst.h"
 
@@ -783,7 +784,14 @@ std::any AstBuilder::visitVector_type(GazpreaParser::Vector_typeContext *ctx) {
   return std::static_pointer_cast<types::DataTypeAst>(vectorType);
 }
 std::any AstBuilder::visitStruct_type(GazpreaParser::Struct_typeContext *ctx) {
-  return GazpreaBaseVisitor::visitStruct_type(ctx);
+  auto structType = std::make_shared<types::StructTypeAst>(ctx->getStart());
+  structType->setStructName(ctx->ID()->getText());
+  for (auto const field : ctx->field_list()->field()) {
+    const std::string elementName = field->ID()->getText();
+    const auto elementType = makeType(field->type(), ctx->getStart());
+    structType->addElement(elementName, elementType);
+  }
+  return std::static_pointer_cast<types::DataTypeAst>(structType);
 }
 std::any AstBuilder::visitCharType(GazpreaParser::CharTypeContext *ctx) {
   return std::static_pointer_cast<types::DataTypeAst>(
@@ -801,7 +809,7 @@ std::any AstBuilder::visitTupType(GazpreaParser::TupTypeContext *ctx) {
   return visit(ctx->tuple_type());
 }
 std::any AstBuilder::visitStructType(GazpreaParser::StructTypeContext *ctx) {
-  return GazpreaBaseVisitor::visitStructType(ctx);
+  return visit(ctx->struct_type());
 }
 std::any AstBuilder::visitIntType(GazpreaParser::IntTypeContext *ctx) {
   return std::static_pointer_cast<types::DataTypeAst>(

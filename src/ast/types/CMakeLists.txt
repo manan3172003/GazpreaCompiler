@@ -8,6 +8,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/AliasTypeAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ArrayTypeAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/VectorTypeAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/StructTypeAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_types_src})
