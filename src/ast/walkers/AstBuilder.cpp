@@ -549,9 +549,37 @@ std::any AstBuilder::visitMulDivRemExpr(GazpreaParser::MulDivRemExprContext *ctx
   return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx) {
-  const auto stringAst = std::make_shared<expressions::StringLiteralAst>(ctx->getStart());
-  stringAst->setValue(ctx->STRING_LIT()->getText());
-  return std::static_pointer_cast<expressions::ExpressionAst>(stringAst);
+  // String literals are converted to array literals containing characters
+  const auto arrayAst = std::make_shared<expressions::ArrayLiteralAst>(ctx->getStart());
+
+  // Get the string text without surrounding quotes
+  std::string stringText = ctx->STRING_LIT()->getText();
+  std::string sanitizedString = stringText.substr(1, stringText.size() - 2);
+
+  // Convert each character in the string to a CharLiteralAst
+  size_t i = 0;
+  while (i < sanitizedString.length()) {
+    std::string charStr;
+
+    // Handle escape sequences
+    if (sanitizedString[i] == '\\' && i + 1 < sanitizedString.length()) {
+      charStr = sanitizedString.substr(i, 2);
+      i += 2;
+    } else {
+      charStr = sanitizedString.substr(i, 1);
+      i += 1;
+    }
+
+    // Create a CharLiteralAst for this character
+    const auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
+    char charValue = convertStringToChar(charStr, ctx->getStart()->getLine());
+    charAst->setValue(charValue);
+
+    // Add the character to the array
+    arrayAst->addElement(std::static_pointer_cast<expressions::ExpressionAst>(charAst));
+  }
+
+  return std::static_pointer_cast<expressions::ExpressionAst>(arrayAst);
 }
 std::any AstBuilder::visitFuncProcExpr(GazpreaParser::FuncProcExprContext *ctx) {
   const auto fpCallAst = std::make_shared<expressions::FuncProcCallAst>(ctx->getStart());
