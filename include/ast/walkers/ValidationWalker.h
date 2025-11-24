@@ -1,5 +1,6 @@
 #pragma once
 #include "AstWalker.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/SymTable.h"
 #include "symTable/TupleTypeSymbol.h"
 
@@ -50,6 +51,7 @@ public:
   std::any visitIdentifierLeft(std::shared_ptr<statements::IdentifierLeftAst> ctx) override;
   std::any visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) override;
   std::any visitReal(std::shared_ptr<expressions::RealLiteralAst> ctx) override;
+  std::any visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) override;
   std::any visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) override;
   std::any visitLoop(std::shared_ptr<statements::LoopAst> ctx) override;
   std::any visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) override;
@@ -71,6 +73,8 @@ public:
                          const std::shared_ptr<symTable::Type> &source);
   static bool isTupleTypeMatch(const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
                                const std::shared_ptr<symTable::TupleTypeSymbol> &source);
+  bool isArrayElementTypeMatch(const std::shared_ptr<symTable::ArrayTypeSymbol> &destination,
+                        const std::shared_ptr<symTable::Type> &source);
   static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
                              const std::string &typeName);
   static std::shared_ptr<symTable::Scope>

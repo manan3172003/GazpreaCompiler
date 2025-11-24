@@ -531,6 +531,17 @@ std::any ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst
   ctx->setInferredSymbolType(resolvedInferredType(realType));
   return {};
 }
+std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) {
+  auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+  if (ctx->getElements().size() > 0) {
+    for (const auto &element : ctx->getElements())
+      visit(element);
+    arrayType->setType(ctx->getElements()[0]->getInferredDataType());
+  }
+  ctx->setInferredDataType(arrayType);
+  ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+  return {};
+}
 std::any ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
   visit(ctx->getExpression());
 

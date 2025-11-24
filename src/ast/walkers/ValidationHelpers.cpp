@@ -1,5 +1,6 @@
 #include "CompileTimeExceptions.h"
 #include "ast/types/AliasTypeAst.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 
 #include <ast/walkers/ValidationWalker.h>
@@ -112,6 +113,12 @@ bool ValidationWalker::isTupleTypeMatch(
   return true;
 }
 
+bool ValidationWalker::isArrayElementTypeMatch(
+  const std::shared_ptr<symTable::ArrayTypeSymbol> &destination,
+  const std::shared_ptr<symTable::Type> &source) {
+  return destination->getType()->getName() == source->getName();
+}
+
 bool ValidationWalker::isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
                                       const std::string &typeName) {
   if (!symbolType)
@@ -207,6 +214,12 @@ ValidationWalker::resolvedInferredType(const std::shared_ptr<types::DataTypeAst>
     return std::dynamic_pointer_cast<symTable::Type>(globalScope->resolveType("character"));
   case NodeType::BoolType:
     return std::dynamic_pointer_cast<symTable::Type>(globalScope->resolveType("boolean"));
+  case NodeType::ArrayType: {
+    auto arrayTypeSymbol = std::make_shared<symTable::ArrayTypeSymbol>("array");
+    auto arrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(dataType);
+    arrayTypeSymbol->setType(resolvedInferredType(arrayDataType->getType()));
+    return std::dynamic_pointer_cast<symTable::Type>(arrayTypeSymbol);
+  }
   case NodeType::AliasType: {
     const auto aliasTypeNode = std::dynamic_pointer_cast<types::AliasTypeAst>(dataType);
     const auto aliasSymType = globalScope->resolveType(aliasTypeNode->getAlias());
