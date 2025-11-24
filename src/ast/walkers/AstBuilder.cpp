@@ -566,6 +566,9 @@ std::any AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx
     charAst->setValue(charValue);
     arrayAst->addElement(std::static_pointer_cast<expressions::ExpressionAst>(charAst));
   }
+  const auto nullChar = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
+  nullChar->setValue('\0');
+  arrayAst->addElement(std::static_pointer_cast<expressions::ExpressionAst>(nullChar));
 
   return std::static_pointer_cast<expressions::ExpressionAst>(arrayAst);
 }
