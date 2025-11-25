@@ -23,6 +23,7 @@ enum class NodeType {
   Break,
   BoolLiteral,
   BoolType,
+  Builtin,
   Continue,
   Conditional,
   Cast,

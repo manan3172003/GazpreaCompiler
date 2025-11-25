@@ -24,23 +24,23 @@ stat
     | output_stat
     | input_stat
     | procedure_call_stat
-    | built_in_stat
+    | member_function_stat
     ;
 
 // TODO: Can string builtin operations done on string expressions
-built_in_stat
-    : assign_left DCONCAT LPAREN args? RPAREN SC
-    | expr DCONCAT LPAREN args? RPAREN SC
-    | assign_left DPUSH LPAREN args? RPAREN SC
-    | expr DPUSH LPAREN args? RPAREN SC
-    | assign_left DLEN LPAREN RPAREN SC
-    | expr DLEN LPAREN RPAREN SC
-    | assign_left DAPPEND LPAREN args? RPAREN SC
-    | expr DAPPEND LPAREN args? RPAREN SC
-    | IDCONCAT LPAREN args? RPAREN SC
-    | IDPUSH LPAREN args? RPAREN SC
-    | IDAPPEND LPAREN args? RPAREN SC
-    | IDLEN LPAREN RPAREN SC
+member_function_stat
+    : assign_left DCONCAT LPAREN args? RPAREN SC #concatBuiltinAssign
+    | expr DCONCAT LPAREN args? RPAREN SC #concatBuiltinExpr
+    | assign_left DPUSH LPAREN args? RPAREN SC #pushBuiltinAssign
+    | expr DPUSH LPAREN args? RPAREN SC #pushBuiltinExpr
+    | assign_left DLEN LPAREN RPAREN SC #lenBuiltinAssign
+    | expr DLEN LPAREN RPAREN SC #lenBuiltinExpr
+    | assign_left DAPPEND LPAREN args? RPAREN SC #appendBuiltinAssign
+    | expr DAPPEND LPAREN args? RPAREN SC #appendBuiltinExpr
+    | IDCONCAT LPAREN args? RPAREN SC #concatBuiltin
+    | IDPUSH LPAREN args? RPAREN SC #pushBuiltin
+    | IDAPPEND LPAREN args? RPAREN SC #appendBuiltin
+    | IDLEN LPAREN RPAREN SC #lenBuiltin
     ;
 
 procedure_stat

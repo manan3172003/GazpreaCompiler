@@ -27,6 +27,7 @@
 #include "ast/statements/InputAst.h"
 #include "ast/statements/IteratorLoopAst.h"
 #include "ast/statements/LoopAst.h"
+#include "ast/statements/MemberFunctionAst.h"
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/ProcedureCallAst.h"
 #include "ast/statements/ReturnAst.h"
@@ -610,9 +611,6 @@ std::shared_ptr<types::DataTypeAst> AstBuilder::makeType(GazpreaParser::TypeCont
   auto type = std::any_cast<std::shared_ptr<types::DataTypeAst>>(visit(typeContext));
   return type;
 }
-std::any AstBuilder::visitBuilt_in_stat(GazpreaParser::Built_in_statContext *ctx) {
-  return GazpreaBaseVisitor::visitBuilt_in_stat(ctx);
-}
 std::any AstBuilder::visitStructFieldLVal(GazpreaParser::StructFieldLValContext *ctx) {
   auto lVal = std::make_shared<statements::StructElementAssignAst>(ctx->getStart());
 
@@ -874,6 +872,139 @@ std::any AstBuilder::visitAliasType(GazpreaParser::AliasTypeContext *ctx) {
   auto aliasType = std::make_shared<types::AliasTypeAst>(ctx->getStart());
   aliasType->setAlias(ctx->ID()->getText());
   return std::static_pointer_cast<types::DataTypeAst>(aliasType);
+}
+
+std::any AstBuilder::visitConcatBuiltinAssign(GazpreaParser::ConcatBuiltinAssignContext *ctx) {
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Concat);
+  builtinAst->setLeft(
+      std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left())));
+  if (ctx->args()) {
+    builtinAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitConcatBuiltinExpr(GazpreaParser::ConcatBuiltinExprContext *ctx) {
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Concat);
+  builtinAst->setLeft(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
+  if (ctx->args()) {
+    builtinAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitPushBuiltinAssign(GazpreaParser::PushBuiltinAssignContext *ctx) {
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Push);
+  builtinAst->setLeft(
+      std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left())));
+  if (ctx->args()) {
+    builtinAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitPushBuiltinExpr(GazpreaParser::PushBuiltinExprContext *ctx) {
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Push);
+  builtinAst->setLeft(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
+  if (ctx->args()) {
+    builtinAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitLenBuiltinAssign(GazpreaParser::LenBuiltinAssignContext *ctx) {
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Len);
+  builtinAst->setLeft(
+      std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left())));
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitLenBuiltinExpr(GazpreaParser::LenBuiltinExprContext *ctx) {
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Len);
+  builtinAst->setLeft(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitAppendBuiltinAssign(GazpreaParser::AppendBuiltinAssignContext *ctx) {
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Append);
+  builtinAst->setLeft(
+      std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left())));
+  if (ctx->args()) {
+    builtinAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitAppendBuiltinExpr(GazpreaParser::AppendBuiltinExprContext *ctx) {
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Append);
+  builtinAst->setLeft(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
+  if (ctx->args()) {
+    builtinAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitConcatBuiltin(GazpreaParser::ConcatBuiltinContext *ctx) {
+  std::string idLenToken = ctx->IDCONCAT()->getText();
+  const std::string leftId = idLenToken.substr(0, idLenToken.find("."));
+  const auto idAst = std::make_shared<expressions::IdentifierAst>(ctx->getStart());
+  idAst->setName(leftId);
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Concat);
+  builtinAst->setLeft(idAst);
+  if (ctx->args()) {
+    builtinAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitPushBuiltin(GazpreaParser::PushBuiltinContext *ctx) {
+  std::string idLenToken = ctx->IDPUSH()->getText();
+  const std::string leftId = idLenToken.substr(0, idLenToken.find("."));
+  const auto idAst = std::make_shared<expressions::IdentifierAst>(ctx->getStart());
+  idAst->setName(leftId);
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Push);
+  builtinAst->setLeft(idAst);
+  if (ctx->args()) {
+    builtinAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitAppendBuiltin(GazpreaParser::AppendBuiltinContext *ctx) {
+  std::string idLenToken = ctx->IDAPPEND()->getText();
+  const std::string leftId = idLenToken.substr(0, idLenToken.find("."));
+  const auto idAst = std::make_shared<expressions::IdentifierAst>(ctx->getStart());
+  idAst->setName(leftId);
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Append);
+  builtinAst->setLeft(idAst);
+  if (ctx->args()) {
+    builtinAst->setArgs(
+        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
+  }
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
+}
+std::any AstBuilder::visitLenBuiltin(GazpreaParser::LenBuiltinContext *ctx) {
+  std::string idLenToken = ctx->IDLEN()->getText();
+  const std::string leftId = idLenToken.substr(0, idLenToken.find("."));
+  const auto idAst = std::make_shared<expressions::IdentifierAst>(ctx->getStart());
+  idAst->setName(leftId);
+  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
+      ctx->getStart(), statements::MemberFunctionType::Len);
+  builtinAst->setLeft(idAst);
+  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
 }
 
 char AstBuilder::convertStringToChar(const std::string &str, int lineNumber) {

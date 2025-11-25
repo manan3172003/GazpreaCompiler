@@ -18,6 +18,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/ProcedureCallAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/StructElementAssignAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/StructDeclarationAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/MemberFunctionAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_statements_src})
