@@ -1,4 +1,5 @@
 #include "run_time_errors.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 #include "utils/ValidationUtils.h"
@@ -25,6 +26,8 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   setupPrintf();
   setupIntPow();
   setupThrowDivisionByZeroError();
+  setupThrowArraySizeError();
+  setupPrintArray();
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%d\0", "intFormat");
   createGlobalString("%g\0", "floatFormat");
@@ -109,6 +112,21 @@ void Backend::setupThrowDivisionByZeroError() const {
   builder->create<mlir::LLVM::LLVMFuncOp>(loc, "throwDivisionByZeroError", llvmFnType);
 }
 
+void Backend::setupThrowArraySizeError() const {
+  // Signature: void throwArraySizeError()
+  auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "throwArraySizeError", llvmFnType);
+}
+
+void Backend::setupPrintArray() const {
+  // Signature: void printArray(ptr arrayStructAddr, i32 elementType)
+  auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy(), intTy()},
+                                                      /*isVarArg=*/false);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printArray", llvmFnType);
+}
+
 void Backend::printFloat(mlir::Value floatValue) {
   mlir::LLVM::GlobalOp formatString;
   if (!(formatString = module.lookupSymbol<mlir::LLVM::GlobalOp>("floatFormat"))) {
@@ -173,6 +191,29 @@ void Backend::printChar(char c) {
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
 }
 
+void Backend::printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType) {
+  auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayType);
+  auto elementType = arrayTypeSym->getType();
+
+  int elementTypeCode = 0;
+  std::string elementTypeName = elementType->getName();
+
+  if (elementTypeName == "integer") {
+    elementTypeCode = 0;
+  } else if (elementTypeName == "real") {
+    elementTypeCode = 1;
+  } else if (elementTypeName == "character") {
+    elementTypeCode = 2;
+  } else if (elementTypeName == "boolean") {
+    elementTypeCode = 3;
+  }
+
+  auto printArrayFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printArray");
+  auto elementTypeConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), elementTypeCode);
+  mlir::ValueRange args = {arrayStructAddr, elementTypeConst};
+  builder->create<mlir::LLVM::CallOp>(loc, printArrayFunc, args);
+}
+
 void Backend::createGlobalString(const char *str, const char *stringName) const {
   // create string and string type
   auto mlirString = mlir::StringRef(str, strlen(str) + 1);
@@ -222,6 +263,14 @@ mlir::Type Backend::getMLIRType(const std::shared_ptr<symTable::Type> &returnTyp
     for (const auto &memberType : tupleTypeSym->getResolvedTypes()) {
       memberTypes.push_back(getMLIRType(memberType));
     }
+    return structTy(memberTypes);
+  }
+  if (returnType->getName().substr(0, 5) == "array") {
+    const auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(returnType);
+    std::vector<mlir::Type> memberTypes;
+    memberTypes.push_back(intTy());  // size
+    memberTypes.push_back(ptrTy());  // data
+    memberTypes.push_back(boolTy()); // is 2D?
     return structTy(memberTypes);
   }
   // TODO: Support other return types
@@ -669,10 +718,47 @@ void Backend::copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAd
           builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(fromSubType), newAddrForElement);
       builder->create<mlir::LLVM::StoreOp>(loc, loadedValue, newElementPtr);
     }
+  } else if (isTypeArray(type)) {
+    copyArrayStruct(type, fromAddr, destAddr);
   } else {
     auto value = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(type), fromAddr);
     builder->create<mlir::LLVM::StoreOp>(loc, value, destAddr);
   }
+}
+
+bool Backend::isTypeArray(std::shared_ptr<symTable::Type> type) {
+  return (type->getName().substr(0, 5) == "array") ? true : false;
+}
+
+void Backend::pushElementToScopeStack(std::shared_ptr<ast::Ast> ctx,
+                                      std::shared_ptr<symTable::Type> elementType,
+                                      mlir::Value val) {
+  ctx->getScope()->pushElementToScopeStack(elementType, val);
+}
+
+std::pair<std::shared_ptr<symTable::Type>, mlir::Value>
+Backend::popElementFromStack(std::shared_ptr<ast::Ast> ctx) {
+  auto topElement = ctx->getScope()->getTopElementInStack();
+  ctx->getScope()->pushElementToFree(topElement);
+  ctx->getScope()->popElementFromScopeStack();
+  return topElement;
+}
+
+void Backend::freeElementsFromMemory(std::shared_ptr<ast::Ast> ctx) {
+  const auto elements = ctx->getScope()->getElementsToFree();
+  const auto stackElements = ctx->getScope()->getScopeStack();
+  for (auto element : stackElements) {
+    if (element.first->getName().substr(0, 5) == "array") {
+      freeArray(element.first, element.second);
+    }
+  }
+  for (auto element : elements) {
+    if (element.first->getName().substr(0, 5) == "array") {
+      freeArray(element.first, element.second);
+    }
+  }
+  ctx->getScope()->getScopeStack().clear();
+  ctx->getScope()->clearElementsToFree();
 }
 
 void Backend::createGlobalDeclaration(const std::string &typeName,

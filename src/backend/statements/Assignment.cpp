@@ -47,6 +47,7 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
                  tupleTy->getResolvedTypes()[tupleElementAssign->getFieldIndex() - 1]);
   } else {
     copyValue(type, valueAddr, variableSymbol->value);
+    arraySizeValidation(variableSymbol, type, variableSymbol->value);
     castIfNeeded(variableSymbol->value, ctx->getExpr()->getInferredSymbolType(),
                  variableSymbol->getType());
   }

@@ -1,0 +1,36 @@
+/*
+All types can be assigned a new array
+*/
+typealias integer int;
+typealias real float;
+typealias character c;
+typealias boolean bool;
+procedure main() returns integer {
+    var int[2] a1 = [1,2];
+    var float[2] a2 = [1.,2.];
+    var c[2] a3 = ['a', 'c'];
+    var bool[2] a4 = [true, false];
+
+    a1 -> std_output;
+    '\n' -> std_output;
+    a1 = [3,4];
+    a1 -> std_output;
+    '\n' -> std_output;
+    a2 -> std_output;
+    '\n' -> std_output;
+    a2 = [3.,5.];
+    a2 -> std_output;
+    '\n' -> std_output;
+    a3 -> std_output;
+    '\n' -> std_output;
+    a3 = ['c', 'v'];
+    a3 -> std_output;
+    '\n' -> std_output;
+    a4 -> std_output;
+    a4 = [false, false];
+    '\n' -> std_output;
+    a4 -> std_output;
+    '\n' -> std_output;
+    return 0;
+}
+//CHECK_FILE:1.out

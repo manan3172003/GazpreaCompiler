@@ -4,12 +4,9 @@ namespace gazprea::backend {
 
 std::any Backend::visitBinary(std::shared_ptr<ast::expressions::BinaryAst> ctx) {
   visit(ctx->getLeft());
-  auto [leftType, leftAddr] = ctx->getScope()->getTopElementInStack();
+  auto [leftType, leftAddr] = popElementFromStack(ctx);
   visit(ctx->getRight());
-  auto [rightType, rightAddr] = ctx->getScope()->getTopElementInStack();
-
-  ctx->getScope()->popElementFromScopeStack(); // Pop right operand
-  ctx->getScope()->popElementFromScopeStack(); // Pop left operand
+  auto [rightType, rightAddr] = popElementFromStack(ctx);
 
   auto newAddr = binaryOperandToValue(
       ctx->getBinaryOpType(), ctx->getInferredSymbolType(), ctx->getLeft()->getInferredSymbolType(),

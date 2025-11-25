@@ -1,0 +1,10 @@
+/*
+1D array padding
+where LHS size is bigger than RHS
+*/
+procedure main() returns integer {
+    integer[10] a = [1,2,3];
+    a->std_output;
+    return 0;
+}
+//CHECK:[1 2 3 0 0 0 0 0 0 0]

@@ -13,7 +13,7 @@ std::any Backend::visitBlock(std::shared_ptr<ast::statements::BlockAst> ctx) {
       break;
     }
   }
-  ctx->getScope()->getScopeStack().clear();
+  freeElementsFromMemory(ctx);
   return {};
 }
 } // namespace gazprea::backend

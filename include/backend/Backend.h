@@ -81,20 +81,56 @@ public:
   std::any visitUnary(std::shared_ptr<ast::expressions::UnaryAst> ctx) override;
   std::any visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) override;
   std::any visitIteratorLoop(std::shared_ptr<ast::statements::IteratorLoopAst> ctx) override;
+  std::any visitArray(std::shared_ptr<ast::expressions::ArrayLiteralAst> ctx) override;
 
 protected:
   void setupPrintf() const;
   void setupIntPow() const;
+  void setupPrintArray() const;
   void setupThrowDivisionByZeroError() const;
+  void setupThrowArraySizeError() const;
   void printFloat(mlir::Value floatValue);
   void printInt(mlir::Value integer);
   void printIntChar(mlir::Value integer);
   void printBool(mlir::Value boolValue);
   void printChar(char c);
+  void printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType);
+  void computeArraySizeIfArray(std::shared_ptr<ast::statements::DeclarationAst> ctx,
+                               std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct);
+  void arraySizeValidation(std::shared_ptr<symTable::VariableSymbol> variableSymbol,
+                           std::shared_ptr<symTable::Type> type, mlir::Value valueAddr);
+  mlir::Value getArraySizeAddr(mlir::OpBuilder &b, mlir::Location l, mlir::Type arrayStructType,
+                               mlir::Value arrayStruct) const;
+  mlir::Value getArrayDataAddr(mlir::OpBuilder &b, mlir::Location l, mlir::Type arrayStructType,
+                               mlir::Value arrayStruct) const;
+  mlir::Value get2DArrayBoolAddr(mlir::OpBuilder &b, mlir::Location l, mlir::Type arrayStructType,
+                                 mlir::Value arrayStruct) const;
+  mlir::Value maxSubArraySize(mlir::Value arrayStruct, std::shared_ptr<symTable::Type> arrayType);
+  mlir::Value mallocArray(mlir::Type elementMLIRType, mlir::Value elementCount);
+  mlir::Value getDefaultValue(std::shared_ptr<symTable::Type> type);
+  void padArrayWithValue(mlir::Value arrayStruct, std::shared_ptr<symTable::Type> arrayType,
+                         mlir::Value currentSize, mlir::Value targetSize, mlir::Value defaultValue);
+  void createEmptySubArray(mlir::Value subArrayPtr, std::shared_ptr<symTable::Type> subArrayType,
+                           mlir::Value targetSize, mlir::Value defaultValue);
+  void padArrayIfNeeded(mlir::Value arrayStruct, std::shared_ptr<symTable::Type> arrayType,
+                        mlir::Value targetOuterSize, mlir::Value targetInnerSize);
+  void copyArrayStruct(std::shared_ptr<symTable::Type> type, mlir::Value fromArrayStruct,
+                       mlir::Value destArrayStruct);
+  mlir::Value copyArray(std::shared_ptr<symTable::Type> elementType, mlir::Value srcDataPtr,
+                        mlir::Value size);
+  void freeArray(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct);
+  void createArrayFromVector(std::vector<std::shared_ptr<ast::expressions::ExpressionAst>> elements,
+                             mlir::Type elementMLIRType, mlir::Value dest);
   void createGlobalString(const char *str, const char *stringName) const;
   void castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
                     std::shared_ptr<symTable::Type> toType);
   void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);
+  bool isTypeArray(std::shared_ptr<symTable::Type> type);
+  void pushElementToScopeStack(std::shared_ptr<ast::Ast> ctx,
+                               std::shared_ptr<symTable::Type> elementType, mlir::Value val);
+  std::pair<std::shared_ptr<symTable::Type>, mlir::Value>
+  popElementFromStack(std::shared_ptr<ast::Ast> ctx);
+  void freeElementsFromMemory(std::shared_ptr<ast::Ast> ctx);
   void createGlobalDeclaration(const std::string &typeName, std::shared_ptr<ast::Ast> exprAst,
                                std::shared_ptr<symTable::Symbol> symbol,
                                const std::string &variableName);

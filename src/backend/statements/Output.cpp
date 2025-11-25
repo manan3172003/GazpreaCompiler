@@ -19,6 +19,8 @@ std::any Backend::visitOutput(std::shared_ptr<ast::statements::OutputAst> ctx) {
   } else if (type->getName() == "boolean") {
     value = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), valueAddr);
     printBool(value);
+  } else if (type->getName().substr(0, 5) == "array") {
+    printArray(valueAddr, type);
   }
   return {};
 }

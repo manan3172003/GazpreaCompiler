@@ -527,6 +527,8 @@ std::any DefRefWalker::visitBooleanType(std::shared_ptr<types::BooleanTypeAst> c
 }
 std::any DefRefWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) {
   visit(ctx->getType());
+  for (auto size : ctx->getSizes())
+    visit(size);
   auto arrayTypeSymbol = std::make_shared<symTable::ArrayTypeSymbol>("array");
   arrayTypeSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   arrayTypeSymbol->setDef(ctx);

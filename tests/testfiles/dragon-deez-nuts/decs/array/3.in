@@ -1,0 +1,22 @@
+/*
+Padding test for 2D arrays for each type,
+using default values
+Arrays should be padded with the maximum subarray size
+*/
+procedure main() returns integer {
+    // should pad to maximum subarray
+    integer[3][3] a1 = [[3],[4,6,7],[5,2]];
+    real[3][3] a2 = [[3.],[4.,6.,7.],[5.,2.]];
+    boolean[3][3] a3 = [[true],[false,true,true],[false,true]];
+    character[3][3] a4 = [['a'],['c','f','f'],['r','1']];
+    a1 ->std_output;
+    '\n'->std_output;
+    a2 ->std_output;
+    '\n'->std_output;
+    a3 ->std_output;
+    '\n'->std_output;
+    a4 ->std_output;
+    '\n'->std_output;
+    return 0;
+}
+//CHECK_FILE:3.out

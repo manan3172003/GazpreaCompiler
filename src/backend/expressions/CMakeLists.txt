@@ -1,6 +1,7 @@
 set(
         gazprea_expressions_src
         "${CMAKE_CURRENT_SOURCE_DIR}/Arg.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Array.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Binary.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Bool.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Cast.cpp"

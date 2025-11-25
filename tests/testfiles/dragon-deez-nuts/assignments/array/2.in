@@ -1,0 +1,12 @@
+/*
+Test padding in assignment
+*/
+
+procedure main() returns integer {
+    var integer[3] a = [1,2,3];
+    a -> std_output;
+    a = [10];
+    a -> std_output;
+    return 0;
+}
+//CHECK:[1 2 3][10 0 0]

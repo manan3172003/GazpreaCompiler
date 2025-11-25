@@ -12,8 +12,7 @@ std::any Backend::visitReturn(std::shared_ptr<ast::statements::ReturnAst> ctx) {
   }
 
   visit(ctx->getExpr());
-  auto [type, value] = ctx->getScope()->getTopElementInStack();
-  ctx->getScope()->popElementFromScopeStack();
+  auto [type, value] = popElementFromStack(ctx);
 
   const auto methodScope = std::dynamic_pointer_cast<symTable::MethodSymbol>(
       ast::walkers::ValidationWalker::getEnclosingFuncProcScope(ctx->getScope()));

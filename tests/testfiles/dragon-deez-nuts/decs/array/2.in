@@ -1,0 +1,9 @@
+/*
+Inferencing size
+*/
+procedure main() returns integer {
+    integer[*] array = [3,4,5];
+    array ->std_output;
+    return 0;
+}
+//CHECK:[3 4 5]

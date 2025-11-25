@@ -9,5 +9,6 @@ add_subdirectory(statements)
 add_subdirectory(types)
 add_subdirectory(prototypes)
 add_subdirectory(expressions)
+add_subdirectory(utils)
 
 target_include_directories(gazc PUBLIC "${PROJECT_SOURCE_DIR}/include")

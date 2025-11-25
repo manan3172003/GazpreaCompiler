@@ -1,0 +1,9 @@
+/*
+Validate array assignment size RHS > LHS
+*/
+procedure main() returns integer {
+    var integer[2] a = [1,2];
+    a = [1,2,3];
+    return 0;
+}
+//CHECK:SizeError

@@ -10,8 +10,6 @@ class DefRefWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
   std::shared_ptr<symTable::Type> resolvedType(int lineNumber,
                                                const std::shared_ptr<types::DataTypeAst> &dataType);
-  static std::shared_ptr<expressions::ExpressionAst>
-  createDefaultLiteral(const std::shared_ptr<symTable::Type> &type, antlr4::Token *token);
 
 public:
   explicit DefRefWalker(std::shared_ptr<symTable::SymbolTable> symTab) : symTab(symTab) {};
@@ -27,6 +25,9 @@ public:
   void compareProtoTypes(std::shared_ptr<prototypes::PrototypeAst> prev,
                          std::shared_ptr<prototypes::PrototypeAst> cur,
                          symTable::ScopeType scopeType);
+  static std::shared_ptr<expressions::ExpressionAst>
+  createDefaultLiteral(const std::shared_ptr<symTable::Type> &type, antlr4::Token *token);
+
   std::any visitRoot(std::shared_ptr<RootAst> ctx) override;
   std::any visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) override;
   std::any visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) override;

@@ -45,6 +45,8 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
   return {};
 }
 std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
+  if (ctx->getType())
+    visit(ctx->getType());
   const auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
 
   // We're going to have an expression since we'll set defaults in AstBuilder
@@ -531,13 +533,19 @@ std::any ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst
   ctx->setInferredSymbolType(resolvedInferredType(realType));
   return {};
 }
+std::any ValidationWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) {
+  for (auto size : ctx->getSizes()) {
+    visit(size);
+  }
+  return {};
+}
 std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) {
   auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
   const auto elements = ctx->getElements();
 
   if (elements.empty()) {
     ctx->setInferredDataType(arrayType);
-    ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+    // ctx->setInferredSymbolType(resolvedInferredType(arrayType));
     return {};
   }
 
@@ -564,7 +572,7 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
   std::shared_ptr<types::DataTypeAst> inferredElementType = nullptr;
 
   for (size_t i = 0; i < elements.size(); i++) {
-    const auto &element = elements[i];
+    auto element = elements[i];
 
     if (i > 0) {
       visit(element);
@@ -588,7 +596,8 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
     }
 
     if (expectedSubtype != nullptr && currentSubtype != nullptr) {
-      if (not typesMatch(currentSubtype, expectedSubtype)) {
+      if (not(typesMatch(currentSubtype, expectedSubtype) ||
+              typesMatch(expectedSubtype, currentSubtype))) {
         throw TypeError(ctx->getLineNumber(), "Type mismatch in Array");
       }
 

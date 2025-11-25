@@ -1,0 +1,18 @@
+/*
+Inferencing type and size
+for all data types
+*/
+procedure main() returns integer {
+    var a1 = [[1, 4], [2, 6]];
+    var a2 = [[true, true], [true, false]];
+    var a3 = [[1., 4.], [2., 6.]];
+    var a4 = [['c', 'v'], ['g', 'k']];
+    boolean t = false;
+    var a5 = [t];
+    a1 ->std_output;
+    a2 -> std_output;
+    a3 -> std_output;
+    a4 -> std_output;
+    return 0;
+}
+//CHECK:[[1 4] [2 6]][[T T] [T F]][[1 4] [2 6]][[c v] [g k]]

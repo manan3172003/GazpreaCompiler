@@ -1,0 +1,8 @@
+/*
+Validate array declaration size RHS > LHS
+*/
+procedure main() returns integer {
+    integer[2] a = [1,2,3];
+    return 0;
+}
+//CHECK:SizeError

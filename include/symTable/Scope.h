@@ -14,6 +14,7 @@ enum class ScopeType { Global, Local, Function, Procedure, Loop, Conditional };
 
 class Scope : public std::enable_shared_from_this<Scope> {
   std::vector<std::pair<std::shared_ptr<Type>, mlir::Value>> scopeStack;
+  std::vector<std::pair<std::shared_ptr<Type>, mlir::Value>> elementsToFree;
 
 protected:
   ScopeType scType;
@@ -33,6 +34,13 @@ public:
   void pushElementToScopeStack(std::shared_ptr<Type> elementType, mlir::Value val) {
     scopeStack.push_back(std::make_pair(elementType, val));
   }
+  void pushElementToFree(std::pair<std::shared_ptr<Type>, mlir::Value> element) {
+    elementsToFree.push_back(element);
+  }
+  std::vector<std::pair<std::shared_ptr<Type>, mlir::Value>> getElementsToFree() {
+    return elementsToFree;
+  }
+  void clearElementsToFree() { elementsToFree.clear(); }
   void popElementFromScopeStack() { scopeStack.pop_back(); }
   std::pair<std::shared_ptr<Type>, mlir::Value> getTopElementInStack() { return scopeStack.back(); }
   std::pair<std::shared_ptr<Type>, mlir::Value> getSecondElementInStack() {

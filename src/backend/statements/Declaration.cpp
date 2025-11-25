@@ -1,4 +1,6 @@
+#include "CompileTimeExceptions.h"
 #include "backend/Backend.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 #include "utils/BackendUtils.h"
 
@@ -15,6 +17,8 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
   auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
       loc, ptrTy(), getMLIRType(variableSymbol->getType()), constOne());
   copyValue(type, valueAddr, newAddr);
+  computeArraySizeIfArray(ctx, type, newAddr);
+  arraySizeValidation(variableSymbol, type, newAddr);
   ctx->getSymbol()->value = newAddr;
   castIfNeeded(newAddr, ctx->getExpr()->getInferredSymbolType(), variableSymbol->getType());
   return {};

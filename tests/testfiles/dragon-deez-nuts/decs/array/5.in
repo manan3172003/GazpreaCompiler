@@ -1,0 +1,9 @@
+/*
+Declaration using an expression in type size
+*/
+procedure main() returns integer {
+    integer[10+1] a = [1,2,3];
+    a->std_output;
+    return 0;
+}
+//CHECK:[1 2 3 0 0 0 0 0 0 0 0]

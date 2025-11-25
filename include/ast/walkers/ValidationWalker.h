@@ -55,6 +55,7 @@ public:
   std::any visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) override;
   std::any visitLoop(std::shared_ptr<statements::LoopAst> ctx) override;
   std::any visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) override;
+  std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) override;
 
   // Helpers
   std::shared_ptr<symTable::Type>
