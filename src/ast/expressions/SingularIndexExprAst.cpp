@@ -1,7 +1,7 @@
 #include "ast/expressions/SingularIndexExprAst.h"
 
 namespace gazprea::ast::expressions {
-NodeType SingularIndexExprAst::getNodeType() const { return NodeType::ScalarIndexExpr; }
+NodeType SingularIndexExprAst::getNodeType() const { return NodeType::SingularIndexExpr; }
 std::string SingularIndexExprAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix + "[\n";
@@ -9,6 +9,5 @@ std::string SingularIndexExprAst::toStringTree(std::string prefix) const {
   ss << prefix + "]\n";
   return ss.str();
 }
-bool SingularIndexExprAst::isLValue() { return singularIndexExpr->isLValue(); }
 
 } // namespace gazprea::ast::expressions

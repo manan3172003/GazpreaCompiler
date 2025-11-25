@@ -9,9 +9,10 @@
 #include "ast/expressions/FuncProcCallAst.h"
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerLiteralAst.h"
+#include "ast/expressions/RangedIndexExprAst.h"
 #include "ast/expressions/RealLiteralAst.h"
-#include "ast/expressions/StructAccessAst.h"
 #include "ast/expressions/SingularIndexExprAst.h"
+#include "ast/expressions/StructAccessAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
@@ -755,16 +756,32 @@ std::any AstBuilder::visitShapeExpr(GazpreaParser::ShapeExprContext *ctx) {
   return GazpreaBaseVisitor::visitShapeExpr(ctx);
 }
 std::any AstBuilder::visitSliceRangeExpr(GazpreaParser::SliceRangeExprContext *ctx) {
-  return GazpreaBaseVisitor::visitSliceRangeExpr(ctx);
+  const auto rangedIndexExpr = std::make_shared<expressions::RangedIndexExprAst>(ctx->getStart());
+  const auto leftExpr =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()[0]));
+  const auto rightExpr =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()[1]));
+  rangedIndexExpr->setLeftIndexExpr(leftExpr);
+  rangedIndexExpr->setRightIndexExpr(rightExpr);
+  return std::static_pointer_cast<expressions::IndexExprAst>(rangedIndexExpr);
 }
 std::any AstBuilder::visitSliceEndExpr(GazpreaParser::SliceEndExprContext *ctx) {
-  return GazpreaBaseVisitor::visitSliceEndExpr(ctx);
+  const auto rangedIndexExpr = std::make_shared<expressions::RangedIndexExprAst>(ctx->getStart());
+  const auto rightExpr =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  rangedIndexExpr->setRightIndexExpr(rightExpr);
+  return std::static_pointer_cast<expressions::IndexExprAst>(rangedIndexExpr);
 }
 std::any AstBuilder::visitSliceStartExpr(GazpreaParser::SliceStartExprContext *ctx) {
-  return GazpreaBaseVisitor::visitSliceStartExpr(ctx);
+  const auto rangedIndexExpr = std::make_shared<expressions::RangedIndexExprAst>(ctx->getStart());
+  const auto leftExpr =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  rangedIndexExpr->setLeftIndexExpr(leftExpr);
+  return std::static_pointer_cast<expressions::IndexExprAst>(rangedIndexExpr);
 }
 std::any AstBuilder::visitSliceAllExpr(GazpreaParser::SliceAllExprContext *ctx) {
-  return GazpreaBaseVisitor::visitSliceAllExpr(ctx);
+  const auto rangedIndexExpr = std::make_shared<expressions::RangedIndexExprAst>(ctx->getStart());
+  return std::static_pointer_cast<expressions::IndexExprAst>(rangedIndexExpr);
 }
 std::any AstBuilder::visitSingleIndexExpr(GazpreaParser::SingleIndexExprContext *ctx) {
   const auto singularIndexExpr =
