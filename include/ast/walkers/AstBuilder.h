@@ -58,6 +58,9 @@ public:
   std::any visitRelationalExpr(GazpreaParser::RelationalExprContext *ctx) override;
   std::any visitTupleLiteral(GazpreaParser::TupleLiteralContext *ctx) override;
   std::any visitStringLiteral(GazpreaParser::StringLiteralContext *ctx) override;
+  std::any visitDomain_expr(GazpreaParser::Domain_exprContext *ctx) override;
+  std::any visitGenerator1D(GazpreaParser::Generator1DContext *ctx) override;
+  std::any visitGenerator2D(GazpreaParser::Generator2DContext *ctx) override;
   std::any visitFuncProcExpr(GazpreaParser::FuncProcExprContext *ctx) override;
   std::any visitEqualityExpr(GazpreaParser::EqualityExprContext *ctx) override;
   std::any visitAndExpr(GazpreaParser::AndExprContext *ctx) override;

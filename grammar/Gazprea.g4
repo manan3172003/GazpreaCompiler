@@ -134,7 +134,9 @@ qualifier
     ;
 
 expr
-    : LPAREN expr RPAREN #parenExpr
+    : LBRACKET domain_expr PIPE expr RBRACKET #generator1D
+    | LBRACKET domain_expr COMMA domain_expr PIPE expr RBRACKET #generator2D
+    | LPAREN expr RPAREN #parenExpr
     | TUPLE_ACCESS #tupleAccessExpr
     | STRUCT_ACCESS #structAccessExpr
     | expr LBRACKET array_access_expr RBRACKET #arrayAccessExpr
@@ -175,7 +177,7 @@ array_access_expr
     | DDOT #sliceAllExpr
     | expr #singleIndexExpr
     ;
-
+domain_expr: ID IN expr;
 tuple_lit: LPAREN tuple_elements RPAREN;
 array_lit: LBRACKET array_elements? RBRACKET;
 matrix_lit: LBRACKET (array_lit (COMMA array_lit)*)? RBRACKET;
@@ -270,6 +272,7 @@ APPEND: '||';
 DOT: '.';
 COMMA: ',';
 SC: ';';
+PIPE: '|';
 
 // Literals
 IDCONCAT: ID '.concat';

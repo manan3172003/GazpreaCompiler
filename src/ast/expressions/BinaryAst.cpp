@@ -57,6 +57,8 @@ std::string BinaryAst::getOperator(BinaryOpType opType) {
     return "OR or";
   case BinaryOpType::XOR:
     return "XOR xor";
+  case BinaryOpType::RANGE:
+    return "RANGE ..";
   }
   return "";
 }

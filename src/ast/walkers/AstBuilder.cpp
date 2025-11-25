@@ -6,7 +6,9 @@
 #include "ast/expressions/BoolLiteralAst.h"
 #include "ast/expressions/CastAst.h"
 #include "ast/expressions/CharLiteralAst.h"
+#include "ast/expressions/DomainExprAst.h"
 #include "ast/expressions/FuncProcCallAst.h"
+#include "ast/expressions/GeneratorAst.h"
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerLiteralAst.h"
 #include "ast/expressions/RangedIndexExprAst.h"
@@ -585,6 +587,45 @@ std::any AstBuilder::visitStringLiteral(GazpreaParser::StringLiteralContext *ctx
 
   return std::static_pointer_cast<expressions::ExpressionAst>(arrayAst);
 }
+
+std::any AstBuilder::visitDomain_expr(GazpreaParser::Domain_exprContext *ctx) {
+  const auto domainAst = std::make_shared<expressions::DomainExprAst>(ctx->getStart());
+  domainAst->setIteratorName(ctx->ID()->getText());
+  domainAst->setDomainExpression(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
+  return std::static_pointer_cast<expressions::ExpressionAst>(domainAst);
+}
+
+std::any AstBuilder::visitGenerator1D(GazpreaParser::Generator1DContext *ctx) {
+  const auto generatorAst = std::make_shared<expressions::GeneratorAst>(ctx->getStart());
+
+  auto domainExpr =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->domain_expr()));
+  generatorAst->addDomainExpr(std::static_pointer_cast<expressions::DomainExprAst>(domainExpr));
+
+  generatorAst->setGeneratorExpression(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
+
+  return std::static_pointer_cast<expressions::ExpressionAst>(generatorAst);
+}
+
+std::any AstBuilder::visitGenerator2D(GazpreaParser::Generator2DContext *ctx) {
+  const auto generatorAst = std::make_shared<expressions::GeneratorAst>(ctx->getStart());
+
+  auto domainExpr1 =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->domain_expr(0)));
+  generatorAst->addDomainExpr(std::static_pointer_cast<expressions::DomainExprAst>(domainExpr1));
+
+  auto domainExpr2 =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->domain_expr(1)));
+  generatorAst->addDomainExpr(std::static_pointer_cast<expressions::DomainExprAst>(domainExpr2));
+
+  generatorAst->setGeneratorExpression(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
+
+  return std::static_pointer_cast<expressions::ExpressionAst>(generatorAst);
+}
+
 std::any AstBuilder::visitFuncProcExpr(GazpreaParser::FuncProcExprContext *ctx) {
   const auto fpCallAst = std::make_shared<expressions::FuncProcCallAst>(ctx->getStart());
   fpCallAst->setName(ctx->ID()->getText());
@@ -744,7 +785,7 @@ std::any AstBuilder::visitArrayAccessExpr(GazpreaParser::ArrayAccessExprContext 
   return std::static_pointer_cast<expressions::ExpressionAst>(arrayAccessExpr);
 }
 std::any AstBuilder::visitGeneratorExpr(GazpreaParser::GeneratorExprContext *ctx) {
-  return GazpreaBaseVisitor::visitGeneratorExpr(ctx);
+  return createBinaryExpr(ctx->expr(0), "..", ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitBuiltinFuncExpr(GazpreaParser::BuiltinFuncExprContext *ctx) {
   return GazpreaBaseVisitor::visitBuiltinFuncExpr(ctx);
@@ -855,6 +896,8 @@ expressions::BinaryOpType AstBuilder::stringToBinaryOpType(const std::string &op
     return expressions::BinaryOpType::OR;
   if (op == "xor")
     return expressions::BinaryOpType::XOR;
+  if (op == "..")
+    return expressions::BinaryOpType::RANGE;
 
   throw std::runtime_error("Unknown binary operator: " + op);
 }
