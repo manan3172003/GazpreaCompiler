@@ -18,8 +18,7 @@ enum class BinaryOpType {
   NOT_EQUAL,
   AND,
   OR,
-  XOR,
-  RANGE
+  XOR
 };
 
 class BinaryAst final : public ExpressionAst {

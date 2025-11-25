@@ -53,6 +53,7 @@ enum class NodeType {
   RealType,
   Loop,
   IteratorLoop,
+  Range,
   Return,
   Root,
   SingularIndexExpr,

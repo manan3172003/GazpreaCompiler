@@ -12,6 +12,7 @@
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerLiteralAst.h"
 #include "ast/expressions/RangedIndexExprAst.h"
+#include "ast/expressions/RangeAst.h"
 #include "ast/expressions/RealLiteralAst.h"
 #include "ast/expressions/SingularIndexExprAst.h"
 #include "ast/expressions/StructAccessAst.h"
@@ -785,8 +786,13 @@ std::any AstBuilder::visitArrayAccessExpr(GazpreaParser::ArrayAccessExprContext 
   return std::static_pointer_cast<expressions::ExpressionAst>(arrayAccessExpr);
 }
 std::any AstBuilder::visitGeneratorExpr(GazpreaParser::GeneratorExprContext *ctx) {
-  return createBinaryExpr(ctx->expr(0), "..", ctx->expr(1), ctx->getStart());
+  const auto rangeAst = std::make_shared<expressions::RangeAst>(ctx->getStart());
+  rangeAst->setStart(
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(0))));
+  rangeAst->setEnd(std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr(1))));
+  return std::static_pointer_cast<expressions::ExpressionAst>(rangeAst);
 }
+
 std::any AstBuilder::visitBuiltinFuncExpr(GazpreaParser::BuiltinFuncExprContext *ctx) {
   return GazpreaBaseVisitor::visitBuiltinFuncExpr(ctx);
 }
@@ -896,9 +902,6 @@ expressions::BinaryOpType AstBuilder::stringToBinaryOpType(const std::string &op
     return expressions::BinaryOpType::OR;
   if (op == "xor")
     return expressions::BinaryOpType::XOR;
-  if (op == "..")
-    return expressions::BinaryOpType::RANGE;
-
   throw std::runtime_error("Unknown binary operator: " + op);
 }
 

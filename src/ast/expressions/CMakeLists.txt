@@ -19,6 +19,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/RangedIndexExprAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/DomainExprAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/GeneratorAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/RangeAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_expressions_src})
