@@ -14,6 +14,8 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleLiteralAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ArrayLiteralAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/StructAccessAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ArrayAccessAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/SingularIndexExprAst.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_expressions_src})

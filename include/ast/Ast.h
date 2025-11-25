@@ -14,6 +14,8 @@ struct Location {
 };
 enum class NodeType {
   AliasType,
+  ArrayAccess,
+  ArrayElementAssign,
   ArrayLiteral,
   ArrayType,
   Arg,
@@ -40,6 +42,7 @@ enum class NodeType {
   Output,
   Identifier,
   IdentifierLeft,
+  IndexExpr,
   IntegerLiteral,
   IntegerType,
   Input,
@@ -52,6 +55,7 @@ enum class NodeType {
   StructAccess,
   StructDeclaration,
   StructElementAssign,
+  ScalarIndexExpr,
   StructType,
   TupleAccess,
   TupleElementAssign,

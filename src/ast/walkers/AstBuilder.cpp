@@ -1,5 +1,6 @@
 #include "CompileTimeExceptions.h"
 #include "ast/RootAst.h"
+#include "ast/expressions/ArrayAccessAst.h"
 #include "ast/expressions/ArrayLiteralAst.h"
 #include "ast/expressions/BinaryAst.h"
 #include "ast/expressions/BoolLiteralAst.h"
@@ -10,6 +11,7 @@
 #include "ast/expressions/IntegerLiteralAst.h"
 #include "ast/expressions/RealLiteralAst.h"
 #include "ast/expressions/StructAccessAst.h"
+#include "ast/expressions/SingularIndexExprAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
@@ -17,6 +19,7 @@
 #include "ast/prototypes/FunctionParamAst.h"
 #include "ast/prototypes/ProcedureAst.h"
 #include "ast/prototypes/ProcedureParamAst.h"
+#include "ast/statements/ArrayElementAssignAst.h"
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
 #include "ast/statements/BreakAst.h"
@@ -623,7 +626,15 @@ std::any AstBuilder::visitStructFieldLVal(GazpreaParser::StructFieldLValContext 
   return std::static_pointer_cast<statements::AssignLeftAst>(lVal);
 }
 std::any AstBuilder::visitArrayElementLVal(GazpreaParser::ArrayElementLValContext *ctx) {
-  return GazpreaBaseVisitor::visitArrayElementLVal(ctx);
+  const auto lVal = std::make_shared<statements::ArrayElementAssignAst>(ctx->getStart());
+  const auto arrayInstance =
+      std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left()));
+  const auto arrayIndexExpr =
+      std::any_cast<std::shared_ptr<expressions::IndexExprAst>>(visit(ctx->array_access_expr()));
+  lVal->setArrayInstance(arrayInstance);
+  lVal->setElementIndex(arrayIndexExpr);
+
+  return std::static_pointer_cast<statements::AssignLeftAst>(lVal);
 }
 std::any
 AstBuilder::visitTwoDimArrayElementLVal(GazpreaParser::TwoDimArrayElementLValContext *ctx) {
@@ -722,7 +733,14 @@ std::any AstBuilder::visitReverseExpr(GazpreaParser::ReverseExprContext *ctx) {
   return GazpreaBaseVisitor::visitReverseExpr(ctx);
 }
 std::any AstBuilder::visitArrayAccessExpr(GazpreaParser::ArrayAccessExprContext *ctx) {
-  return GazpreaBaseVisitor::visitArrayAccessExpr(ctx);
+  const auto arrayExpr =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  const auto arrayIndexExpr =
+      std::any_cast<std::shared_ptr<expressions::IndexExprAst>>(visit(ctx->array_access_expr()));
+  const auto arrayAccessExpr = std::make_shared<expressions::ArrayAccessAst>(ctx->getStart());
+  arrayAccessExpr->setArrayInstance(arrayExpr);
+  arrayAccessExpr->setElementIndex(arrayIndexExpr);
+  return std::static_pointer_cast<expressions::ExpressionAst>(arrayAccessExpr);
 }
 std::any AstBuilder::visitGeneratorExpr(GazpreaParser::GeneratorExprContext *ctx) {
   return GazpreaBaseVisitor::visitGeneratorExpr(ctx);
@@ -749,7 +767,12 @@ std::any AstBuilder::visitSliceAllExpr(GazpreaParser::SliceAllExprContext *ctx) 
   return GazpreaBaseVisitor::visitSliceAllExpr(ctx);
 }
 std::any AstBuilder::visitSingleIndexExpr(GazpreaParser::SingleIndexExprContext *ctx) {
-  return GazpreaBaseVisitor::visitSingleIndexExpr(ctx);
+  const auto singularIndexExpr =
+      std::make_shared<expressions::SingularIndexExprAst>(ctx->getStart());
+  const auto expression =
+      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  singularIndexExpr->setSingularIndexExpr(expression);
+  return std::static_pointer_cast<expressions::IndexExprAst>(singularIndexExpr);
 }
 std::any AstBuilder::visitArray_lit(GazpreaParser::Array_litContext *ctx) {
   auto arrayLiteralAst = std::make_shared<expressions::ArrayLiteralAst>(ctx->getStart());
