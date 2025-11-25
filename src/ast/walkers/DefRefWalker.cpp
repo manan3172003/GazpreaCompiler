@@ -4,6 +4,7 @@
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
 #include "symTable/VariableSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
 
 #include <ast/walkers/DefRefWalker.h>
 #include <symTable/MethodSymbol.h>
@@ -146,6 +147,12 @@ DefRefWalker::resolvedType(int lineNumber, const std::shared_ptr<types::DataType
     break;
   }
   case NodeType::ArrayType: {
+    visit(dataType);
+    type = std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
+    break;
+  }
+  case NodeType::VectorType: {
+    visit(dataType);
     type = std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
     break;
   }
@@ -476,6 +483,15 @@ std::any DefRefWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) 
   arrayTypeSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   arrayTypeSymbol->setDef(ctx);
   ctx->setSymbol(arrayTypeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) {
+  visit(ctx->getElementType());
+  const auto vectorTypeSymbol = std::make_shared<symTable::VectorTypeSymbol>("vector");
+  vectorTypeSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getElementType()));
+  vectorTypeSymbol->setDef(ctx);
+  ctx->setSymbol(vectorTypeSymbol);
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }

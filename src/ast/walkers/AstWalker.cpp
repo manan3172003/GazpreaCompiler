@@ -2,7 +2,7 @@
 
 namespace gazprea::ast::walkers {
 
-AstWalker::AstWalker() {}
+AstWalker::AstWalker() = default;
 
 std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   switch (ast->getNodeType()) {
@@ -91,6 +91,8 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
     return visitArrayType(std::static_pointer_cast<types::ArrayTypeAst>(ast));
   case NodeType::ArrayLiteral:
     return visitArray(std::static_pointer_cast<expressions::ArrayLiteralAst>(ast));
+  case NodeType::VectorType:
+    return visitVectorType(std::static_pointer_cast<types::VectorTypeAst>(ast));
   default:
     return {};
   }

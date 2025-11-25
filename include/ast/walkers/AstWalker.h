@@ -40,6 +40,7 @@
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/RealTypeAst.h"
 #include "ast/types/TupleTypeAst.h"
+#include "ast/types/VectorTypeAst.h"
 
 #include <any>
 namespace gazprea::ast::walkers {
@@ -108,5 +109,6 @@ public:
   virtual std::any visitCharacterType(std::shared_ptr<types::CharacterTypeAst> ctx) { return {}; }
   virtual std::any visitBooleanType(std::shared_ptr<types::BooleanTypeAst> ctx) { return {}; }
   virtual std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) { return {}; }
+  virtual std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) { return {}; }
 };
 } // namespace gazprea::ast::walkers

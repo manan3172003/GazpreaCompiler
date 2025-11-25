@@ -67,5 +67,6 @@ public:
   std::any visitBooleanType(std::shared_ptr<types::BooleanTypeAst> ctx) override;
   std::any visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) override;
   std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) override;
+  std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) override;
 };
 } // namespace gazprea::ast::walkers
