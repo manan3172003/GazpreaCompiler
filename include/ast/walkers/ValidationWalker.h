@@ -59,9 +59,6 @@ public:
   // Helpers
   std::shared_ptr<symTable::Type>
   resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
-  void arrayTypeCheck(int lineNumber,
-                      const std::shared_ptr<expressions::ArrayLiteralAst> &arrayLiteral,
-                      const std::shared_ptr<symTable::ArrayTypeSymbol> &arrayTypeSymbol);
   static bool isScalar(const std::shared_ptr<symTable::Type> &type);
   static bool isTuple(const std::shared_ptr<symTable::Type> &type);
   static void validateVariableAssignmentTypes(std::shared_ptr<statements::IdentifierLeftAst> ctx,

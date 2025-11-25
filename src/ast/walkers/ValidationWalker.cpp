@@ -58,13 +58,6 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
     ctx->getType()->setSymbol(
         std::dynamic_pointer_cast<symTable::Symbol>(ctx->getExpr()->getInferredSymbolType()));
   }
-
-  if (auto arrayTypeSymbol =
-          std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType())) {
-    arrayTypeCheck(ctx->getLineNumber(),
-                   std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(ctx->getExpr()),
-                   arrayTypeSymbol);
-  }
   // type check
   const auto declarationType =
       std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
@@ -540,9 +533,21 @@ std::any ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst
 std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) {
   auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
   if (ctx->getElements().size() > 0) {
-    for (const auto &element : ctx->getElements())
+    std::shared_ptr<symTable::Type> prevInferredTypeSymbol = nullptr;
+    std::shared_ptr<types::DataTypeAst> prevDataType = nullptr;
+    for (const auto &element : ctx->getElements()) {
       visit(element);
-    arrayType->setType(ctx->getElements()[0]->getInferredDataType());
+      if (prevInferredTypeSymbol != nullptr) {
+        if (not typesMatch(prevInferredTypeSymbol, element->getInferredSymbolType()))
+          throw TypeError(ctx->getLineNumber(), "Type mismatch in Array");
+        // if the symbol is real do not change previous type
+        if (prevInferredTypeSymbol->getName().find("real") != std::string::npos)
+          continue;
+      }
+      prevInferredTypeSymbol = element->getInferredSymbolType();
+      prevDataType = element->getInferredDataType();
+    }
+    arrayType->setType(prevDataType);
   }
   ctx->setInferredDataType(arrayType);
   ctx->setInferredSymbolType(resolvedInferredType(arrayType));

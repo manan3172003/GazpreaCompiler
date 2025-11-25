@@ -80,6 +80,15 @@ void ValidationWalker::validateTupleUnpackAssignmentTypes(
 
 bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destination,
                                   const std::shared_ptr<symTable::Type> &source) {
+  if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "array")) {
+    const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
+    const auto sourceArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(source);
+    return typesMatch(destArray->getType(), sourceArray->getType());
+  }
+  if (isOfSymbolType(destination, "array")) {
+    const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
+    return typesMatch(destArray->getType(), source);
+  }
   if (isOfSymbolType(destination, "integer") && isOfSymbolType(source, "integer"))
     return true;
   if (isOfSymbolType(destination, "real") && isOfSymbolType(source, "real"))
@@ -89,8 +98,6 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
   if (isOfSymbolType(destination, "character") && isOfSymbolType(source, "character"))
     return true;
   if (isOfSymbolType(destination, "boolean") && isOfSymbolType(source, "boolean"))
-    return true;
-  if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "array"))
     return true;
   if (isOfSymbolType(destination, "tuple") && isOfSymbolType(source, "tuple")) {
     const auto destTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(destination);
@@ -113,22 +120,6 @@ bool ValidationWalker::isTupleTypeMatch(
       return false;
   }
   return true;
-}
-
-void ValidationWalker::arrayTypeCheck(
-    int lineNumber, const std::shared_ptr<expressions::ArrayLiteralAst> &arrayLiteral,
-    const std::shared_ptr<symTable::ArrayTypeSymbol> &arrayTypeSymbol) {
-  for (const auto &element : arrayLiteral->getElements()) {
-    if (not typesMatch(arrayTypeSymbol->getType(), element->getInferredSymbolType()))
-      throw TypeError(lineNumber, "Type mismatch in array");
-    if (auto subElement = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(element)) {
-      if (auto subElementTypeSymbol =
-              std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayTypeSymbol->getType()))
-        arrayTypeCheck(lineNumber, subElement, subElementTypeSymbol);
-      else
-        throw TypeError(lineNumber, "Invalid 2D array type");
-    }
-  }
 }
 
 bool ValidationWalker::isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
