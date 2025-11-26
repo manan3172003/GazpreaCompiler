@@ -202,6 +202,13 @@ DefRefWalker::createDefaultLiteral(const std::shared_ptr<symTable::Type> &type,
     }
     return tupleLiteral;
   }
+  if (type->getName().substr(0, 6) == "vector") {
+    const auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type);
+    if (vectorType) {
+      auto arrayLiteral = std::make_shared<expressions::ArrayLiteralAst>(token);
+      return arrayLiteral;
+    }
+  }
   return nullptr;
 }
 
