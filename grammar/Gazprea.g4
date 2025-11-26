@@ -29,13 +29,9 @@ stat
 
 // TODO: Can string builtin operations done on string expressions
 member_function_stat
-    : assign_left DCONCAT LPAREN args? RPAREN SC #concatBuiltinAssign
-    | expr DCONCAT LPAREN args? RPAREN SC #concatBuiltinExpr
-    | assign_left DPUSH LPAREN args? RPAREN SC #pushBuiltinAssign
+    : expr DCONCAT LPAREN args? RPAREN SC #concatBuiltinExpr
     | expr DPUSH LPAREN args? RPAREN SC #pushBuiltinExpr
-    | assign_left DLEN LPAREN RPAREN SC #lenBuiltinAssign
     | expr DLEN LPAREN RPAREN SC #lenBuiltinExpr
-    | assign_left DAPPEND LPAREN args? RPAREN SC #appendBuiltinAssign
     | expr DAPPEND LPAREN args? RPAREN SC #appendBuiltinExpr
     | IDCONCAT LPAREN args? RPAREN SC #concatBuiltin
     | IDPUSH LPAREN args? RPAREN SC #pushBuiltin

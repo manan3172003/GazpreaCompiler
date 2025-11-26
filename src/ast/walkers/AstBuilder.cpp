@@ -873,34 +873,11 @@ std::any AstBuilder::visitAliasType(GazpreaParser::AliasTypeContext *ctx) {
   aliasType->setAlias(ctx->ID()->getText());
   return std::static_pointer_cast<types::DataTypeAst>(aliasType);
 }
-
-std::any AstBuilder::visitConcatBuiltinAssign(GazpreaParser::ConcatBuiltinAssignContext *ctx) {
-  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
-      ctx->getStart(), statements::MemberFunctionType::Concat);
-  builtinAst->setLeft(
-      std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left())));
-  if (ctx->args()) {
-    builtinAst->setArgs(
-        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
-  }
-  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
-}
 std::any AstBuilder::visitConcatBuiltinExpr(GazpreaParser::ConcatBuiltinExprContext *ctx) {
   const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
       ctx->getStart(), statements::MemberFunctionType::Concat);
   builtinAst->setLeft(
       std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
-  if (ctx->args()) {
-    builtinAst->setArgs(
-        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
-  }
-  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
-}
-std::any AstBuilder::visitPushBuiltinAssign(GazpreaParser::PushBuiltinAssignContext *ctx) {
-  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
-      ctx->getStart(), statements::MemberFunctionType::Push);
-  builtinAst->setLeft(
-      std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left())));
   if (ctx->args()) {
     builtinAst->setArgs(
         std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
@@ -918,29 +895,11 @@ std::any AstBuilder::visitPushBuiltinExpr(GazpreaParser::PushBuiltinExprContext 
   }
   return std::static_pointer_cast<statements::StatementAst>(builtinAst);
 }
-std::any AstBuilder::visitLenBuiltinAssign(GazpreaParser::LenBuiltinAssignContext *ctx) {
-  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
-      ctx->getStart(), statements::MemberFunctionType::Len);
-  builtinAst->setLeft(
-      std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left())));
-  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
-}
 std::any AstBuilder::visitLenBuiltinExpr(GazpreaParser::LenBuiltinExprContext *ctx) {
   const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
       ctx->getStart(), statements::MemberFunctionType::Len);
   builtinAst->setLeft(
       std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
-  return std::static_pointer_cast<statements::StatementAst>(builtinAst);
-}
-std::any AstBuilder::visitAppendBuiltinAssign(GazpreaParser::AppendBuiltinAssignContext *ctx) {
-  const auto builtinAst = std::make_shared<statements::MemberFunctionAst>(
-      ctx->getStart(), statements::MemberFunctionType::Append);
-  builtinAst->setLeft(
-      std::any_cast<std::shared_ptr<statements::AssignLeftAst>>(visit(ctx->assign_left())));
-  if (ctx->args()) {
-    builtinAst->setArgs(
-        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
-  }
   return std::static_pointer_cast<statements::StatementAst>(builtinAst);
 }
 std::any AstBuilder::visitAppendBuiltinExpr(GazpreaParser::AppendBuiltinExprContext *ctx) {
