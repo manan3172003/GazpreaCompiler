@@ -1,4 +1,5 @@
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
 #include <sstream>
@@ -22,10 +23,14 @@ std::shared_ptr<Symbol> BaseScope::getTypeSymbol(const std::string &name) {
 void BaseScope::setEnclosingScope(std::shared_ptr<Scope> scope) { enclosingScope = scope; }
 std::shared_ptr<Scope> BaseScope::getEnclosingScope() { return enclosingScope.lock(); }
 void BaseScope::defineSymbol(std::shared_ptr<Symbol> sym) {
-  if (std::dynamic_pointer_cast<Type>(sym)) {
+  if (std::dynamic_pointer_cast<Type>(sym) &&
+      not std::dynamic_pointer_cast<StructTypeSymbol>(sym)) {
     throw std::runtime_error("Cannot define type symbols here");
   }
-  symbols.emplace(sym->getName(), sym);
+  if (const auto structSym = std::dynamic_pointer_cast<StructTypeSymbol>(sym))
+    symbols.emplace(structSym->getStructName(), sym);
+  else
+    symbols.emplace(sym->getName(), sym);
   sym->setScope(shared_from_this());
 }
 
@@ -33,7 +38,11 @@ void BaseScope::defineTypeSymbol(std::shared_ptr<Symbol> sym) {
   if (!std::dynamic_pointer_cast<Type>(sym)) {
     throw std::runtime_error("Can only define type symbols");
   }
-  typeSymbols.emplace(sym->getName(), sym);
+
+  if (const auto structSym = std::dynamic_pointer_cast<StructTypeSymbol>(sym))
+    typeSymbols.emplace(structSym->getStructName(), sym);
+  else
+    typeSymbols.emplace(sym->getName(), sym);
   sym->setScope(shared_from_this());
 }
 

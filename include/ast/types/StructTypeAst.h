@@ -15,6 +15,9 @@ public:
   void addElement(std::string elementName, std::shared_ptr<DataTypeAst> type);
   std::string getStructName() const;
   void setStructName(const std::string &name);
+  std::string getElementName(size_t idx) const;
+  size_t getElementIdx(std::string elementName) const;
+  std::vector<std::shared_ptr<DataTypeAst>> getTypes();
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
 };

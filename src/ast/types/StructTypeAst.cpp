@@ -13,6 +13,13 @@ void StructTypeAst::addElement(std::string elementName, std::shared_ptr<DataType
 std::string StructTypeAst::getStructName() const { return structName; }
 void StructTypeAst::setStructName(const std::string &name) { structName = name; }
 
+std::vector<std::shared_ptr<DataTypeAst>> StructTypeAst::getTypes() { return types; }
+
+std::string StructTypeAst::getElementName(size_t idx) const { return idxToName.at(idx); }
+size_t StructTypeAst::getElementIdx(std::string elementName) const {
+  return nameToIdx.at(elementName);
+}
+
 std::string StructTypeAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << structName << " ";

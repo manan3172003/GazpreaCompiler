@@ -1,6 +1,7 @@
 #include "CompileTimeExceptions.h"
 #include "ast/types/AliasTypeAst.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
 #include "symTable/VariableSymbol.h"
@@ -162,6 +163,10 @@ DefRefWalker::resolvedType(int lineNumber, const std::shared_ptr<types::DataType
     type = std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
     break;
   }
+  case NodeType::StructType: {
+    type = std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
+    break;
+  }
   default:
     break;
   }
@@ -209,6 +214,9 @@ DefRefWalker::createDefaultLiteral(const std::shared_ptr<symTable::Type> &type,
       return arrayLiteral;
     }
   }
+  if (type->getName() == "struct") {
+    // TODO: struct literal
+  }
   return nullptr;
 }
 
@@ -255,6 +263,15 @@ std::any DefRefWalker::visitDeclaration(std::shared_ptr<statements::DeclarationA
   varSymbol->setDef(ctx);
   symTab->getCurrentScope()->defineSymbol(varSymbol);
   ctx->setSymbol(varSymbol);
+  return {};
+}
+std::any
+DefRefWalker::visitStructDeclaration(std::shared_ptr<statements::StructDeclarationAst> ctx) {
+  visit(ctx->getType());
+  const auto typeSymbol = ctx->getType()->getSymbol();
+  typeSymbol->setDef(ctx);
+  ctx->setSymbol(typeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) {
@@ -317,7 +334,8 @@ std::any DefRefWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> 
   throwGlobalError(ctx);
   const auto symbol = symTab->getCurrentScope()->getSymbol(ctx->getProto()->getName());
   const auto oldMethodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(symbol);
-  // if a symbol exists in the same scope with the same name but isn't a method symbol, throw error
+  // if a symbol exists in the same scope with the same name but isn't a method symbol, throw
+  // error
   if (symbol && not oldMethodSymbol)
     throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
 
@@ -426,6 +444,14 @@ DefRefWalker::visitTupleElementAssign(std::shared_ptr<statements::TupleElementAs
   return {};
 }
 std::any
+DefRefWalker::visitStructElementAssign(std::shared_ptr<statements::StructElementAssignAst> ctx) {
+  const auto symbol = symTab->getCurrentScope()->resolveSymbol(ctx->getStructName());
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
+  ctx->setScope(symTab->getCurrentScope());
+  ctx->setSymbol(symbol);
+  return {};
+}
+std::any
 DefRefWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
   for (const auto &lVal : ctx->getLVals()) {
     visit(lVal);
@@ -435,6 +461,13 @@ DefRefWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssi
 }
 std::any DefRefWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
   auto symbol = symTab->getCurrentScope()->resolveSymbol(ctx->getTupleName());
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
+  ctx->setScope(symTab->getCurrentScope());
+  ctx->setSymbol(symbol);
+  return {};
+}
+std::any DefRefWalker::visitStructAccess(std::shared_ptr<expressions::StructAccessAst> ctx) {
+  const auto symbol = symTab->getCurrentScope()->resolveSymbol(ctx->getStructName());
   throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
   ctx->setScope(symTab->getCurrentScope());
   ctx->setSymbol(symbol);
@@ -510,6 +543,28 @@ std::any DefRefWalker::visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
+std::any DefRefWalker::visitStructType(std::shared_ptr<types::StructTypeAst> ctx) {
+  throwDuplicateSymbolError(ctx, ctx->getStructName(), symTab->getGlobalScope(), true);
+  throwDuplicateSymbolError(ctx, ctx->getStructName(), symTab->getGlobalScope(), false);
+  const auto structTypeSymbol = std::make_shared<symTable::StructTypeSymbol>("struct");
+  structTypeSymbol->setStructName(ctx->getStructName());
+  const auto unresolvedTypes = ctx->getTypes();
+  for (size_t i = 0; i < unresolvedTypes.size(); i++) {
+    const auto resolvedSubType =
+        resolvedType(unresolvedTypes[i]->getLineNumber(), unresolvedTypes[i]);
+    const auto elementName = ctx->getElementName(i + 1);
+    structTypeSymbol->addResolvedType(elementName, resolvedSubType);
+    structTypeSymbol->addUnresolvedType(unresolvedTypes[i]);
+  }
+
+  structTypeSymbol->setDef(ctx);
+  ctx->setSymbol(structTypeSymbol);
+  ctx->setScope(symTab->getCurrentScope());
+  symTab->getCurrentScope()->defineTypeSymbol(structTypeSymbol);
+  symTab->getCurrentScope()->defineSymbol(structTypeSymbol);
+
+  return {};
+}
 std::any DefRefWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   throwDuplicateSymbolError(ctx, ctx->getAlias(), symTab->getGlobalScope(), true);
   ctx->setScope(symTab->getCurrentScope());
@@ -525,7 +580,8 @@ std::any DefRefWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ct
   throwGlobalError(ctx);
   const auto symbol = symTab->getCurrentScope()->getSymbol(ctx->getProto()->getName());
   const auto oldMethodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(symbol);
-  // if a symbol exists in the same scope with the same name but isn't a method symbol, throw error
+  // if a symbol exists in the same scope with the same name but isn't a method symbol, throw
+  // error
   if (symbol && not oldMethodSymbol)
     throwDuplicateSymbolError(ctx, ctx->getProto()->getName(), symTab->getCurrentScope(), false);
 

@@ -81,7 +81,8 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
 std::any ValidationWalker::visitBlock(std::shared_ptr<statements::BlockAst> ctx) {
   bool visitedAllDeclarations = false;
   for (const auto &child : ctx->getChildren()) {
-    if (!std::dynamic_pointer_cast<statements::DeclarationAst>(child))
+    if (not(std::dynamic_pointer_cast<statements::DeclarationAst>(child) ||
+            std::dynamic_pointer_cast<statements::StructDeclarationAst>(child)))
       visitedAllDeclarations = true;
     else {
       if (visitedAllDeclarations)

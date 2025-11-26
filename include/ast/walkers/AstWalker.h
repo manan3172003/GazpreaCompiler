@@ -11,6 +11,7 @@
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerLiteralAst.h"
 #include "ast/expressions/RealLiteralAst.h"
+#include "ast/expressions/StructAccessAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
@@ -31,6 +32,8 @@
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/ProcedureCallAst.h"
 #include "ast/statements/ReturnAst.h"
+#include "ast/statements/StructDeclarationAst.h"
+#include "ast/statements/StructElementAssignAst.h"
 #include "ast/statements/TupleElementAssignAst.h"
 #include "ast/statements/TupleUnpackAssignAst.h"
 #include "ast/statements/TypealiasAst.h"
@@ -39,6 +42,7 @@
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/RealTypeAst.h"
+#include "ast/types/StructTypeAst.h"
 #include "ast/types/TupleTypeAst.h"
 #include "ast/types/VectorTypeAst.h"
 
@@ -53,6 +57,9 @@ public:
   virtual std::any visitRoot(std::shared_ptr<RootAst> ctx) { return {}; }
   virtual std::any visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) { return {}; }
   virtual std::any visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) { return {}; }
+  virtual std::any visitStructDeclaration(std::shared_ptr<statements::StructDeclarationAst> ctx) {
+    return {};
+  }
   virtual std::any visitBinary(std::shared_ptr<expressions::BinaryAst> ctx) { return {}; }
   virtual std::any visitBlock(std::shared_ptr<statements::BlockAst> ctx) { return {}; }
   virtual std::any visitBreak(std::shared_ptr<statements::BreakAst> ctx) { return {}; }
@@ -71,10 +78,17 @@ public:
   virtual std::any visitTupleElementAssign(std::shared_ptr<statements::TupleElementAssignAst> ctx) {
     return {};
   }
+  virtual std::any
+  visitStructElementAssign(std::shared_ptr<statements::StructElementAssignAst> ctx) {
+    return {};
+  }
   virtual std::any visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
     return {};
   }
   virtual std::any visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) { return {}; }
+  virtual std::any visitStructAccess(std::shared_ptr<expressions::StructAccessAst> ctx) {
+    return {};
+  }
   virtual std::any visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) { return {}; }
   virtual std::any visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) { return {}; }
   virtual std::any visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) { return {}; }
@@ -110,5 +124,6 @@ public:
   virtual std::any visitBooleanType(std::shared_ptr<types::BooleanTypeAst> ctx) { return {}; }
   virtual std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) { return {}; }
   virtual std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) { return {}; }
+  virtual std::any visitStructType(std::shared_ptr<types::StructTypeAst> ctx) { return {}; }
 };
 } // namespace gazprea::ast::walkers

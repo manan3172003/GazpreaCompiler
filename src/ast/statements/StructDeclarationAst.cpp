@@ -5,7 +5,7 @@ namespace gazprea::ast::statements {
 NodeType StructDeclarationAst::getNodeType() const { return NodeType::StructDeclaration; }
 std::string StructDeclarationAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
-  ss << prefix << "Declaration ";
+  ss << prefix << "StructDeclaration ";
   ss << type->toStringTree(prefix + indent);
   if (sym) {
     ss << sym->toString();

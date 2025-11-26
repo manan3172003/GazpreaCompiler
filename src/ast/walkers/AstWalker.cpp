@@ -58,6 +58,13 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
     return visitReturn(std::static_pointer_cast<statements::ReturnAst>(ast));
   case NodeType::Root:
     return visitRoot(std::static_pointer_cast<RootAst>(ast));
+  case NodeType::StructAccess:
+    return visitStructAccess(std::static_pointer_cast<expressions::StructAccessAst>(ast));
+  case NodeType::StructDeclaration:
+    return visitStructDeclaration(std::static_pointer_cast<statements::StructDeclarationAst>(ast));
+  case NodeType::StructElementAssign:
+    return visitStructElementAssign(
+        std::static_pointer_cast<statements::StructElementAssignAst>(ast));
   case NodeType::TupleAccess:
     return visitTupleAccess(std::static_pointer_cast<expressions::TupleAccessAst>(ast));
   case NodeType::Typealias:
@@ -75,6 +82,8 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
     return visitIteratorLoop(std::static_pointer_cast<statements::IteratorLoopAst>(ast));
   case NodeType::TupleLiteral:
     return visitTuple(std::static_pointer_cast<expressions::TupleLiteralAst>(ast));
+  case NodeType::StructType:
+    return visitStructType(std::static_pointer_cast<types::StructTypeAst>(ast));
   case NodeType::TupleType:
     return visitTupleType(std::static_pointer_cast<types::TupleTypeAst>(ast));
   case NodeType::AliasType:

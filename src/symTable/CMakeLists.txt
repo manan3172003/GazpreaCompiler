@@ -12,6 +12,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/MethodSymbol.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ArrayTypeSymbol.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/VectorTypeSymbol.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/StructTypeSymbol.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_symtable_src})

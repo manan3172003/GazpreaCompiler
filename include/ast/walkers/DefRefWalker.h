@@ -1,5 +1,7 @@
 #pragma once
 #include "AstWalker.h"
+#include "ast/expressions/StructAccessAst.h"
+#include "ast/statements/StructElementAssignAst.h"
 #include "symTable/SymTable.h"
 #include "symTable/TupleTypeSymbol.h"
 
@@ -40,8 +42,11 @@ public:
   std::any visitProcedureCall(std::shared_ptr<statements::ProcedureCallAst> ctx) override;
   std::any visitReturn(std::shared_ptr<statements::ReturnAst> ctx) override;
   std::any visitTupleElementAssign(std::shared_ptr<statements::TupleElementAssignAst> ctx) override;
+  std::any
+  visitStructElementAssign(std::shared_ptr<statements::StructElementAssignAst> ctx) override;
   std::any visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssignAst> ctx) override;
   std::any visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) override;
+  std::any visitStructAccess(std::shared_ptr<expressions::StructAccessAst> ctx) override;
   std::any visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) override;
   std::any visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) override;
   std::any visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) override;
@@ -68,5 +73,7 @@ public:
   std::any visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) override;
   std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) override;
   std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) override;
+  std::any visitStructDeclaration(std::shared_ptr<statements::StructDeclarationAst> ctx) override;
+  std::any visitStructType(std::shared_ptr<types::StructTypeAst> ctx) override;
 };
 } // namespace gazprea::ast::walkers
