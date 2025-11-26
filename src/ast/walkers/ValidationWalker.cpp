@@ -538,7 +538,7 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
     for (const auto &element : ctx->getElements()) {
       visit(element);
       if (prevInferredTypeSymbol != nullptr) {
-        if (not typesMatch(prevInferredTypeSymbol, element->getInferredSymbolType()))
+        if (not typesMatch(element->getInferredSymbolType(), prevInferredTypeSymbol))
           throw TypeError(ctx->getLineNumber(), "Type mismatch in Array");
         // if the symbol is real do not change previous type
         if (prevInferredTypeSymbol->getName().find("real") != std::string::npos)
