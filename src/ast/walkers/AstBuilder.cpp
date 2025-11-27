@@ -767,8 +767,11 @@ std::any AstBuilder::visitSliceRangeExpr(GazpreaParser::SliceRangeExprContext *c
 }
 std::any AstBuilder::visitSliceEndExpr(GazpreaParser::SliceEndExprContext *ctx) {
   const auto rangedIndexExpr = std::make_shared<expressions::RangedIndexExprAst>(ctx->getStart());
+  const auto leftExpr =
+      std::make_shared<expressions::IntegerLiteralAst>(ctx->getStart(), 1); // start index
   const auto rightExpr =
       std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  rangedIndexExpr->setLeftIndexExpr(leftExpr);
   rangedIndexExpr->setRightIndexExpr(rightExpr);
   return std::static_pointer_cast<expressions::IndexExprAst>(rangedIndexExpr);
 }
