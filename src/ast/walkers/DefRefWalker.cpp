@@ -236,6 +236,13 @@ std::any DefRefWalker::visitDeclaration(std::shared_ptr<statements::DeclarationA
   }
 
   if (not ctx->getExpr() && ctx->getType()) {
+    // integer[*] needs to have an expression
+    if (auto arrayType = std::dynamic_pointer_cast<types::ArrayTypeAst>(ctx->getType())) {
+      for (auto size : arrayType->getSizes()) {
+        if (size)
+          throw SyntaxError(ctx->getLineNumber(), "Inferred Array cannot be empty");
+      }
+    }
     // Set everything to base (false, '\0', 0, 0.0)
     // normal primitives (boolean, character, integer, real)
     // tuples

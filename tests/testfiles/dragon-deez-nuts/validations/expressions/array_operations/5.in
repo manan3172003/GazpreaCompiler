@@ -1,0 +1,5 @@
+procedure main() returns integer {
+    var integer[*][*] a;
+    return 0;
+}
+// CHECK:SyntaxError on Line 2: Inferred Array cannot be empty

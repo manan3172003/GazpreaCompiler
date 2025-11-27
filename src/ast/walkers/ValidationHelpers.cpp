@@ -19,6 +19,12 @@ bool ValidationWalker::isScalar(const std::shared_ptr<symTable::Type> &type) {
   return false;
 }
 
+bool ValidationWalker::isCollection(const std::shared_ptr<symTable::Type> &type) {
+  if (type->getName().substr(0, 5) == "array")
+    return true;
+  return false;
+}
+
 bool ValidationWalker::isTuple(const std::shared_ptr<symTable::Type> &type) {
   if (type->getName() == "tuple")
     return true;
@@ -80,15 +86,6 @@ void ValidationWalker::validateTupleUnpackAssignmentTypes(
 
 bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destination,
                                   const std::shared_ptr<symTable::Type> &source) {
-  if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "array")) {
-    const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
-    const auto sourceArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(source);
-    return typesMatch(destArray->getType(), sourceArray->getType());
-  }
-  if (isOfSymbolType(destination, "array")) {
-    const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
-    return typesMatch(destArray->getType(), source);
-  }
   if (isOfSymbolType(destination, "integer") && isOfSymbolType(source, "integer"))
     return true;
   if (isOfSymbolType(destination, "real") && isOfSymbolType(source, "real"))
@@ -103,6 +100,11 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
     const auto destTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(destination);
     const auto sourceTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(source);
     return isTupleTypeMatch(destTuple, sourceTuple);
+  }
+  if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "array")) {
+    const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
+    const auto sourceArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(source);
+    return typesMatch(destArray->getType(), sourceArray->getType());
   }
   return false;
 }

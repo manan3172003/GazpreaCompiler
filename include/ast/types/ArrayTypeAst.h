@@ -18,6 +18,7 @@ public:
     static_sizes.push_back(sizeAst);
   }
   std::vector<std::shared_ptr<expressions::ExpressionAst>> getSizes() { return static_sizes; }
+  std::vector<bool> isSizeInferred() const;
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
 };

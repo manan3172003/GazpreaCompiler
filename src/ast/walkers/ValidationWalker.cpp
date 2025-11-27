@@ -532,23 +532,74 @@ std::any ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst
 }
 std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) {
   auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-  if (ctx->getElements().size() > 0) {
-    std::shared_ptr<symTable::Type> prevInferredTypeSymbol = nullptr;
-    std::shared_ptr<types::DataTypeAst> prevDataType = nullptr;
-    for (const auto &element : ctx->getElements()) {
-      visit(element);
-      if (prevInferredTypeSymbol != nullptr) {
-        if (not typesMatch(element->getInferredSymbolType(), prevInferredTypeSymbol))
-          throw TypeError(ctx->getLineNumber(), "Type mismatch in Array");
-        // if the symbol is real do not change previous type
-        if (prevInferredTypeSymbol->getName().find("real") != std::string::npos)
-          continue;
-      }
-      prevInferredTypeSymbol = element->getInferredSymbolType();
-      prevDataType = element->getInferredDataType();
-    }
-    arrayType->setType(prevDataType);
+  const auto elements = ctx->getElements();
+
+  if (elements.empty()) {
+    ctx->setInferredDataType(arrayType);
+    ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+    return {};
   }
+
+  // first pass: find if it's a two-dimensional array and check for >2 dimensions
+  visit(elements[0]);
+  bool is2DArray = false;
+
+  if (elements[0]->getInferredDataType()->getNodeType() == NodeType::ArrayType) {
+    is2DArray = true;
+
+    // Check if this is a 3D or higher dimensional array (not allowed)
+    auto firstElementArrayType =
+        std::dynamic_pointer_cast<types::ArrayTypeAst>(elements[0]->getInferredDataType());
+    if (firstElementArrayType && firstElementArrayType->getType() &&
+        firstElementArrayType->getType()->getNodeType() == NodeType::ArrayType) {
+      throw SyntaxError(ctx->getLineNumber(),
+                        "Arrays with more than 2 dimensions are not supported");
+    }
+  }
+
+  // second pass: elements must all be the same dimension &
+  // third pass: infer type by explicitly checking subtypes
+  std::shared_ptr<symTable::Type> expectedSubtype = nullptr;
+  std::shared_ptr<types::DataTypeAst> inferredElementType = nullptr;
+
+  for (size_t i = 0; i < elements.size(); i++) {
+    const auto &element = elements[i];
+
+    if (i > 0) {
+      visit(element);
+    }
+
+    // dimension consistency
+    bool isElementArray = (element->getInferredDataType()->getNodeType() == NodeType::ArrayType);
+    if (isElementArray != is2DArray) {
+      throw TypeError(ctx->getLineNumber(), "Array elements must have the same dimension");
+    }
+
+    std::shared_ptr<symTable::Type> currentSubtype;
+    if (is2DArray) {
+      auto elementArrayType =
+          std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(element->getInferredSymbolType());
+      if (elementArrayType && elementArrayType->getType()) {
+        currentSubtype = elementArrayType->getType();
+      }
+    } else {
+      currentSubtype = element->getInferredSymbolType();
+    }
+
+    if (expectedSubtype != nullptr && currentSubtype != nullptr) {
+      if (not typesMatch(currentSubtype, expectedSubtype)) {
+        throw TypeError(ctx->getLineNumber(), "Type mismatch in Array");
+      }
+
+      if (expectedSubtype->getName().find("real") != std::string::npos) {
+        continue;
+      }
+    }
+    expectedSubtype = currentSubtype;
+    inferredElementType = element->getInferredDataType();
+  }
+
+  arrayType->setType(inferredElementType);
   ctx->setInferredDataType(arrayType);
   ctx->setInferredSymbolType(resolvedInferredType(arrayType));
   return {};

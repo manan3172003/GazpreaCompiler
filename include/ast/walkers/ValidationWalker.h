@@ -60,6 +60,7 @@ public:
   std::shared_ptr<symTable::Type>
   resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType);
   static bool isScalar(const std::shared_ptr<symTable::Type> &type);
+  static bool isCollection(const std::shared_ptr<symTable::Type> &type);
   static bool isTuple(const std::shared_ptr<symTable::Type> &type);
   static void validateVariableAssignmentTypes(std::shared_ptr<statements::IdentifierLeftAst> ctx,
                                               std::shared_ptr<symTable::Type> exprTypeSymbol);
