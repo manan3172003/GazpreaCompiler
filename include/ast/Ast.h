@@ -60,6 +60,8 @@ enum class NodeType {
   StructAccess,
   StructDeclaration,
   StructElementAssign,
+  StructFuncCallRouter,
+  StructLiteral,
   StructType,
   TupleAccess,
   TupleElementAssign,

@@ -12,6 +12,7 @@
 #include "ast/expressions/IntegerLiteralAst.h"
 #include "ast/expressions/RealLiteralAst.h"
 #include "ast/expressions/StructAccessAst.h"
+#include "ast/expressions/StructFuncCallRouterAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
@@ -82,6 +83,10 @@ public:
   visitStructElementAssign(std::shared_ptr<statements::StructElementAssignAst> ctx) {
     return {};
   }
+  virtual std::any
+  visitStructFuncCallRouter(std::shared_ptr<expressions::StructFuncCallRouterAst> ctx) {
+    return {};
+  }
   virtual std::any visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssignAst> ctx) {
     return {};
   }
@@ -90,6 +95,7 @@ public:
     return {};
   }
   virtual std::any visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) { return {}; }
+  virtual std::any visitStruct(std::shared_ptr<expressions::StructLiteralAst> ctx) { return {}; }
   virtual std::any visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) { return {}; }
   virtual std::any visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) { return {}; }
   virtual std::any visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) { return {}; }

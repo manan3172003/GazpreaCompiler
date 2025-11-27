@@ -16,6 +16,7 @@
 #include "ast/expressions/RealLiteralAst.h"
 #include "ast/expressions/SingularIndexExprAst.h"
 #include "ast/expressions/StructAccessAst.h"
+#include "ast/expressions/StructFuncCallRouterAst.h"
 #include "ast/expressions/TupleAccessAst.h"
 #include "ast/expressions/TupleLiteralAst.h"
 #include "ast/expressions/UnaryAst.h"
@@ -634,7 +635,11 @@ std::any AstBuilder::visitFuncProcExpr(GazpreaParser::FuncProcExprContext *ctx) 
     fpCallAst->setArgs(
         std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
   }
-  return std::static_pointer_cast<expressions::ExpressionAst>(fpCallAst);
+
+  const auto sfpRouterAst = std::make_shared<expressions::StructFuncCallRouterAst>(ctx->getStart());
+  sfpRouterAst->setFuncProcCallAst(fpCallAst);
+
+  return std::static_pointer_cast<expressions::ExpressionAst>(sfpRouterAst);
 }
 std::any AstBuilder::visitEqualityExpr(GazpreaParser::EqualityExprContext *ctx) {
   return createBinaryExpr(ctx->expr(0), ctx->op->getText(), ctx->expr(1), ctx->getStart());

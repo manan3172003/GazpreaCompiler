@@ -4,6 +4,7 @@
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/RealTypeAst.h"
 #include "symTable/MethodSymbol.h"
+#include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 #include "utils/ValidationUtils.h"
@@ -38,6 +39,10 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
     const auto tupleElementAssignStat =
         std::dynamic_pointer_cast<statements::TupleElementAssignAst>(ctx->getLVal());
     validateTupleElementAssignmentTypes(tupleElementAssignStat, exprTypeSymbol);
+  } else if (ctx->getLVal()->getNodeType() == NodeType::StructElementAssign) {
+    const auto structElementAssignStat =
+        std::dynamic_pointer_cast<statements::StructElementAssignAst>(ctx->getLVal());
+    validateStructElementAssignmentTypes(structElementAssignStat, exprTypeSymbol);
   } else if (ctx->getLVal()->getNodeType() == NodeType::TupleUnpackAssign) {
     const auto tupleUnpackAssignStat =
         std::dynamic_pointer_cast<statements::TupleUnpackAssignAst>(ctx->getLVal());
@@ -208,8 +213,9 @@ std::any ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ct
     throw StatementError(ctx->getLineNumber(), "Output statement not allowed in functions");
   }
   visit(ctx->getExpression());
-  if (ctx->getExpression()->getInferredSymbolType()->getName() == "tuple")
-    throw TypeError(ctx->getLineNumber(), "Cannot print a tuple");
+  const auto typeName = ctx->getExpression()->getInferredSymbolType()->getName();
+  if (typeName == "tuple" || typeName == "struct")
+    throw TypeError(ctx->getLineNumber(), "Cannot print this datatype");
   return {};
 }
 std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
@@ -311,10 +317,10 @@ std::any ValidationWalker::visitReturn(std::shared_ptr<statements::ReturnAst> ct
 std::any
 ValidationWalker::visitTupleElementAssign(std::shared_ptr<statements::TupleElementAssignAst> ctx) {
   const auto idSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  const auto tupleTypeSymbol =
-      std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(idSymbol->getType());
   if (not idSymbol)
     throw SymbolError(ctx->getLineNumber(), "Identifier symbol is not a variable");
+  const auto tupleTypeSymbol =
+      std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(idSymbol->getType());
   if (not tupleTypeSymbol)
     throw TypeError(ctx->getLineNumber(), "Identifier symbol is not a tuple type");
   if (ctx->getFieldIndex() == 0 ||
@@ -339,7 +345,6 @@ std::any ValidationWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAc
       std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(tupleSymbol->getType());
   const int32_t fieldIndex = ctx->getFieldIndex();
   const auto elementType = tupleTypeSymbol->getResolvedTypes()[fieldIndex - 1];
-  const auto declNode = tupleSymbol->getDef();
 
   std::shared_ptr<types::DataTypeAst> dataType;
   const std::string typeName = elementType->getName();
@@ -352,6 +357,7 @@ std::any ValidationWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAc
     dataType = std::make_shared<types::CharacterTypeAst>(ctx->token);
   else if (typeName == "boolean")
     dataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+  // TODO: introduce part 2 types
   else
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
 
@@ -369,6 +375,75 @@ std::any ValidationWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralA
   ctx->setInferredSymbolType(resolvedInferredType(tupleType));
   ctx->setInferredDataType(tupleType);
   return {};
+}
+std::any ValidationWalker::visitStruct(std::shared_ptr<expressions::StructLiteralAst> ctx) {
+  const auto typeSymbol = ctx->getScope()->resolveType(ctx->getStructTypeName());
+  const auto structTypeSymbol = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(typeSymbol);
+  const auto structTypeAst =
+      std::dynamic_pointer_cast<types::StructTypeAst>(structTypeSymbol->getDef());
+
+  const auto literalElementValues = ctx->getElements();
+  const auto symbolElementTypes = structTypeSymbol->getResolvedTypes();
+
+  // number of arguments must be the same
+  if (literalElementValues.size() != symbolElementTypes.size())
+    throw TypeError(ctx->getLineNumber(), "Incorrect struct member list");
+
+  for (size_t i = 0; i < literalElementValues.size(); ++i) {
+    const auto literalElementValue = literalElementValues[i];
+    const auto symbolElementType = symbolElementTypes[i];
+    visit(literalElementValue);
+
+    if (not typesMatch(symbolElementType, literalElementValue->getInferredSymbolType()))
+      throw TypeError(ctx->getLineNumber(), "Incorrect struct member list");
+  }
+
+  ctx->setInferredSymbolType(structTypeSymbol);
+  ctx->setInferredDataType(structTypeAst);
+  return AstWalker::visitStruct(ctx);
+}
+std::any
+ValidationWalker::visitStructDeclaration(std::shared_ptr<statements::StructDeclarationAst> ctx) {
+  return AstWalker::visitStructDeclaration(ctx);
+}
+std::any ValidationWalker::visitStructElementAssign(
+    std::shared_ptr<statements::StructElementAssignAst> ctx) {
+  const auto idSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (not idSymbol)
+    throw SymbolError(ctx->getLineNumber(), "Identifier symbol is not a variable");
+
+  const auto structTypeSymbol =
+      std::dynamic_pointer_cast<symTable::StructTypeSymbol>(idSymbol->getType());
+  if (not structTypeSymbol)
+    throw TypeError(ctx->getLineNumber(), "Identifier symbol is not a struct type");
+
+  if (not structTypeSymbol->elementNameExist(ctx->getElementName()))
+    throw TypeError(ctx->getLineNumber(), "Invalid struct element");
+  return {};
+}
+std::any ValidationWalker::visitStructAccess(std::shared_ptr<expressions::StructAccessAst> ctx) {
+  const auto idSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (not idSymbol)
+    throw SymbolError(ctx->getLineNumber(), "Identifier symbol is not a variable");
+
+  const auto structTypeSymbol =
+      std::dynamic_pointer_cast<symTable::StructTypeSymbol>(idSymbol->getType());
+  if (not structTypeSymbol)
+    throw TypeError(ctx->getLineNumber(), "Identifier symbol is not a struct type");
+
+  if (not structTypeSymbol->elementNameExist(ctx->getElementName()))
+    throw TypeError(ctx->getLineNumber(), "Invalid struct element");
+
+  const auto elementSymbolType = structTypeSymbol->getResolvedType(ctx->getElementName());
+  const auto elementDataType = structTypeSymbol->getUnresolvedType(ctx->getElementName());
+
+  ctx->setInferredSymbolType(elementSymbolType);
+  ctx->setInferredDataType(elementDataType);
+
+  return {};
+}
+std::any ValidationWalker::visitStructType(std::shared_ptr<types::StructTypeAst> ctx) {
+  return AstWalker::visitStructType(ctx);
 }
 std::any ValidationWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   return AstWalker::visitTupleType(ctx);
@@ -403,6 +478,26 @@ std::any ValidationWalker::visitFunctionParam(std::shared_ptr<prototypes::Functi
 }
 std::any ValidationWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
   return AstWalker::visitPrototype(ctx);
+}
+std::any ValidationWalker::visitStructFuncCallRouter(
+    std::shared_ptr<expressions::StructFuncCallRouterAst> ctx) {
+  if (ctx->getIsStruct()) {
+    const auto structLiteralAst = ctx->getStructLiteralAst();
+    visit(structLiteralAst);
+    ctx->setSymbol(structLiteralAst->getSymbol());
+    ctx->setScope(structLiteralAst->getScope());
+    ctx->setInferredDataType(structLiteralAst->getInferredDataType());
+    ctx->setInferredSymbolType(structLiteralAst->getInferredSymbolType());
+  } else {
+    const auto fpCallAst = ctx->getFuncProcCallAst();
+    visit(fpCallAst);
+    ctx->setSymbol(fpCallAst->getSymbol());
+    ctx->setScope(fpCallAst->getScope());
+    ctx->setInferredDataType(fpCallAst->getInferredDataType());
+    ctx->setInferredSymbolType(fpCallAst->getInferredSymbolType());
+  }
+
+  return {};
 }
 std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCallAst> ctx) {
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());

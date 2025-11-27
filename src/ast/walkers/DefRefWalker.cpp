@@ -1,4 +1,5 @@
 #include "CompileTimeExceptions.h"
+#include "ast/expressions/StructLiteralAst.h"
 #include "ast/types/AliasTypeAst.h"
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/StructTypeSymbol.h"
@@ -61,6 +62,11 @@ bool DefRefWalker::exactTypeMatch(const std::shared_ptr<symTable::Type> &destina
     const auto destTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(destination);
     const auto sourceTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(source);
     return isTupleTypeMatch(destTuple, sourceTuple);
+  }
+  if (destination->getName() == "struct" && source->getName() == "struct") {
+    const auto destStruct = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(destination);
+    const auto sourceStruct = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(source);
+    return destStruct->getStructName() == sourceStruct->getStructName();
   }
   return false;
 }
@@ -143,7 +149,7 @@ DefRefWalker::resolvedType(int lineNumber, const std::shared_ptr<types::DataType
     break;
   case NodeType::AliasType: {
     const auto aliasTypeNode = std::dynamic_pointer_cast<types::AliasTypeAst>(dataType);
-    const auto aliasSymType = globalScope->resolveType(aliasTypeNode->getAlias());
+    const auto aliasSymType = dataType->getScope()->resolveType(aliasTypeNode->getAlias());
     type = std::dynamic_pointer_cast<symTable::Type>(aliasSymType);
     break;
   }
@@ -215,7 +221,16 @@ DefRefWalker::createDefaultLiteral(const std::shared_ptr<symTable::Type> &type,
     }
   }
   if (type->getName() == "struct") {
-    // TODO: struct literal
+    const auto structType = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(type);
+    const auto structLiteral = std::make_shared<expressions::StructLiteralAst>(token);
+    structLiteral->setStructTypeName(structType->getStructName());
+    for (const auto &elementType : structType->getResolvedTypes()) {
+      const auto elementDefault = createDefaultLiteral(elementType, token);
+      if (elementDefault) {
+        structLiteral->addElement(elementDefault);
+      }
+    }
+    return structLiteral;
   }
   return nullptr;
 }
@@ -480,21 +495,29 @@ std::any DefRefWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> 
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
+std::any DefRefWalker::visitStruct(std::shared_ptr<expressions::StructLiteralAst> ctx) {
+  for (const auto &element : ctx->getElements()) {
+    visit(element);
+  }
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
 std::any DefRefWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
   auto tupleTypeSymbol = std::make_shared<symTable::TupleTypeSymbol>("tuple");
+  ctx->setScope(symTab->getCurrentScope());
   for (const auto &subType : ctx->getTypes()) {
+    visit(subType);
     tupleTypeSymbol->addResolvedType(resolvedType(ctx->getLineNumber(), subType));
   }
   tupleTypeSymbol->setDef(ctx);
   ctx->setSymbol(tupleTypeSymbol);
-  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitAliasType(std::shared_ptr<types::AliasTypeAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   const auto typeSymbol =
       std::dynamic_pointer_cast<symTable::Symbol>(resolvedType(ctx->getLineNumber(), ctx));
   ctx->setSymbol(typeSymbol);
-  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitIntegerType(std::shared_ptr<types::IntegerTypeAst> ctx) {
@@ -526,6 +549,7 @@ std::any DefRefWalker::visitBooleanType(std::shared_ptr<types::BooleanTypeAst> c
   return {};
 }
 std::any DefRefWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   visit(ctx->getType());
   for (auto size : ctx->getSizes())
     visit(size);
@@ -538,25 +562,26 @@ std::any DefRefWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) 
   }
 
   ctx->setSymbol(arrayTypeSymbol);
-  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   visit(ctx->getElementType());
   const auto vectorTypeSymbol = std::make_shared<symTable::VectorTypeSymbol>("vector");
   vectorTypeSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getElementType()));
   vectorTypeSymbol->setDef(ctx);
   ctx->setSymbol(vectorTypeSymbol);
-  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitStructType(std::shared_ptr<types::StructTypeAst> ctx) {
   throwDuplicateSymbolError(ctx, ctx->getStructName(), symTab->getGlobalScope(), true);
   throwDuplicateSymbolError(ctx, ctx->getStructName(), symTab->getGlobalScope(), false);
+  ctx->setScope(symTab->getCurrentScope());
   const auto structTypeSymbol = std::make_shared<symTable::StructTypeSymbol>("struct");
   structTypeSymbol->setStructName(ctx->getStructName());
   const auto unresolvedTypes = ctx->getTypes();
   for (size_t i = 0; i < unresolvedTypes.size(); i++) {
+    visit(unresolvedTypes[i]);
     const auto resolvedSubType =
         resolvedType(unresolvedTypes[i]->getLineNumber(), unresolvedTypes[i]);
     const auto elementName = ctx->getElementName(i + 1);
@@ -566,7 +591,6 @@ std::any DefRefWalker::visitStructType(std::shared_ptr<types::StructTypeAst> ctx
 
   structTypeSymbol->setDef(ctx);
   ctx->setSymbol(structTypeSymbol);
-  ctx->setScope(symTab->getCurrentScope());
   symTab->getCurrentScope()->defineTypeSymbol(structTypeSymbol);
   symTab->getCurrentScope()->defineSymbol(structTypeSymbol);
 
@@ -681,6 +705,39 @@ std::any DefRefWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> 
     methodSym->setReturnType(resolvedType(ctx->getLineNumber(), ctx->getReturnType()));
   }
 
+  return {};
+}
+std::any
+DefRefWalker::visitStructFuncCallRouter(std::shared_ptr<expressions::StructFuncCallRouterAst> ctx) {
+  const auto fpCallAst = ctx->getFuncProcCallAst();
+  const auto resolvedSymbol = symTab->getCurrentScope()->resolveSymbol(ctx->getCallName());
+
+  if (std::dynamic_pointer_cast<symTable::MethodSymbol>(resolvedSymbol)) {
+    visit(fpCallAst);
+    ctx->setInferredDataType(fpCallAst->getInferredDataType());
+    ctx->setInferredSymbolType(fpCallAst->getInferredSymbolType());
+    ctx->setScope(fpCallAst->getScope());
+    ctx->setSymbol(fpCallAst->getSymbol());
+  } else if (std::dynamic_pointer_cast<symTable::StructTypeSymbol>(resolvedSymbol)) {
+    const auto structLiteralAst = std::make_shared<expressions::StructLiteralAst>(ctx->token);
+    structLiteralAst->setStructTypeName(ctx->getCallName());
+    for (const auto &arg : fpCallAst->getArgs()) {
+      const auto expr = arg->getExpr();
+      structLiteralAst->addElement(expr);
+    }
+
+    ctx->setStructLiteralAst(structLiteralAst);
+
+    visit(structLiteralAst);
+
+    ctx->setInferredDataType(structLiteralAst->getInferredDataType());
+    ctx->setInferredSymbolType(structLiteralAst->getInferredSymbolType());
+    ctx->setScope(structLiteralAst->getScope());
+    ctx->setSymbol(structLiteralAst->getSymbol());
+  } else {
+    throw SymbolError(ctx->getLineNumber(),
+                      "Unable to find a struct/function/procedure with this Id");
+  }
   return {};
 }
 std::any DefRefWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCallAst> ctx) {

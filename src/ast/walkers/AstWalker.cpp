@@ -65,6 +65,11 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::StructElementAssign:
     return visitStructElementAssign(
         std::static_pointer_cast<statements::StructElementAssignAst>(ast));
+  case NodeType::StructFuncCallRouter:
+    return visitStructFuncCallRouter(
+        std::static_pointer_cast<expressions::StructFuncCallRouterAst>(ast));
+  case NodeType::StructLiteral:
+    return visitStruct(std::static_pointer_cast<expressions::StructLiteralAst>(ast));
   case NodeType::TupleAccess:
     return visitTupleAccess(std::static_pointer_cast<expressions::TupleAccessAst>(ast));
   case NodeType::Typealias:

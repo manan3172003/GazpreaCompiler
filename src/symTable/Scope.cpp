@@ -64,12 +64,20 @@ std::shared_ptr<Symbol> GlobalScope::resolveType(const std::string &type) {
     return nullptr;
   }
 
+  if (const auto typeSym = std::dynamic_pointer_cast<StructTypeSymbol>(getTypeSymbols().at(type)))
+    return typeSym;
+
   // TODO: Error handling check if the symbol exists
   auto typeSym = std::dynamic_pointer_cast<TypealiasSymbol>(getTypeSymbols().at(type));
 
-  // TODO: do the same thing for structs
+  // TODO: do the same thing for vectors and strings?
   if (typeSym->getType()->getName() == "tuple") {
     auto tupleTypeSym = std::dynamic_pointer_cast<TupleTypeSymbol>(typeSym->getType());
+    return tupleTypeSym;
+  }
+
+  if (typeSym->getType()->getName() == "struct") {
+    auto tupleTypeSym = std::dynamic_pointer_cast<StructTypeSymbol>(typeSym->getType());
     return tupleTypeSym;
   }
 

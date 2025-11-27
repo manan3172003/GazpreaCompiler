@@ -54,6 +54,8 @@ public:
   std::any visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) override;
   std::any visitFunctionParam(std::shared_ptr<prototypes::FunctionParamAst> ctx) override;
   std::any visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) override;
+  std::any
+  visitStructFuncCallRouter(std::shared_ptr<expressions::StructFuncCallRouterAst> ctx) override;
   std::any visitFuncProcCall(std::shared_ptr<expressions::FuncProcCallAst> ctx) override;
   std::any visitArg(std::shared_ptr<expressions::ArgAst> ctx) override;
   std::any visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) override;
@@ -76,5 +78,6 @@ public:
   std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) override;
   std::any visitStructDeclaration(std::shared_ptr<statements::StructDeclarationAst> ctx) override;
   std::any visitStructType(std::shared_ptr<types::StructTypeAst> ctx) override;
+  std::any visitStruct(std::shared_ptr<expressions::StructLiteralAst> ctx) override;
 };
 } // namespace gazprea::ast::walkers

@@ -109,7 +109,7 @@ vector_type: VECTOR LT type GT;
 
 struct_type: STRUCT typename=ID LPAREN field_list RPAREN;
 
-field_list: field (COMMA field)*;
+field_list: field (COMMA field)+;
 
 field: type ID;
 

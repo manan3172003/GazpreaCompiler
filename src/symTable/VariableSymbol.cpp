@@ -1,5 +1,6 @@
 #include "Colors.h"
 #include "symTable/BuiltInTypeSymbol.h"
+#include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
 
@@ -18,6 +19,8 @@ std::string VariableSymbol::toString() {
       ss << tupleType->toString();
     } else if (auto aliasType = std::dynamic_pointer_cast<TypealiasSymbol>(type)) {
       ss << KGRN << aliasType->getName() << RST;
+    } else if (auto structType = std::dynamic_pointer_cast<StructTypeSymbol>(type)) {
+      ss << structType->toString();
     } else if (auto builtInType = std::dynamic_pointer_cast<BuiltInTypeSymbol>(type)) {
       ss << KGRN << builtInType->getName() << RST;
     } else {

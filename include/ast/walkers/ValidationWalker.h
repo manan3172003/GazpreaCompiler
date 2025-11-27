@@ -10,7 +10,7 @@ class ValidationWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
   bool inBinaryOp = false;
   bool inAssignment = false;
-  static int opTable[5][15];
+  static int opTable[6][15];
   void visitExpression(const std::shared_ptr<Ast> &exprAst) {
     inBinaryOp = true;
     visit(exprAst);
@@ -43,6 +43,8 @@ public:
   std::any visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) override;
   std::any visitFunctionParam(std::shared_ptr<prototypes::FunctionParamAst> ctx) override;
   std::any visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) override;
+  std::any
+  visitStructFuncCallRouter(std::shared_ptr<expressions::StructFuncCallRouterAst> ctx) override;
   std::any visitFuncProcCall(std::shared_ptr<expressions::FuncProcCallAst> ctx) override;
   std::any visitArg(std::shared_ptr<expressions::ArgAst> ctx) override;
   std::any visitBool(std::shared_ptr<expressions::BoolLiteralAst> ctx) override;
@@ -56,6 +58,12 @@ public:
   std::any visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) override;
   std::any visitLoop(std::shared_ptr<statements::LoopAst> ctx) override;
   std::any visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) override;
+  std::any visitStruct(std::shared_ptr<expressions::StructLiteralAst> ctx) override;
+  std::any visitStructDeclaration(std::shared_ptr<statements::StructDeclarationAst> ctx) override;
+  std::any
+  visitStructElementAssign(std::shared_ptr<statements::StructElementAssignAst> ctx) override;
+  std::any visitStructAccess(std::shared_ptr<expressions::StructAccessAst> ctx) override;
+  std::any visitStructType(std::shared_ptr<types::StructTypeAst> ctx) override;
   std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) override;
   std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) override;
 
@@ -70,6 +78,9 @@ public:
   static void
   validateTupleElementAssignmentTypes(std::shared_ptr<statements::TupleElementAssignAst> ctx,
                                       std::shared_ptr<symTable::Type> exprTypeSymbol);
+  static void
+  validateStructElementAssignmentTypes(std::shared_ptr<statements::StructElementAssignAst> ctx,
+                                       std::shared_ptr<symTable::Type> exprTypeSymbol);
   static void
   validateTupleUnpackAssignmentTypes(std::shared_ptr<statements::TupleUnpackAssignAst> ctx,
                                      std::shared_ptr<symTable::Type> exprTypeSymbol);

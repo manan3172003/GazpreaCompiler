@@ -6,6 +6,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/Bool.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Cast.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Char.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/StructFuncCallRouter.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/FuncProcCall.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Identifier.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Integer.cpp"

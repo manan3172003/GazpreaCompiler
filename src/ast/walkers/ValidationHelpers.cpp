@@ -1,6 +1,7 @@
 #include "CompileTimeExceptions.h"
 #include "ast/types/AliasTypeAst.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/StructTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 #include "symTable/VectorTypeSymbol.h"
 
@@ -59,6 +60,21 @@ void ValidationWalker::validateTupleElementAssignmentTypes(
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
 }
 
+void ValidationWalker::validateStructElementAssignmentTypes(
+    std::shared_ptr<statements::StructElementAssignAst> ctx,
+    std::shared_ptr<symTable::Type> exprTypeSymbol) {
+  const auto lValSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (lValSymbol->getQualifier() == Qualifier::Const)
+    throw AssignError(ctx->getLineNumber(), "Cannot re-assign a constant value");
+
+  const auto structType =
+      std::dynamic_pointer_cast<symTable::StructTypeSymbol>(lValSymbol->getType());
+  const auto structSubType = structType->getResolvedType(ctx->getElementName());
+
+  if (not typesMatch(structSubType, exprTypeSymbol))
+    throw TypeError(ctx->getLineNumber(), "Type mismatch");
+}
+
 void ValidationWalker::validateTupleUnpackAssignmentTypes(
     std::shared_ptr<statements::TupleUnpackAssignAst> ctx,
     std::shared_ptr<symTable::Type> exprTypeSymbol) {
@@ -81,6 +97,10 @@ void ValidationWalker::validateTupleUnpackAssignmentTypes(
       const auto tupleElementAssignStat =
           std::dynamic_pointer_cast<statements::TupleElementAssignAst>(varList[i]);
       validateTupleElementAssignmentTypes(tupleElementAssignStat, tupleElements[i]);
+    } else if (varList[i]->getNodeType() == NodeType::StructElementAssign) {
+      const auto structElementAssignStat =
+          std::dynamic_pointer_cast<statements::StructElementAssignAst>(varList[i]);
+      validateStructElementAssignmentTypes(structElementAssignStat, tupleElements[i]);
     } // TODO: add more assignment types in part 2
   }
 }
@@ -101,6 +121,11 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
     const auto destTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(destination);
     const auto sourceTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(source);
     return isTupleTypeMatch(destTuple, sourceTuple);
+  }
+  if (isOfSymbolType(destination, "struct") && isOfSymbolType(source, "struct")) {
+    const auto destStruct = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(destination);
+    const auto sourceStruct = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(source);
+    return destStruct->getStructName() == sourceStruct->getStructName();
   }
   if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "array")) {
     const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
@@ -159,13 +184,14 @@ ValidationWalker::getEnclosingFuncProcScope(std::shared_ptr<symTable::Scope> cur
   return currentScope;
 }
 
-int ValidationWalker::opTable[5][15] = {
+int ValidationWalker::opTable[6][15] = {
     //  ^  *  /  %  +  -  <  > <= >= == !=  & or xor
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Integer
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Real
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Character
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1}, // Boolean
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Tuple
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Struct
 };
 
 bool ValidationWalker::isValidOp(const std::string &typeName, expressions::BinaryOpType opType) {
@@ -196,6 +222,8 @@ int ValidationWalker::nodeTypeToIndex(const std::string &typeName) {
     return 3;
   if (typeName == "tuple")
     return 4;
+  if (typeName == "struct")
+    return 5;
   return -1;
 }
 
@@ -377,6 +405,35 @@ void ValidationWalker::checkVarArgs(const std::vector<std::shared_ptr<Ast>> &par
               throw AliasingError(args[i]->getLineNumber(),
                                   "var parameter cannot share a variable with another parameter");
             seenVarMap[varIdentifier].emplace_back(tupleAccess, isVar);
+          }
+        }
+      }
+
+    } else if (args[i]->getExpr()->getNodeType() == NodeType::StructAccess) {
+      const auto structAccess =
+          std::dynamic_pointer_cast<expressions::StructAccessAst>(args[i]->getExpr());
+      std::string varIdentifier = structAccess->getStructName();
+
+      // First time seeing this identifier
+      if (seenVarMap.find(varIdentifier) == seenVarMap.end()) {
+        seenVarMap[varIdentifier].emplace_back(structAccess, isVar);
+        continue;
+      }
+
+      // If this identifier was already seen
+      for (const auto &seenArg : seenVarMap[varIdentifier]) {
+        if (seenArg.second || isVar) {
+          const auto lVal = seenArg.first;
+          if (lVal->getNodeType() == NodeType::Identifier)
+            throw AliasingError(args[i]->getLineNumber(),
+                                "var parameter cannot share a variable with another parameter");
+          if (lVal->getNodeType() == NodeType::StructAccess) {
+            const auto structAccessLVal =
+                std::dynamic_pointer_cast<expressions::StructAccessAst>(lVal);
+            if (structAccessLVal->getElementName() == structAccess->getElementName())
+              throw AliasingError(args[i]->getLineNumber(),
+                                  "var parameter cannot share a variable with another parameter");
+            seenVarMap[varIdentifier].emplace_back(structAccess, isVar);
           }
         }
       }

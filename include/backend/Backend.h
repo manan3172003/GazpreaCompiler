@@ -72,6 +72,8 @@ public:
   std::any visitFunction(std::shared_ptr<ast::prototypes::FunctionAst> ctx) override;
   std::any visitFunctionParam(std::shared_ptr<ast::prototypes::FunctionParamAst> ctx) override;
   std::any visitPrototype(std::shared_ptr<ast::prototypes::PrototypeAst> ctx) override;
+  std::any visitStructFuncCallRouter(
+      std::shared_ptr<ast::expressions::StructFuncCallRouterAst> ctx) override;
   std::any visitFuncProcCall(std::shared_ptr<ast::expressions::FuncProcCallAst> ctx) override;
   std::any visitArg(std::shared_ptr<ast::expressions::ArgAst> ctx) override;
   std::any visitBool(std::shared_ptr<ast::expressions::BoolLiteralAst> ctx) override;
