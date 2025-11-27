@@ -1,0 +1,8 @@
+procedure main() returns integer {
+    integer[3][3] a1 = [[3],[4,6,7],[5,2]];
+    vector<integer[3][3]> x = [[[3],[4,6,7],[5,2]]];
+    a1 -> std_output;
+    x -> std_output;
+    return 0;
+}
+//CHECK:[[3 0 0] [4 6 7] [5 2 0]][[[3 0 0] [4 6 7] [5 2 0]]]

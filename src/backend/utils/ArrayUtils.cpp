@@ -1,8 +1,10 @@
 #include "CompileTimeExceptions.h"
 #include "ast/walkers/DefRefWalker.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
 
 #include <backend/Backend.h>
+#include <llvm/ADT/APFloat.h>
 
 namespace gazprea::backend {
 void Backend::printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType) {
@@ -162,6 +164,15 @@ mlir::Value Backend::getArrayDataAddr(mlir::OpBuilder &b, mlir::Location l,
       l, ptrTy(), arrayStructType, arrayStruct,
       mlir::ValueRange{b.create<mlir::LLVM::ConstantOp>(l, b.getI32Type(), 0),
                        b.create<mlir::LLVM::ConstantOp>(l, b.getI32Type(), 1)});
+}
+
+mlir::Value Backend::gepOpVector(mlir::Type vectorStructType, mlir::Value vectorStruct,
+                                 VectorOffset offset) const {
+  return builder->create<mlir::LLVM::GEPOp>(
+      loc, ptrTy(), vectorStructType, vectorStruct,
+      mlir::ValueRange{builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+                       builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(),
+                                                               static_cast<int>(offset))});
 }
 
 mlir::Value Backend::get2DArrayBoolAddr(mlir::OpBuilder &b, mlir::Location l,
@@ -390,7 +401,6 @@ void Backend::padArrayIfNeeded(mlir::Value arrayStruct, std::shared_ptr<symTable
 
     auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, arrayStruct);
     mlir::Value currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arraySizeAddr);
-
     auto needsPadding = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt,
                                                             currentSize, targetOuterSize);
 
@@ -484,6 +494,54 @@ void Backend::padArrayIfNeeded(mlir::Value arrayStruct, std::shared_ptr<symTable
         b.create<mlir::LLVM::StoreOp>(l, targetOuterSize, arraySizeAddr);
 
         b.create<mlir::scf::YieldOp>(l);
+      });
+}
+
+void Backend::cloneArrayStructure(std::shared_ptr<symTable::Type> type,
+                                  mlir::Value sourceArrayStruct, mlir::Value destArrayStruct) {
+  auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type);
+  if (!arrayTypeSym) {
+    return;
+  }
+
+  auto arrayStructType = getMLIRType(type);
+  auto elementType = arrayTypeSym->getType();
+  auto elementMLIRType = getMLIRType(elementType);
+
+  auto srcSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, sourceArrayStruct);
+  mlir::Value srcSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcSizeAddr);
+
+  auto destSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, destArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcSize, destSizeAddr);
+
+  mlir::Value destDataPtr = mallocArray(elementMLIRType, srcSize);
+  auto destDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, destArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, destDataPtr, destDataAddr);
+
+  auto srcIs2dAddr = get2DArrayBoolAddr(*builder, loc, arrayStructType, sourceArrayStruct);
+  mlir::Value srcIs2d = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), srcIs2dAddr);
+  auto destIs2dAddr = get2DArrayBoolAddr(*builder, loc, arrayStructType, destArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcIs2d, destIs2dAddr);
+
+  auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
+  if (!elementArrayType) {
+    return;
+  }
+
+  auto sourceDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, sourceArrayStruct);
+  mlir::Value sourceDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), sourceDataAddr);
+
+  auto subArrayStructType = getMLIRType(elementType);
+
+  builder->create<mlir::scf::ForOp>(
+      loc, constZero(), srcSize, constOne(), mlir::ValueRange{},
+      [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+        auto srcSubArrayPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), subArrayStructType,
+                                                          sourceDataPtr, mlir::ValueRange{i});
+        auto destSubArrayPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), subArrayStructType,
+                                                           destDataPtr, mlir::ValueRange{i});
+        cloneArrayStructure(elementType, srcSubArrayPtr, destSubArrayPtr);
+        b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
       });
 }
 
@@ -622,6 +680,60 @@ void Backend::freeArray(std::shared_ptr<symTable::Type> type, mlir::Value arrayS
 
   auto nullPtr = builder->create<mlir::LLVM::ZeroOp>(loc, ptrTy());
   builder->create<mlir::LLVM::StoreOp>(loc, nullPtr, arrayDataAddr);
+}
+
+void Backend::freeVector(std::shared_ptr<symTable::Type> type, mlir::Value vectorStruct) {
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type);
+  if (!vectorTypeSym) {
+    return;
+  }
+
+  auto elementType = vectorTypeSym->getType();
+  auto vectorStructType = getMLIRType(type);
+
+  auto vectorSizeAddr = gepOpVector(vectorStructType, vectorStruct, VectorOffset::Size);
+  mlir::Value vectorSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), vectorSizeAddr);
+
+  auto vectorDataAddr = gepOpVector(vectorStructType, vectorStruct, VectorOffset::Data);
+  mlir::Value dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), vectorDataAddr);
+
+  if (auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+    auto subArrayStructType = getMLIRType(elementType);
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), vectorSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto subArrayPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), subArrayStructType, dataPtr,
+                                                         mlir::ValueRange{i});
+
+          freeArray(elementType, subArrayPtr);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  }
+
+  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+  if (!freeFunc) {
+    auto savedInsertionPoint = builder->saveInsertionPoint();
+
+    builder->setInsertionPointToStart(module.getBody());
+
+    auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
+    auto freeFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy()}, /*isVarArg=*/false);
+    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "free", freeFnType);
+
+    builder->restoreInsertionPoint(savedInsertionPoint);
+  }
+
+  builder->create<mlir::LLVM::CallOp>(loc, freeFunc, mlir::ValueRange{dataPtr});
+
+  builder->create<mlir::LLVM::StoreOp>(loc, constZero(), vectorSizeAddr);
+
+  auto nullPtr = builder->create<mlir::LLVM::ZeroOp>(loc, ptrTy());
+  builder->create<mlir::LLVM::StoreOp>(loc, nullPtr, vectorDataAddr);
+
+  auto is2dAddr = get2DArrayBoolAddr(*builder, loc, vectorStructType, vectorStruct);
+  auto boolZero = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+  builder->create<mlir::LLVM::StoreOp>(loc, boolZero, is2dAddr);
 }
 
 void Backend::createArrayFromVector(

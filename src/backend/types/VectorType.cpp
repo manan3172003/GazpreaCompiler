@@ -1,0 +1,169 @@
+#include "ast/types/ArrayTypeAst.h"
+#include "symTable/VectorTypeSymbol.h"
+#include <algorithm>
+#include <backend/Backend.h>
+#include <string>
+
+namespace gazprea::backend {
+std::any Backend::visitVectorType(std::shared_ptr<ast::types::VectorTypeAst> ctx) {
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(ctx->getSymbol());
+  if (auto elementArrayType =
+          std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(ctx->getElementType())) {
+    (void)elementArrayType;
+    vectorTypeSym->isScalar = false;
+  }
+  if (vectorTypeSym->isScalar) {
+    // We don't need to evaluate anything for scalar types
+    return {};
+  }
+
+  vectorTypeSym->declaredElementSize.clear();
+
+  // Either 1D or 2D element type
+  const auto arrayType = std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(ctx->getElementType());
+  const auto sizeExpr = arrayType->getSizes();
+  for (size_t i = 0; i < sizeExpr.size(); ++i) {
+    visit(sizeExpr[i]);
+
+    auto [type, valueAddr] = ctx->getScope()->getTopElementInStack();
+    ctx->getScope()->popElementFromScopeStack();
+
+    // Could be * or an integer value
+    mlir::Value recordedSizeAddr = valueAddr;
+    if (!type || type->getName() != "integer") {
+      int inferredSize = 0;
+      if (i < vectorTypeSym->inferredElementSize.size()) {
+        inferredSize = vectorTypeSym->inferredElementSize[i];
+      }
+      auto ifrValue = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), inferredSize);
+      recordedSizeAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
+      builder->create<mlir::LLVM::StoreOp>(loc, ifrValue, recordedSizeAddr);
+    }
+
+    vectorTypeSym->declaredElementSize.push_back(recordedSizeAddr);
+  }
+
+  return {};
+}
+
+mlir::Value
+Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
+                           const std::shared_ptr<symTable::Type> &sourceType,
+                           mlir::Value sourceAddr) {
+  if (!vectorType || !sourceType)
+    return {};
+
+  auto loadSizesFromVector = [&](const std::shared_ptr<symTable::VectorTypeSymbol> &type) {
+    std::vector<mlir::Value> sizes;
+    if (!type)
+      return sizes;
+    for (const auto &sizeAddr : type->declaredElementSize) {
+      if (!sizeAddr)
+        continue;
+      sizes.push_back(builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sizeAddr));
+    }
+    return sizes;
+  };
+
+  const auto declaredSizes = loadSizesFromVector(vectorType);
+  auto throwSizeErrorFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("throwVectorSizeError");
+
+  auto emitSizeValidation = [&](const std::vector<mlir::Value> &actualSizes) {
+    if (!throwSizeErrorFunc || declaredSizes.empty() || actualSizes.empty())
+      return;
+
+    const auto dims = std::min(declaredSizes.size(), actualSizes.size());
+    for (size_t i = 0; i < dims; ++i) {
+      auto exceeds = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sgt,
+                                                         actualSizes[i], declaredSizes[i]);
+      builder->create<mlir::scf::IfOp>(
+          loc, exceeds,
+          [&](mlir::OpBuilder &b, mlir::Location l) {
+            b.create<mlir::LLVM::CallOp>(l, throwSizeErrorFunc, mlir::ValueRange{});
+            b.create<mlir::scf::YieldOp>(l);
+          },
+          [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
+    }
+  };
+
+  auto buildInferredSizeConstants = [&]() {
+    std::vector<mlir::Value> inferredSizes;
+    for (int inferred : vectorType->inferredElementSize) {
+      inferredSizes.push_back(builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), inferred));
+    }
+    return inferredSizes;
+  };
+
+  auto vectorStructTy = getMLIRType(vectorType);
+  auto vectorStructAddr =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), vectorStructTy, constOne());
+
+  auto makeIndexConst = [&](int idx) {
+    return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), idx);
+  };
+
+  auto makeFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr, VectorOffset offset) {
+    return builder->create<mlir::LLVM::GEPOp>(
+        loc, ptrTy(), structTy, baseAddr,
+        mlir::ValueRange{makeIndexConst(0), makeIndexConst(static_cast<int>(offset))});
+  };
+
+  auto storeVectorField = [&](const VectorOffset offset, mlir::Value value) {
+    auto destPtr = makeFieldPtr(vectorStructTy, vectorStructAddr, offset);
+    builder->create<mlir::LLVM::StoreOp>(loc, value, destPtr);
+  };
+
+  const auto sourceName = sourceType->getName();
+  if (sourceName.substr(0, 5) == "array") {
+    if (!declaredSizes.empty()) {
+      emitSizeValidation(buildInferredSizeConstants());
+    }
+
+    auto arrayStructTy = getMLIRType(sourceType);
+    auto loadField = [&](const VectorOffset offset, mlir::Type fieldType) {
+      auto fieldPtr = makeFieldPtr(arrayStructTy, sourceAddr, offset);
+      return builder->create<mlir::LLVM::LoadOp>(loc, fieldType, fieldPtr);
+    };
+
+    mlir::Value inferredSize = loadField(VectorOffset::Size, intTy());
+
+    auto clonedArrayStruct =
+        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructTy, constOne());
+
+    copyArrayStruct(sourceType, sourceAddr, clonedArrayStruct);
+
+    auto clonedDataPtr = builder->create<mlir::LLVM::LoadOp>(
+        loc, ptrTy(), getArrayDataAddr(*builder, loc, arrayStructTy, clonedArrayStruct));
+    auto clonedIs2dValue = builder->create<mlir::LLVM::LoadOp>(
+        loc, boolTy(), get2DArrayBoolAddr(*builder, loc, arrayStructTy, clonedArrayStruct));
+
+    storeVectorField(VectorOffset::Size, inferredSize);
+    storeVectorField(VectorOffset::Capacity, inferredSize);
+    storeVectorField(VectorOffset::Data, clonedDataPtr);
+    storeVectorField(VectorOffset::Is2D, clonedIs2dValue);
+    return vectorStructAddr;
+  }
+
+  if (sourceName.substr(0, 6) == "vector") {
+    if (!declaredSizes.empty()) {
+      if (auto sourceVectorType =
+              std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(sourceType)) {
+        emitSizeValidation(loadSizesFromVector(sourceVectorType));
+      }
+    }
+    copyValue(vectorType, sourceAddr, vectorStructAddr);
+    return vectorStructAddr;
+  }
+
+  auto zeroSize = constZero();
+  auto boolZero = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+  auto nullPtrInt = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
+  auto nullPtr = builder->create<mlir::LLVM::IntToPtrOp>(loc, ptrTy(), nullPtrInt);
+
+  storeVectorField(VectorOffset::Size, zeroSize);
+  storeVectorField(VectorOffset::Capacity, zeroSize);
+  storeVectorField(VectorOffset::Data, nullPtr);
+  storeVectorField(VectorOffset::Is2D, boolZero);
+  return vectorStructAddr;
+}
+} // namespace gazprea::backend

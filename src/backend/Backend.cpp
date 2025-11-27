@@ -2,6 +2,7 @@
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
 #include "utils/ValidationUtils.h"
 
 #include <assert.h>
@@ -27,6 +28,7 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   setupIntPow();
   setupThrowDivisionByZeroError();
   setupThrowArraySizeError();
+  setupThrowVectorSizeError();
   setupPrintArray();
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%d\0", "intFormat");
@@ -118,6 +120,12 @@ void Backend::setupThrowArraySizeError() const {
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
   builder->create<mlir::LLVM::LLVMFuncOp>(loc, "throwArraySizeError", llvmFnType);
 }
+void Backend::setupThrowVectorSizeError() const {
+  // Signature: void throwVectorSizeError()
+  auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "throwVectorSizeError", llvmFnType);
+}
 
 void Backend::setupPrintArray() const {
   // Signature: void printArray(ptr arrayStructAddr, i32 elementType)
@@ -191,13 +199,19 @@ void Backend::printChar(char c) {
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
 }
 
-void Backend::printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType) {
-  auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayType);
-  auto elementType = arrayTypeSym->getType();
+void Backend::printVector(mlir::Value vectorStructAddr,
+                          std::shared_ptr<symTable::Type> vectorType) {
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(vectorType);
+  if (!vectorTypeSym)
+    return;
+
+  auto elementType = vectorTypeSym->getType();
+  if (auto arrayElement = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+    elementType = arrayElement->getType();
+  }
 
   int elementTypeCode = 0;
-  std::string elementTypeName = elementType->getName();
-
+  auto elementTypeName = elementType ? elementType->getName() : "";
   if (elementTypeName == "integer") {
     elementTypeCode = 0;
   } else if (elementTypeName == "real") {
@@ -210,7 +224,7 @@ void Backend::printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::
 
   auto printArrayFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printArray");
   auto elementTypeConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), elementTypeCode);
-  mlir::ValueRange args = {arrayStructAddr, elementTypeConst};
+  mlir::ValueRange args = {vectorStructAddr, elementTypeConst};
   builder->create<mlir::LLVM::CallOp>(loc, printArrayFunc, args);
 }
 
@@ -265,10 +279,18 @@ mlir::Type Backend::getMLIRType(const std::shared_ptr<symTable::Type> &returnTyp
     }
     return structTy(memberTypes);
   }
-  if (returnType->getName().substr(0, 5) == "array") {
-    const auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(returnType);
+  const auto typeName = returnType->getName();
+  if (typeName.substr(0, 5) == "array") {
     std::vector<mlir::Type> memberTypes;
     memberTypes.push_back(intTy());  // size
+    memberTypes.push_back(ptrTy());  // data
+    memberTypes.push_back(boolTy()); // is 2D?
+    return structTy(memberTypes);
+  }
+  if (typeName.substr(0, 6) == "vector") {
+    std::vector<mlir::Type> memberTypes;
+    memberTypes.push_back(intTy());  // size
+    memberTypes.push_back(intTy());  // capacity
     memberTypes.push_back(ptrTy());  // data
     memberTypes.push_back(boolTy()); // is 2D?
     return structTy(memberTypes);
@@ -750,11 +772,15 @@ void Backend::freeElementsFromMemory(std::shared_ptr<ast::Ast> ctx) {
   for (auto element : stackElements) {
     if (element.first->getName().substr(0, 5) == "array") {
       freeArray(element.first, element.second);
+    } else if (element.first->getName().substr(0, 6) == "vector") {
+      freeVector(element.first, element.second);
     }
   }
   for (auto element : elements) {
     if (element.first->getName().substr(0, 5) == "array") {
       freeArray(element.first, element.second);
+    } else if (element.first->getName().substr(0, 6) == "vector") {
+      freeVector(element.first, element.second);
     }
   }
   ctx->getScope()->getScopeStack().clear();

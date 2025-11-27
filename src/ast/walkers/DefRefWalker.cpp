@@ -15,7 +15,7 @@ void DefRefWalker::throwIfUndeclaredSymbol(int lineNumber, std::shared_ptr<symTa
   if (!sym)
     throw SymbolError(lineNumber, "Use of undeclared symbol");
 }
-void DefRefWalker::throwGlobalError(std::shared_ptr<Ast> ctx) {
+void DefRefWalker::throwGlobalError(std::shared_ptr<Ast> ctx) const {
   auto curScope = symTab->getCurrentScope();
   if (curScope->getScopeType() != symTable::ScopeType::Global)
     throw GlobalError(ctx->getLineNumber(), "Symbol can only be defined in Global");
@@ -532,6 +532,11 @@ std::any DefRefWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) 
   auto arrayTypeSymbol = std::make_shared<symTable::ArrayTypeSymbol>("array");
   arrayTypeSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   arrayTypeSymbol->setDef(ctx);
+
+  for (const auto &sizeExpr : ctx->getSizes()) {
+    visit(sizeExpr);
+  }
+
   ctx->setSymbol(arrayTypeSymbol);
   ctx->setScope(symTab->getCurrentScope());
   return {};

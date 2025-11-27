@@ -3,6 +3,7 @@
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/SymTable.h"
 #include "symTable/TupleTypeSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
 
 namespace gazprea::ast::walkers {
 class ValidationWalker final : public AstWalker {
@@ -56,6 +57,7 @@ public:
   std::any visitLoop(std::shared_ptr<statements::LoopAst> ctx) override;
   std::any visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) override;
   std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) override;
+  std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) override;
 
   // Helpers
   std::shared_ptr<symTable::Type>
@@ -97,5 +99,7 @@ public:
                            const std::vector<std::shared_ptr<expressions::ArgAst>> &args);
   static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);
   static bool isLiteralExpression(const std::shared_ptr<expressions::ExpressionAst> &expr);
+  static void inferVectorSize(const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
+                              const std::shared_ptr<expressions::ExpressionAst> &expr);
 };
 } // namespace gazprea::ast::walkers

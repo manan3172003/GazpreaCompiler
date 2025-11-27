@@ -1,4 +1,5 @@
 #include "CompileTimeExceptions.h"
+#include "ast/types/ArrayTypeAst.h"
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/RealTypeAst.h"
@@ -69,6 +70,19 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
 
   // do not need to check qualifier
   // var can be assigned to const, const can be assigned to var
+
+  // Infer vector sizes from RHS expression
+  if (isOfSymbolType(declarationType, "vector")) {
+    auto vectorDeclarationType =
+        std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(declarationType);
+    if (vectorDeclarationType) {
+      if (const auto literal =
+              std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(ctx->getExpr())) {
+      }
+      inferVectorSize(vectorDeclarationType, ctx->getExpr());
+      variableSymbol->setType(vectorDeclarationType);
+    }
+  }
 
   // Check if global declaration - must have only literals
   if (ctx->getScope() && ctx->getScope()->getScopeType() == symTable::ScopeType::Global) {
@@ -484,7 +498,7 @@ std::any ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) 
     throw TypeError(ctx->getLineNumber(), "Illegal cast");
   }
   ctx->setInferredSymbolType(ctx->getResolvedTargetType());
-  ctx->setInferredDataType(ctx->getExpression()->getInferredDataType());
+  ctx->setInferredDataType(ctx->getTargetType());
   return {};
 }
 std::any ValidationWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst> ctx) {
@@ -501,7 +515,8 @@ std::any ValidationWalker::visitIdentifier(std::shared_ptr<expressions::Identifi
   if (astNode->getNodeType() == NodeType::Declaration) {
     auto dataType = std::dynamic_pointer_cast<statements::DeclarationAst>(astNode)->getType();
     ctx->setInferredDataType(dataType);
-    ctx->setInferredSymbolType(resolvedInferredType(dataType));
+    // Use the variable symbol's type directly to preserve inferred sizes
+    ctx->setInferredSymbolType(dataTypeSymbol->getType());
   } else if (astNode->getNodeType() == NodeType::FunctionParam) {
     auto dataType =
         std::dynamic_pointer_cast<prototypes::FunctionParamAst>(astNode)->getParamType();
@@ -533,12 +548,6 @@ std::any ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst
   ctx->setInferredSymbolType(resolvedInferredType(realType));
   return {};
 }
-std::any ValidationWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) {
-  for (auto size : ctx->getSizes()) {
-    visit(size);
-  }
-  return {};
-}
 std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) {
   auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
   const auto elements = ctx->getElements();
@@ -555,15 +564,6 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
 
   if (elements[0]->getInferredDataType()->getNodeType() == NodeType::ArrayType) {
     is2DArray = true;
-
-    // Check if this is a 3D or higher dimensional array (not allowed)
-    auto firstElementArrayType =
-        std::dynamic_pointer_cast<types::ArrayTypeAst>(elements[0]->getInferredDataType());
-    if (firstElementArrayType && firstElementArrayType->getType() &&
-        firstElementArrayType->getType()->getNodeType() == NodeType::ArrayType) {
-      throw SyntaxError(ctx->getLineNumber(),
-                        "Arrays with more than 2 dimensions are not supported");
-    }
   }
 
   // second pass: elements must all be the same dimension &
@@ -649,5 +649,26 @@ std::any ValidationWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
 }
 std::any ValidationWalker::visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {
   return AstWalker::visitIteratorLoop(ctx);
+}
+
+std::any ValidationWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) {
+  if (ctx->getType()) {
+    visit(ctx->getType());
+  }
+
+  for (const auto &sizeExpr : ctx->getSizes()) {
+    if (sizeExpr) {
+      visit(sizeExpr);
+    }
+  }
+
+  return {};
+}
+
+std::any ValidationWalker::visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) {
+  if (ctx->getElementType()) {
+    visit(ctx->getElementType());
+  }
+  return {};
 }
 } // namespace gazprea::ast::walkers

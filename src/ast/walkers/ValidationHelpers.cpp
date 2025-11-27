@@ -2,6 +2,7 @@
 #include "ast/types/AliasTypeAst.h"
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
 
 #include <ast/walkers/ValidationWalker.h>
 
@@ -106,6 +107,16 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
     const auto sourceArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(source);
     return typesMatch(destArray->getType(), sourceArray->getType());
   }
+  if (isOfSymbolType(destination, "vector") && isOfSymbolType(source, "array")) {
+    const auto destVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(destination);
+    const auto sourceVector = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(source);
+    return typesMatch(destVector->getType(), sourceVector->getType());
+  }
+  if (isOfSymbolType(destination, "vector") && isOfSymbolType(source, "vector")) {
+    const auto destVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(destination);
+    const auto sourceVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(source);
+    return typesMatch(destVector->getType(), sourceVector->getType());
+  }
   return false;
 }
 
@@ -129,8 +140,10 @@ bool ValidationWalker::isOfSymbolType(const std::shared_ptr<symTable::Type> &sym
   if (!symbolType)
     throw std::runtime_error("SymbolType should not be null\n");
 
-  auto symbolName = symbolType->getName();
+  const auto symbolName = symbolType->getName();
   if (typeName == "array" && symbolName.substr(0, 5) == "array")
+    return true;
+  if (typeName == "vector" && symbolName.substr(0, 6) == "vector")
     return true;
 
   return symbolName == typeName;
@@ -228,6 +241,12 @@ ValidationWalker::resolvedInferredType(const std::shared_ptr<types::DataTypeAst>
     auto arrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(dataType);
     arrayTypeSymbol->setType(resolvedInferredType(arrayDataType->getType()));
     return std::dynamic_pointer_cast<symTable::Type>(arrayTypeSymbol);
+  }
+  case NodeType::VectorType: {
+    const auto vectorTypeSymbol = std::make_shared<symTable::VectorTypeSymbol>("vector");
+    const auto vectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(dataType);
+    vectorTypeSymbol->setType(resolvedInferredType(vectorDataType->getElementType()));
+    return std::dynamic_pointer_cast<symTable::Type>(vectorTypeSymbol);
   }
   case NodeType::AliasType: {
     const auto aliasTypeNode = std::dynamic_pointer_cast<types::AliasTypeAst>(dataType);
@@ -411,6 +430,30 @@ bool ValidationWalker::isLiteralExpression(
     return true;
   }
   return false;
+}
+
+void ValidationWalker::inferVectorSize(
+    const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
+    const std::shared_ptr<expressions::ExpressionAst> &expr) {
+
+  if (const auto arrayLiteral = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(expr)) {
+    const auto rhsSize = arrayLiteral->getElements().size();
+    vectorType->inferredSize = rhsSize;
+    const auto firstElement = arrayLiteral->getElements()[0];
+    if (firstElement->getNodeType() == NodeType::ArrayLiteral) {
+      vectorType->isScalar = false;
+      const auto innerArray = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(firstElement);
+      vectorType->inferredElementSize.push_back(innerArray->getElements().size()); // rows
+      // check for 2D
+      if (const auto firstInnerArray = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(
+              innerArray->getElements()[0])) {
+        const auto innerSize = firstInnerArray->getElements().size();
+        vectorType->isElement2D = true;
+        vectorType->inferredElementSize.push_back(innerSize);
+      }
+    }
+  }
+  // TODO: Add more cases if needed
 }
 
 } // namespace gazprea::ast::walkers

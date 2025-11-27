@@ -7,6 +7,12 @@ class VectorTypeSymbol final : public Type, public Symbol {
   std::shared_ptr<Type> type;
 
 public:
+  int inferredSize = 0; // number of elements in the vector, remains same for declared and inferred.
+  std::vector<int> inferredElementSize;
+  std::vector<mlir::Value> declaredElementSize;
+  bool isScalar = true;
+  bool isElement2D = false;
+
   explicit VectorTypeSymbol(const std::string &name) : Symbol(name) {};
   std::string getName() override;
   std::string toString() override;

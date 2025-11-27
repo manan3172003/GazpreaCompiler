@@ -36,7 +36,10 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 
+#include <symTable/VectorTypeSymbol.h>
+
 namespace gazprea::backend {
+enum class VectorOffset { Size = 0, Capacity = 1, Data = 2, Is2D = 3 };
 class Backend final : public ast::walkers::AstWalker {
 public:
   explicit Backend(const std::shared_ptr<ast::Ast> &ast);
@@ -82,6 +85,7 @@ public:
   std::any visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) override;
   std::any visitIteratorLoop(std::shared_ptr<ast::statements::IteratorLoopAst> ctx) override;
   std::any visitArray(std::shared_ptr<ast::expressions::ArrayLiteralAst> ctx) override;
+  std::any visitVectorType(std::shared_ptr<ast::types::VectorTypeAst> ctx) override;
 
 protected:
   void setupPrintf() const;
@@ -89,6 +93,7 @@ protected:
   void setupPrintArray() const;
   void setupThrowDivisionByZeroError() const;
   void setupThrowArraySizeError() const;
+  void setupThrowVectorSizeError() const;
   void printFloat(mlir::Value floatValue);
   void printInt(mlir::Value integer);
   void printIntChar(mlir::Value integer);
@@ -105,6 +110,8 @@ protected:
                                mlir::Value arrayStruct) const;
   mlir::Value get2DArrayBoolAddr(mlir::OpBuilder &b, mlir::Location l, mlir::Type arrayStructType,
                                  mlir::Value arrayStruct) const;
+  mlir::Value gepOpVector(mlir::Type vectorStructType, mlir::Value vectorStruct,
+                          VectorOffset offset) const;
   mlir::Value maxSubArraySize(mlir::Value arrayStruct, std::shared_ptr<symTable::Type> arrayType);
   mlir::Value mallocArray(mlir::Type elementMLIRType, mlir::Value elementCount);
   mlir::Value getDefaultValue(std::shared_ptr<symTable::Type> type);
@@ -118,9 +125,12 @@ protected:
                        mlir::Value destArrayStruct);
   mlir::Value copyArray(std::shared_ptr<symTable::Type> elementType, mlir::Value srcDataPtr,
                         mlir::Value size);
+  void cloneArrayStructure(std::shared_ptr<symTable::Type> type, mlir::Value sourceArrayStruct,
+                           mlir::Value destArrayStruct);
   void freeArray(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct);
   void createArrayFromVector(std::vector<std::shared_ptr<ast::expressions::ExpressionAst>> elements,
                              mlir::Type elementMLIRType, mlir::Value dest);
+  void printVector(mlir::Value vectorStructAddr, std::shared_ptr<symTable::Type> vectorType);
   void createGlobalString(const char *str, const char *stringName) const;
   void castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
                     std::shared_ptr<symTable::Type> toType);
@@ -134,6 +144,10 @@ protected:
   void createGlobalDeclaration(const std::string &typeName, std::shared_ptr<ast::Ast> exprAst,
                                std::shared_ptr<symTable::Symbol> symbol,
                                const std::string &variableName);
+  mlir::Value createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
+                                const std::shared_ptr<symTable::Type> &sourceType,
+                                mlir::Value sourceAddr);
+  void freeVector(std::shared_ptr<symTable::Type> type, mlir::Value vectorStruct);
 
 private:
   std::shared_ptr<ast::Ast> ast;

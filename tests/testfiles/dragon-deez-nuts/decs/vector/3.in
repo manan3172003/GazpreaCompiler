@@ -1,0 +1,6 @@
+procedure main() returns integer {
+    vector<integer[2]> x = [[1, 2], [2, 3]];
+    vector<integer[1]> y = x;
+    return 0;
+}
+//CHECK:SizeError

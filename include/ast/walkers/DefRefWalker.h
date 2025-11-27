@@ -14,10 +14,10 @@ class DefRefWalker final : public AstWalker {
 public:
   explicit DefRefWalker(std::shared_ptr<symTable::SymbolTable> symTab) : symTab(symTab) {};
   ~DefRefWalker() override = default;
-  void throwIfUndeclaredSymbol(int lineNumber, std::shared_ptr<symTable::Symbol> sym);
-  void throwGlobalError(std::shared_ptr<Ast> ctx);
-  void throwDuplicateSymbolError(std::shared_ptr<Ast> ctx, const std::string &name,
-                                 std::shared_ptr<symTable::Scope> curScope, bool isType);
+  static void throwIfUndeclaredSymbol(int lineNumber, std::shared_ptr<symTable::Symbol> sym);
+  void throwGlobalError(std::shared_ptr<Ast> ctx) const;
+  static void throwDuplicateSymbolError(std::shared_ptr<Ast> ctx, const std::string &name,
+                                        std::shared_ptr<symTable::Scope> curScope, bool isType);
   bool isTupleTypeMatch(const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
                         const std::shared_ptr<symTable::TupleTypeSymbol> &source);
   bool exactTypeMatch(const std::shared_ptr<symTable::Type> &destination,

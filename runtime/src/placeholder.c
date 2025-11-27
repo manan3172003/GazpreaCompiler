@@ -19,8 +19,12 @@ void throwDivisionByZeroError() {
     MathError("Division by zero");
 }
 
+
 void throwArraySizeError() {
-    SizeError("Array size cannot be smaller than the actual array size");
+  SizeError("Array size cannot be smaller than the actual array size");
+}
+void throwVectorSizeError() {
+    SizeError("Vector size mismatch");
 }
 
 enum ElementType {

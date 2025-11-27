@@ -2,6 +2,7 @@
 #include "backend/Backend.h"
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
 #include "utils/BackendUtils.h"
 
 namespace gazprea::backend {
@@ -11,9 +12,19 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
                             ctx->getSymbol(), ctx->getName());
     return {};
   }
+  visit(ctx->getType());
   visit(ctx->getExpr());
   auto [type, valueAddr] = ctx->getScope()->getTopElementInStack();
   auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (ctx->getType()->getNodeType() == ast::NodeType::VectorType) {
+    auto vectorTypeSymbol =
+        std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(variableSymbol->getType());
+    if (vectorTypeSymbol) {
+      auto newAddr = createVectorValue(vectorTypeSymbol, type, valueAddr);
+      ctx->getSymbol()->value = newAddr;
+      return {};
+    }
+  }
   auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
       loc, ptrTy(), getMLIRType(variableSymbol->getType()), constOne());
   copyValue(type, valueAddr, newAddr);
@@ -23,5 +34,4 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
   castIfNeeded(newAddr, ctx->getExpr()->getInferredSymbolType(), variableSymbol->getType());
   return {};
 }
-
 } // namespace gazprea::backend
