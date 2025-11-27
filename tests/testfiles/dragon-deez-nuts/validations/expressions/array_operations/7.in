@@ -1,0 +1,6 @@
+procedure main() returns integer {
+    var integer[1] a = [1];
+    a = [true];
+    return 0;
+}
+// CHECK:TypeError on Line 3: Type mismatch
