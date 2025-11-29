@@ -1,6 +1,7 @@
 #include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
 
 #include <backend/Backend.h>
 
@@ -84,6 +85,12 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       freeArray(variableSymbol->getType(), variableSymbol->value);
     } else if (isTypeVector(variableSymbol->getType())) {
       freeVector(variableSymbol->getType(), variableSymbol->value);
+    }
+    if (auto vectorType =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(variableSymbol->getType())) {
+      auto newVectorAddr = createVectorValue(vectorType, type, valueAddr);
+      copyValue(vectorType, newVectorAddr, variableSymbol->value);
+      return {};
     }
     copyValue(type, valueAddr, variableSymbol->value);
     arraySizeValidation(variableSymbol, type, variableSymbol->value);

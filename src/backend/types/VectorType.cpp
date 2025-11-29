@@ -1,7 +1,9 @@
 #include "ast/types/ArrayTypeAst.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/VectorTypeSymbol.h"
 #include <algorithm>
 #include <backend/Backend.h>
+#include <memory>
 #include <string>
 
 namespace gazprea::backend {
@@ -168,7 +170,77 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
         emitSizeValidation(loadSizesFromVector(sourceVectorType));
       }
     }
-    copyValue(vectorType, sourceAddr, vectorStructAddr);
+
+    auto sourceVectorStructTy = getMLIRType(sourceType);
+    auto loadVectorField = [&](VectorOffset offset, mlir::Type fieldType) {
+      auto fieldPtr = makeFieldPtr(sourceVectorStructTy, sourceAddr, offset);
+      return builder->create<mlir::LLVM::LoadOp>(loc, fieldType, fieldPtr);
+    };
+
+    auto srcSize = loadVectorField(VectorOffset::Size, intTy());
+    auto srcCapacity = loadVectorField(VectorOffset::Capacity, intTy());
+    auto srcDataPtr = loadVectorField(VectorOffset::Data, ptrTy());
+    auto srcIs2DValue = loadVectorField(VectorOffset::Is2D, boolTy());
+
+    auto elementType = vectorType->getType();
+    auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
+
+    if (elementArrayType) {
+      auto pseudoArrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+      pseudoArrayType->setType(elementType);
+      auto pseudoArrayStructTy = getMLIRType(pseudoArrayType);
+
+      auto sourceArrayStruct =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), pseudoArrayStructTy, constOne());
+      auto clonedArrayStruct =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), pseudoArrayStructTy, constOne());
+
+      auto sizeAddr = getArraySizeAddr(*builder, loc, pseudoArrayStructTy, sourceArrayStruct);
+      builder->create<mlir::LLVM::StoreOp>(loc, srcSize, sizeAddr);
+      auto dataAddr = getArrayDataAddr(*builder, loc, pseudoArrayStructTy, sourceArrayStruct);
+      builder->create<mlir::LLVM::StoreOp>(loc, srcDataPtr, dataAddr);
+      auto is2dAddr = get2DArrayBoolAddr(*builder, loc, pseudoArrayStructTy, sourceArrayStruct);
+      builder->create<mlir::LLVM::StoreOp>(loc, srcIs2DValue, is2dAddr);
+
+      copyArrayStruct(pseudoArrayType, sourceArrayStruct, clonedArrayStruct);
+
+      if (!declaredSizes.empty()) {
+        padArrayIfNeeded(clonedArrayStruct, pseudoArrayType, srcSize, declaredSizes.front());
+      }
+
+      auto clonedSize = builder->create<mlir::LLVM::LoadOp>(
+          loc, intTy(), getArraySizeAddr(*builder, loc, pseudoArrayStructTy, clonedArrayStruct));
+      auto clonedDataPtr = builder->create<mlir::LLVM::LoadOp>(
+          loc, ptrTy(), getArrayDataAddr(*builder, loc, pseudoArrayStructTy, clonedArrayStruct));
+      auto clonedIs2D = builder->create<mlir::LLVM::LoadOp>(
+          loc, boolTy(), get2DArrayBoolAddr(*builder, loc, pseudoArrayStructTy, clonedArrayStruct));
+
+      storeVectorField(VectorOffset::Size, clonedSize);
+      storeVectorField(VectorOffset::Capacity, srcCapacity);
+      storeVectorField(VectorOffset::Data, clonedDataPtr);
+      storeVectorField(VectorOffset::Is2D, clonedIs2D);
+      return vectorStructAddr;
+    }
+
+    auto elementMLIRType = getMLIRType(elementType);
+    auto newDataPtr = mallocArray(elementMLIRType, srcSize);
+
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), srcSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, srcDataPtr,
+                                                           mlir::ValueRange{i});
+          auto destElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                            mlir::ValueRange{i});
+          auto elementValue = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcElementPtr);
+          b.create<mlir::LLVM::StoreOp>(l, elementValue, destElementPtr);
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    storeVectorField(VectorOffset::Size, srcSize);
+    storeVectorField(VectorOffset::Capacity, srcCapacity);
+    storeVectorField(VectorOffset::Data, newDataPtr);
+    storeVectorField(VectorOffset::Is2D, srcIs2DValue);
     return vectorStructAddr;
   }
 
