@@ -110,6 +110,9 @@ public:
                            const std::vector<std::shared_ptr<expressions::ArgAst>> &args);
   static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);
   static bool isLiteralExpression(const std::shared_ptr<expressions::ExpressionAst> &expr);
+  static void accumulateSizes(std::vector<size_t> &maxElementSizes,
+                              const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
+                              size_t depth);
   static void inferVectorSize(const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
                               const std::shared_ptr<expressions::ExpressionAst> &expr);
 };

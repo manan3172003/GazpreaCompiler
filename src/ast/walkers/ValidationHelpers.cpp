@@ -7,6 +7,8 @@
 
 #include <ast/walkers/ValidationWalker.h>
 
+#include <algorithm>
+
 namespace gazprea::ast::walkers {
 
 bool ValidationWalker::isScalar(const std::shared_ptr<symTable::Type> &type) {
@@ -489,28 +491,58 @@ bool ValidationWalker::isLiteralExpression(
   return false;
 }
 
+void ValidationWalker::accumulateSizes(std::vector<size_t> &maxElementSizes,
+                                       const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
+                                       size_t depth) {
+  if (!literal)
+    return;
+  if (maxElementSizes.size() <= depth)
+    maxElementSizes.emplace_back(0);
+  maxElementSizes[depth] = std::max(maxElementSizes[depth], literal->getElements().size());
+
+  for (const auto &nestedElement : literal->getElements()) {
+    if (const auto nestedLiteral =
+            std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(nestedElement)) {
+      accumulateSizes(maxElementSizes, nestedLiteral, depth + 1);
+    }
+  }
+}
+
 void ValidationWalker::inferVectorSize(
     const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
     const std::shared_ptr<expressions::ExpressionAst> &expr) {
 
-  if (const auto arrayLiteral = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(expr)) {
-    const auto rhsSize = arrayLiteral->getElements().size();
-    vectorType->inferredSize = rhsSize;
-    const auto firstElement = arrayLiteral->getElements()[0];
-    if (firstElement->getNodeType() == NodeType::ArrayLiteral) {
-      vectorType->isScalar = false;
-      const auto innerArray = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(firstElement);
-      vectorType->inferredElementSize.push_back(innerArray->getElements().size()); // rows
-      // check for 2D
-      if (const auto firstInnerArray = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(
-              innerArray->getElements()[0])) {
-        const auto innerSize = firstInnerArray->getElements().size();
-        vectorType->isElement2D = true;
-        vectorType->inferredElementSize.push_back(innerSize);
-      }
-    }
+  if (!vectorType)
+    return;
+
+  vectorType->inferredElementSize.clear();
+  vectorType->isScalar = true;
+  vectorType->isElement2D = false;
+
+  const auto arrayLiteral = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(expr);
+  if (!arrayLiteral)
+    return;
+
+  const auto &elements = arrayLiteral->getElements();
+  vectorType->inferredSize = static_cast<int>(elements.size());
+  if (elements.empty())
+    return;
+
+  std::vector<size_t> maxElementSizes;
+  for (const auto &element : elements) {
+    const auto elementLiteral = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(element);
+    if (!elementLiteral)
+      continue;
+
+    vectorType->isScalar = false;
+    accumulateSizes(maxElementSizes, elementLiteral, 0);
   }
-  // TODO: Add more cases if needed
+
+  vectorType->inferredElementSize.reserve(maxElementSizes.size());
+  for (const auto size : maxElementSizes) {
+    vectorType->inferredElementSize.push_back(static_cast<int>(size));
+  }
+  vectorType->isElement2D = vectorType->inferredElementSize.size() > 1;
 }
 
 } // namespace gazprea::ast::walkers
