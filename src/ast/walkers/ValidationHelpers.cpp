@@ -508,6 +508,29 @@ void ValidationWalker::accumulateSizes(std::vector<size_t> &maxElementSizes,
   }
 }
 
+void ValidationWalker::ensureArrayLiteralType(
+    const std::shared_ptr<expressions::ExpressionAst> &expr,
+    const std::shared_ptr<symTable::Type> &targetType) {
+  if (!expr || expr->getNodeType() != NodeType::ArrayLiteral)
+    return;
+  if (expr->getInferredSymbolType() || !targetType)
+    return;
+
+  if (isOfSymbolType(targetType, "array")) {
+    expr->setInferredSymbolType(targetType);
+    return;
+  }
+
+  if (isOfSymbolType(targetType, "vector")) {
+    const auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(targetType);
+    if (!vectorType)
+      return;
+    const auto literalArrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+    literalArrayType->setType(vectorType->getType());
+    expr->setInferredSymbolType(literalArrayType);
+  }
+}
+
 void ValidationWalker::inferVectorSize(
     const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
     const std::shared_ptr<expressions::ExpressionAst> &expr) {

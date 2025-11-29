@@ -30,6 +30,16 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
   visit(ctx->getExpr());
   inAssignment = false;
 
+  if (ctx->getLVal()->getNodeType() == NodeType::IdentifierLeft) {
+    const auto idAssignStat =
+        std::dynamic_pointer_cast<statements::IdentifierLeftAst>(ctx->getLVal());
+    const auto varSymbol =
+        std::dynamic_pointer_cast<symTable::VariableSymbol>(idAssignStat->getSymbol());
+    if (varSymbol) {
+      ensureArrayLiteralType(ctx->getExpr(), varSymbol->getType());
+    }
+  }
+
   const auto exprTypeSymbol = ctx->getExpr()->getInferredSymbolType();
   if (ctx->getLVal()->getNodeType() == NodeType::IdentifierLeft) {
     const auto idAssignStat =
@@ -69,6 +79,7 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
   // type check
   const auto declarationType =
       std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
+  ensureArrayLiteralType(ctx->getExpr(), declarationType);
   const auto expressionType = ctx->getExpr()->getInferredSymbolType();
   if (not typesMatch(declarationType, expressionType))
     throw TypeError(ctx->getLineNumber(), "Type mismatch");

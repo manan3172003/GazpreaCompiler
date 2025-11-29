@@ -113,6 +113,8 @@ public:
   static void accumulateSizes(std::vector<size_t> &maxElementSizes,
                               const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
                               size_t depth);
+  static void ensureArrayLiteralType(const std::shared_ptr<expressions::ExpressionAst> &expr,
+                                     const std::shared_ptr<symTable::Type> &targetType);
   static void inferVectorSize(const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
                               const std::shared_ptr<expressions::ExpressionAst> &expr);
 };
