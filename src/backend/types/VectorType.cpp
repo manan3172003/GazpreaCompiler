@@ -132,6 +132,23 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
 
     copyArrayStruct(sourceType, sourceAddr, clonedArrayStruct);
 
+    auto ensureVectorElementCapacity = [&](mlir::Value targetInnerSize) {
+      if (!targetInnerSize)
+        return;
+      auto clonedOuterSizeAddr = getArraySizeAddr(*builder, loc, arrayStructTy, clonedArrayStruct);
+      auto currentOuterSize =
+          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), clonedOuterSizeAddr);
+      padArrayIfNeeded(clonedArrayStruct, sourceType, currentOuterSize, targetInnerSize);
+    };
+
+    if (!declaredSizes.empty()) {
+      ensureVectorElementCapacity(declaredSizes.front());
+    } else if (!vectorType->inferredElementSize.empty()) {
+      auto inferredInnerSize = builder->create<mlir::LLVM::ConstantOp>(
+          loc, intTy(), vectorType->inferredElementSize.front());
+      ensureVectorElementCapacity(inferredInnerSize);
+    }
+
     auto clonedDataPtr = builder->create<mlir::LLVM::LoadOp>(
         loc, ptrTy(), getArrayDataAddr(*builder, loc, arrayStructTy, clonedArrayStruct));
     auto clonedIs2dValue = builder->create<mlir::LLVM::LoadOp>(
