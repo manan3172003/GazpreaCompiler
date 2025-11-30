@@ -390,11 +390,15 @@ std::any ValidationWalker::visitStruct(std::shared_ptr<expressions::StructLitera
     throw TypeError(ctx->getLineNumber(), "Incorrect struct member list");
 
   for (size_t i = 0; i < literalElementValues.size(); ++i) {
-    const auto literalElementValue = literalElementValues[i];
-    const auto symbolElementType = symbolElementTypes[i];
+    const auto &literalElementValue = literalElementValues[i];
+    const auto &symbolElementType = symbolElementTypes[i];
     visit(literalElementValue);
 
     if (not typesMatch(symbolElementType, literalElementValue->getInferredSymbolType()))
+      throw TypeError(ctx->getLineNumber(), "Incorrect struct member list");
+
+    if (symbolElementType->getName() == "tuple" &&
+        literalElementValue->getInferredSymbolType()->getName() == "tuple")
       throw TypeError(ctx->getLineNumber(), "Incorrect struct member list");
   }
 
@@ -443,13 +447,32 @@ std::any ValidationWalker::visitStructAccess(std::shared_ptr<expressions::Struct
   return {};
 }
 std::any ValidationWalker::visitStructType(std::shared_ptr<types::StructTypeAst> ctx) {
-  return AstWalker::visitStructType(ctx);
+  const auto typeSymbol = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(ctx->getSymbol());
+  for (const auto &elementAst : ctx->getTypes())
+    visit(elementAst);
+  for (const auto &resolvedType : typeSymbol->getResolvedTypes()) {
+    if (std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(resolvedType) ||
+        std::dynamic_pointer_cast<symTable::StructTypeSymbol>(resolvedType)) {
+      throw DefinitionError(ctx->getLineNumber(), "Invalid struct declaration");
+    }
+  }
+  return {};
 }
 std::any ValidationWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) {
-  return AstWalker::visitTupleType(ctx);
+  const auto typeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(ctx->getSymbol());
+  for (const auto &elementAst : ctx->getTypes())
+    visit(elementAst);
+  for (const auto &resolvedType : typeSymbol->getResolvedTypes()) {
+    if (std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(resolvedType) ||
+        std::dynamic_pointer_cast<symTable::StructTypeSymbol>(resolvedType)) {
+      throw DefinitionError(ctx->getLineNumber(), "Invalid tuple declaration");
+    }
+  }
+  return {};
 }
 std::any ValidationWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
-  return AstWalker::visitTypealias(ctx);
+  visit(ctx->getType());
+  return {};
 }
 std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
   if (!ctx->getProto()->getReturnType()) {

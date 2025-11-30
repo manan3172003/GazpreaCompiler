@@ -24,6 +24,7 @@ public:
   const std::shared_ptr<ast::types::DataTypeAst> &getUnresolvedType(std::string elementName) const;
   const std::vector<std::shared_ptr<ast::types::DataTypeAst>> &getUnresolvedTypes() const;
   bool elementNameExist(const std::string &elementName) const;
+  size_t getIdx(const std::string &name) const;
   std::string getName() override;
   std::string toString() override;
 };

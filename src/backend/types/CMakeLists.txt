@@ -1,6 +1,7 @@
 set(
         gazprea_types_src
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleType.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/StructType.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/VectorType.cpp"
 )
 

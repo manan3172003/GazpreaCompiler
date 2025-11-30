@@ -27,6 +27,7 @@ const std::vector<std::shared_ptr<ast::types::DataTypeAst>> &
 StructTypeSymbol::getUnresolvedTypes() const {
   return unresolvedTypes;
 }
+size_t StructTypeSymbol::getIdx(const std::string &name) const { return nameToIdx.at(name); }
 bool StructTypeSymbol::elementNameExist(const std::string &elementName) const {
   if (nameToIdx.find(elementName) != nameToIdx.end())
     return true;

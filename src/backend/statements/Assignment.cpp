@@ -1,3 +1,4 @@
+#include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 
@@ -45,6 +46,24 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
     copyValue(type, valueAddr, elementAddr);
     castIfNeeded(elementAddr, ctx->getExpr()->getInferredSymbolType(),
                  tupleTy->getResolvedTypes()[tupleElementAssign->getFieldIndex() - 1]);
+  }
+  if (const auto structElementAssign =
+          std::dynamic_pointer_cast<ast::statements::StructElementAssignAst>(
+              ctx->getLVal())) { // check if tuple assign
+    const auto structTy =
+        std::dynamic_pointer_cast<symTable::StructTypeSymbol>(variableSymbol->getType());
+    auto sTy = getMLIRType(structTy);
+    auto gepIndices = std::vector<mlir::Value>{
+        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+        builder->create<mlir::LLVM::ConstantOp>(
+            loc, builder->getI32Type(),
+            structTy->getIdx(structElementAssign->getElementName()) - 1)};
+    auto elementAddr = builder->create<mlir::LLVM::GEPOp>(
+        loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, variableSymbol->value,
+        gepIndices);
+    copyValue(type, valueAddr, elementAddr);
+    castIfNeeded(elementAddr, ctx->getExpr()->getInferredSymbolType(),
+                 structTy->getResolvedType(structElementAssign->getElementName()));
   } else {
     copyValue(type, valueAddr, variableSymbol->value);
     arraySizeValidation(variableSymbol, type, variableSymbol->value);

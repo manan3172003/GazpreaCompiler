@@ -154,18 +154,14 @@ DefRefWalker::resolvedType(int lineNumber, const std::shared_ptr<types::DataType
     break;
   }
   case NodeType::ArrayType: {
-    visit(dataType);
     type = std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
     break;
   }
   case NodeType::VectorType: {
-    visit(dataType);
     type = std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
     break;
   }
   case NodeType::TupleType: {
-    // visiting the tuple
-    visit(dataType);
     type = std::dynamic_pointer_cast<symTable::Type>(dataType->getSymbol());
     break;
   }

@@ -1,11 +1,11 @@
 #include "run_time_errors.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 #include "symTable/VectorTypeSymbol.h"
 #include "utils/ValidationUtils.h"
 
-#include <assert.h>
 #include <backend/Backend.h>
 namespace gazprea::backend {
 Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
@@ -279,6 +279,15 @@ mlir::Type Backend::getMLIRType(const std::shared_ptr<symTable::Type> &returnTyp
     }
     return structTy(memberTypes);
   }
+  if (returnType->getName() == "struct") {
+    // Struct type
+    const auto structTypeSym = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(returnType);
+    std::vector<mlir::Type> memberTypes;
+    for (const auto &memberType : structTypeSym->getResolvedTypes()) {
+      memberTypes.push_back(getMLIRType(memberType));
+    }
+    return structTy(memberTypes);
+  }
   const auto typeName = returnType->getName();
   if (typeName.substr(0, 5) == "array") {
     std::vector<mlir::Type> memberTypes;
@@ -348,19 +357,19 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
     }
     auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
         loc, ptrTy(), boolTy(), constOne()); // Can only have bool for tuples
-    mlir::Value cumalativeResult;
+    mlir::Value cumulativeResult;
     if (op == ast::expressions::BinaryOpType::EQUAL) {
-      cumalativeResult = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+      cumulativeResult = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
     } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
-      cumalativeResult = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+      cumulativeResult = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
     }
-    builder->create<mlir::LLVM::StoreOp>(loc, cumalativeResult, newAddr);
+    builder->create<mlir::LLVM::StoreOp>(loc, cumulativeResult, newAddr);
 
     // Check if types are the same
-    auto leftResovledTypes = leftTypeSym->getResolvedTypes();
+    auto leftResolvedTypes = leftTypeSym->getResolvedTypes();
     auto rightResolvedTypes = rightTypeSym->getResolvedTypes();
-    for (size_t i = 0; i < leftResovledTypes.size(); ++i) {
-      auto leftTypeName = leftResovledTypes[i]->getName();
+    for (size_t i = 0; i < leftResolvedTypes.size(); ++i) {
+      auto leftTypeName = leftResolvedTypes[i]->getName();
       auto rightTypeName = rightResolvedTypes[i]->getName();
       if ((rightTypeName == "real" && leftTypeName == "integer") ||
           (rightTypeName == "integer" && leftTypeName == "real")) {
@@ -394,25 +403,125 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
           [&](mlir::OpBuilder &b, mlir::Location l) {
             auto curValue = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), newAddr);
             auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
-            mlir::Value newCumalativeValue;
+            mlir::Value newCumulativeValue;
             if (op == ast::expressions::BinaryOpType::EQUAL) {
-              newCumalativeValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, trueValue);
+              newCumulativeValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, trueValue);
             } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
-              newCumalativeValue = builder->create<mlir::LLVM::OrOp>(loc, curValue, trueValue);
+              newCumulativeValue = builder->create<mlir::LLVM::OrOp>(loc, curValue, trueValue);
             }
-            builder->create<mlir::LLVM::StoreOp>(loc, newCumalativeValue, newAddr);
+            builder->create<mlir::LLVM::StoreOp>(loc, newCumulativeValue, newAddr);
             b.create<mlir::scf::YieldOp>(l);
           },
           [&](mlir::OpBuilder &b, mlir::Location l) {
             auto curValue = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), newAddr);
             auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
-            mlir::Value newCumalativeValue;
+            mlir::Value newCumulativeValue;
             if (op == ast::expressions::BinaryOpType::EQUAL) {
-              newCumalativeValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, falseValue);
+              newCumulativeValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, falseValue);
             } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
-              newCumalativeValue = builder->create<mlir::LLVM::OrOp>(loc, curValue, falseValue);
+              newCumulativeValue = builder->create<mlir::LLVM::OrOp>(loc, curValue, falseValue);
             }
-            builder->create<mlir::LLVM::StoreOp>(loc, newCumalativeValue, newAddr);
+            builder->create<mlir::LLVM::StoreOp>(loc, newCumulativeValue, newAddr);
+            b.create<mlir::scf::YieldOp>(l);
+          });
+    }
+    return newAddr;
+  }
+  if (leftType->getName() ==
+      "struct") { // we assert if one is struct then the other is also a struct
+    auto leftTypeSym = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(leftType);
+    auto rightTypeSym = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(rightType);
+
+    if (leftTypeSym->getStructName() != rightTypeSym->getStructName()) {
+      // return true/false based on the operation
+      switch (op) {
+      case ast::expressions::BinaryOpType::EQUAL: {
+        auto newAddr =
+            builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(opType), constOne());
+        auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+        builder->create<mlir::LLVM::StoreOp>(loc, falseValue, newAddr);
+        return newAddr;
+      }
+      case ast::expressions::BinaryOpType::NOT_EQUAL: {
+        auto newAddr =
+            builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(opType), constOne());
+        auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+        builder->create<mlir::LLVM::StoreOp>(loc, trueValue, newAddr);
+        return newAddr;
+      }
+      default:
+        MathError("No other binary operations supported for tuples other than equality checks");
+      }
+    }
+
+    auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
+        loc, ptrTy(), boolTy(), constOne()); // Can only have bool for tuples
+    mlir::Value cumulativeResult;
+    if (op == ast::expressions::BinaryOpType::EQUAL) {
+      cumulativeResult = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+    } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+      cumulativeResult = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+    }
+    builder->create<mlir::LLVM::StoreOp>(loc, cumulativeResult, newAddr);
+
+    // Check if types are the same
+    auto leftResolvedTypes = leftTypeSym->getResolvedTypes();
+    auto rightResolvedTypes = rightTypeSym->getResolvedTypes();
+    for (size_t i = 0; i < leftResolvedTypes.size(); ++i) {
+      auto leftTypeName = leftResolvedTypes[i]->getName();
+      auto rightTypeName = rightResolvedTypes[i]->getName();
+      if ((rightTypeName == "real" && leftTypeName == "integer") ||
+          (rightTypeName == "integer" && leftTypeName == "real")) {
+        continue;
+      }
+      if (leftTypeName != rightTypeName) {
+        if (op == ast::expressions::BinaryOpType::EQUAL) {
+          auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+          builder->create<mlir::LLVM::StoreOp>(loc, falseValue, newAddr);
+        } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+          auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+          builder->create<mlir::LLVM::StoreOp>(loc, trueValue, newAddr);
+        }
+        return newAddr;
+      }
+    }
+
+    // Compare individual values
+    for (size_t i = 0; i < leftTypeSym->getResolvedTypes().size(); ++i) {
+      auto gepIndices =
+          std::vector<mlir::Value>{builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0),
+                                   builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), i)};
+      auto leftElementPtr = builder->create<mlir::LLVM::GEPOp>(
+          loc, ptrTy(), getMLIRType(leftTypeSym), leftAddr, gepIndices);
+      auto rightElementPtr = builder->create<mlir::LLVM::GEPOp>(
+          loc, ptrTy(), getMLIRType(rightTypeSym), rightAddr, gepIndices);
+      auto comparationValueAddr = binaryOperandToValue(
+          op, opType, leftTypeSym->getResolvedTypes()[i], rightTypeSym->getResolvedTypes()[i],
+          leftElementPtr, rightElementPtr);
+      builder->create<mlir::scf::IfOp>(
+          loc, builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), comparationValueAddr),
+          [&](mlir::OpBuilder &b, mlir::Location l) {
+            auto curValue = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), newAddr);
+            auto trueValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+            mlir::Value newCumulativeValue;
+            if (op == ast::expressions::BinaryOpType::EQUAL) {
+              newCumulativeValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, trueValue);
+            } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+              newCumulativeValue = builder->create<mlir::LLVM::OrOp>(loc, curValue, trueValue);
+            }
+            builder->create<mlir::LLVM::StoreOp>(loc, newCumulativeValue, newAddr);
+            b.create<mlir::scf::YieldOp>(l);
+          },
+          [&](mlir::OpBuilder &b, mlir::Location l) {
+            auto curValue = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), newAddr);
+            auto falseValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+            mlir::Value newCumulativeValue;
+            if (op == ast::expressions::BinaryOpType::EQUAL) {
+              newCumulativeValue = builder->create<mlir::LLVM::AndOp>(loc, curValue, falseValue);
+            } else if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+              newCumulativeValue = builder->create<mlir::LLVM::OrOp>(loc, curValue, falseValue);
+            }
+            builder->create<mlir::LLVM::StoreOp>(loc, newCumulativeValue, newAddr);
             b.create<mlir::scf::YieldOp>(l);
           });
     }
