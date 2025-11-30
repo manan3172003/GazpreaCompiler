@@ -833,16 +833,25 @@ std::any DefRefWalker::visitLenMemberFunc(std::shared_ptr<statements::LenMemberF
 }
 std::any DefRefWalker::visitAppendMemberFunc(std::shared_ptr<statements::AppendMemberFuncAst> ctx) {
   visit(ctx->getLeft());
+  for (auto &arg : ctx->getArgs()) {
+    visit(arg);
+  }
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitPushMemberFunc(std::shared_ptr<statements::PushMemberFuncAst> ctx) {
   visit(ctx->getLeft());
+  for (auto &arg : ctx->getArgs()) {
+    visit(arg);
+  }
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitConcatMemberFunc(std::shared_ptr<statements::ConcatMemberFuncAst> ctx) {
   visit(ctx->getLeft());
+  for (auto &arg : ctx->getArgs()) {
+    visit(arg);
+  }
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
