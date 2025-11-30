@@ -9,7 +9,7 @@ class AssignmentAst : public StatementAst {
   std::shared_ptr<expressions::ExpressionAst> expr;
 
 public:
-  explicit AssignmentAst(antlr4::Token *token) : StatementAst(token) {}
+  explicit AssignmentAst(antlr4::Token *token) : Ast(token), StatementAst(token) {}
   std::shared_ptr<AssignLeftAst> getLVal() const { return lVal; }
   std::shared_ptr<expressions::ExpressionAst> getExpr() const { return expr; }
   void setLVal(std::shared_ptr<AssignLeftAst> left) { lVal = left; }

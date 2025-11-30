@@ -10,7 +10,7 @@ private:
   std::string elementName;
 
 public:
-  explicit StructAccessAst(antlr4::Token *token) : ExpressionAst(token) {}
+  explicit StructAccessAst(antlr4::Token *token) : Ast(token), ExpressionAst(token) {}
 
   void setStructName(std::string name) { structName = std::move(name); }
   const std::string &getStructName() const { return structName; }

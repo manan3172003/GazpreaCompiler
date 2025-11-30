@@ -13,7 +13,7 @@ private:
   std::shared_ptr<expressions::ExpressionAst> domainExpr;
 
 public:
-  explicit IteratorLoopAst(antlr4::Token *token) : StatementAst(token) {}
+  explicit IteratorLoopAst(antlr4::Token *token) : Ast(token), StatementAst(token) {}
   void setBody(std::shared_ptr<BlockAst> bodyBlock);
   void setIteratorName(std::string name);
   void setDomainExpr(std::shared_ptr<expressions::ExpressionAst> expr);

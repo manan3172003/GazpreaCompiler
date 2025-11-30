@@ -11,6 +11,10 @@ std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> 
   const bool isForwardDecl = !ctx->getBody();
 
   if (methodSym && methodSym->getName() == "main") {
+
+    // Create Builtins and Member functions before main
+    makeLenMemberFunc();
+
     auto mainType = mlir::LLVM::LLVMFunctionType::get(intTy(), {}, false);
     auto mainFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "main", mainType);
     mlir::Block *entry = mainFunc.addEntryBlock();
@@ -70,4 +74,34 @@ std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> 
   builder->restoreInsertionPoint(savedInsertPoint);
   return {};
 }
+
+std::any Backend::makeLenMemberFunc() {
+  if (module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("@vector_len")) {
+    return {};
+  }
+
+  auto savedInsertionPoint = builder->saveInsertionPoint();
+  builder->setInsertionPointToStart(module.getBody());
+
+  auto lenType = mlir::LLVM::LLVMFunctionType::get(intTy(), {/*self-pointer*/ ptrTy()}, false);
+  auto lenFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "@vector_len", lenType);
+  mlir::Block *entry = lenFunc.addEntryBlock();
+  builder->setInsertionPointToStart(entry);
+
+  auto vectorStructTy = structTy({intTy(), intTy(), ptrTy(), boolTy()});
+  auto selfPtr = entry->getArgument(0);
+
+  auto zeroIndex = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0);
+  auto sizeIndex = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(),
+                                                           static_cast<int>(VectorOffset::Size));
+
+  auto sizePtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), vectorStructTy, selfPtr,
+                                                    mlir::ValueRange{zeroIndex, sizeIndex});
+  auto sizeValue = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sizePtr);
+  builder->create<mlir::LLVM::ReturnOp>(loc, mlir::ValueRange{sizeValue});
+
+  builder->restoreInsertionPoint(savedInsertionPoint);
+  return {};
+}
+
 } // namespace gazprea::backend

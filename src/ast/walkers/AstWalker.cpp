@@ -7,106 +7,114 @@ AstWalker::AstWalker() = default;
 std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   switch (ast->getNodeType()) {
   case NodeType::Arg:
-    return visitArg(std::static_pointer_cast<expressions::ArgAst>(ast));
+    return visitArg(std::dynamic_pointer_cast<expressions::ArgAst>(ast));
   case NodeType::Assignment:
-    return visitAssignment(std::static_pointer_cast<statements::AssignmentAst>(ast));
+    return visitAssignment(std::dynamic_pointer_cast<statements::AssignmentAst>(ast));
   case NodeType::BinaryExpression:
-    return visitBinary(std::static_pointer_cast<expressions::BinaryAst>(ast));
+    return visitBinary(std::dynamic_pointer_cast<expressions::BinaryAst>(ast));
   case NodeType::Block:
-    return visitBlock(std::static_pointer_cast<statements::BlockAst>(ast));
+    return visitBlock(std::dynamic_pointer_cast<statements::BlockAst>(ast));
   case NodeType::Break:
-    return visitBreak(std::static_pointer_cast<statements::BreakAst>(ast));
+    return visitBreak(std::dynamic_pointer_cast<statements::BreakAst>(ast));
   case NodeType::BoolLiteral:
-    return visitBool(std::static_pointer_cast<expressions::BoolLiteralAst>(ast));
+    return visitBool(std::dynamic_pointer_cast<expressions::BoolLiteralAst>(ast));
   case NodeType::Continue:
-    return visitContinue(std::static_pointer_cast<statements::ContinueAst>(ast));
+    return visitContinue(std::dynamic_pointer_cast<statements::ContinueAst>(ast));
   case NodeType::Conditional:
-    return visitConditional(std::static_pointer_cast<statements::ConditionalAst>(ast));
+    return visitConditional(std::dynamic_pointer_cast<statements::ConditionalAst>(ast));
   case NodeType::Cast:
-    return visitCast(std::static_pointer_cast<expressions::CastAst>(ast));
+    return visitCast(std::dynamic_pointer_cast<expressions::CastAst>(ast));
   case NodeType::CharLiteral:
-    return visitChar(std::static_pointer_cast<expressions::CharLiteralAst>(ast));
+    return visitChar(std::dynamic_pointer_cast<expressions::CharLiteralAst>(ast));
   case NodeType::Declaration:
-    return visitDeclaration(std::static_pointer_cast<statements::DeclarationAst>(ast));
+    return visitDeclaration(std::dynamic_pointer_cast<statements::DeclarationAst>(ast));
   case NodeType::Function:
-    return visitFunction(std::static_pointer_cast<prototypes::FunctionAst>(ast));
+    return visitFunction(std::dynamic_pointer_cast<prototypes::FunctionAst>(ast));
   case NodeType::FunctionParam:
-    return visitFunctionParam(std::static_pointer_cast<prototypes::FunctionParamAst>(ast));
+    return visitFunctionParam(std::dynamic_pointer_cast<prototypes::FunctionParamAst>(ast));
   case NodeType::FuncProcCall:
-    return visitFuncProcCall(std::static_pointer_cast<expressions::FuncProcCallAst>(ast));
+    return visitFuncProcCall(std::dynamic_pointer_cast<expressions::FuncProcCallAst>(ast));
   case NodeType::Procedure:
-    return visitProcedure(std::static_pointer_cast<prototypes::ProcedureAst>(ast));
+    return visitProcedure(std::dynamic_pointer_cast<prototypes::ProcedureAst>(ast));
   case NodeType::ProcedureParam:
-    return visitProcedureParams(std::static_pointer_cast<prototypes::ProcedureParamAst>(ast));
+    return visitProcedureParams(std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(ast));
   case NodeType::ProcedureCall:
-    return visitProcedureCall(std::static_pointer_cast<statements::ProcedureCallAst>(ast));
+    return visitProcedureCall(std::dynamic_pointer_cast<statements::ProcedureCallAst>(ast));
   case NodeType::Prototype:
-    return visitPrototype(std::static_pointer_cast<prototypes::PrototypeAst>(ast));
+    return visitPrototype(std::dynamic_pointer_cast<prototypes::PrototypeAst>(ast));
   case NodeType::Output:
-    return visitOutput(std::static_pointer_cast<statements::OutputAst>(ast));
+    return visitOutput(std::dynamic_pointer_cast<statements::OutputAst>(ast));
   case NodeType::Identifier:
-    return visitIdentifier(std::static_pointer_cast<expressions::IdentifierAst>(ast));
+    return visitIdentifier(std::dynamic_pointer_cast<expressions::IdentifierAst>(ast));
   case NodeType::IdentifierLeft:
-    return visitIdentifierLeft(std::static_pointer_cast<statements::IdentifierLeftAst>(ast));
+    return visitIdentifierLeft(std::dynamic_pointer_cast<statements::IdentifierLeftAst>(ast));
   case NodeType::IntegerLiteral:
-    return visitInteger(std::static_pointer_cast<expressions::IntegerLiteralAst>(ast));
+    return visitInteger(std::dynamic_pointer_cast<expressions::IntegerLiteralAst>(ast));
   case NodeType::Input:
-    return visitInput(std::static_pointer_cast<statements::InputAst>(ast));
+    return visitInput(std::dynamic_pointer_cast<statements::InputAst>(ast));
   case NodeType::RealLiteral:
-    return visitReal(std::static_pointer_cast<expressions::RealLiteralAst>(ast));
+    return visitReal(std::dynamic_pointer_cast<expressions::RealLiteralAst>(ast));
   case NodeType::Return:
-    return visitReturn(std::static_pointer_cast<statements::ReturnAst>(ast));
+    return visitReturn(std::dynamic_pointer_cast<statements::ReturnAst>(ast));
   case NodeType::Root:
-    return visitRoot(std::static_pointer_cast<RootAst>(ast));
+    return visitRoot(std::dynamic_pointer_cast<RootAst>(ast));
   case NodeType::StructAccess:
-    return visitStructAccess(std::static_pointer_cast<expressions::StructAccessAst>(ast));
+    return visitStructAccess(std::dynamic_pointer_cast<expressions::StructAccessAst>(ast));
   case NodeType::StructDeclaration:
-    return visitStructDeclaration(std::static_pointer_cast<statements::StructDeclarationAst>(ast));
+    return visitStructDeclaration(std::dynamic_pointer_cast<statements::StructDeclarationAst>(ast));
   case NodeType::StructElementAssign:
     return visitStructElementAssign(
-        std::static_pointer_cast<statements::StructElementAssignAst>(ast));
+        std::dynamic_pointer_cast<statements::StructElementAssignAst>(ast));
   case NodeType::StructFuncCallRouter:
     return visitStructFuncCallRouter(
-        std::static_pointer_cast<expressions::StructFuncCallRouterAst>(ast));
+        std::dynamic_pointer_cast<expressions::StructFuncCallRouterAst>(ast));
   case NodeType::StructLiteral:
-    return visitStruct(std::static_pointer_cast<expressions::StructLiteralAst>(ast));
+    return visitStruct(std::dynamic_pointer_cast<expressions::StructLiteralAst>(ast));
   case NodeType::TupleAccess:
-    return visitTupleAccess(std::static_pointer_cast<expressions::TupleAccessAst>(ast));
+    return visitTupleAccess(std::dynamic_pointer_cast<expressions::TupleAccessAst>(ast));
   case NodeType::Typealias:
-    return visitTypealias(std::static_pointer_cast<statements::TypealiasAst>(ast));
+    return visitTypealias(std::dynamic_pointer_cast<statements::TypealiasAst>(ast));
   case NodeType::TupleElementAssign:
     return visitTupleElementAssign(
-        std::static_pointer_cast<statements::TupleElementAssignAst>(ast));
+        std::dynamic_pointer_cast<statements::TupleElementAssignAst>(ast));
   case NodeType::TupleUnpackAssign:
-    return visitTupleUnpackAssign(std::static_pointer_cast<statements::TupleUnpackAssignAst>(ast));
+    return visitTupleUnpackAssign(std::dynamic_pointer_cast<statements::TupleUnpackAssignAst>(ast));
   case NodeType::UnaryExpression:
-    return visitUnary(std::static_pointer_cast<expressions::UnaryAst>(ast));
+    return visitUnary(std::dynamic_pointer_cast<expressions::UnaryAst>(ast));
   case NodeType::Loop:
-    return visitLoop(std::static_pointer_cast<statements::LoopAst>(ast));
+    return visitLoop(std::dynamic_pointer_cast<statements::LoopAst>(ast));
   case NodeType::IteratorLoop:
-    return visitIteratorLoop(std::static_pointer_cast<statements::IteratorLoopAst>(ast));
+    return visitIteratorLoop(std::dynamic_pointer_cast<statements::IteratorLoopAst>(ast));
   case NodeType::TupleLiteral:
-    return visitTuple(std::static_pointer_cast<expressions::TupleLiteralAst>(ast));
+    return visitTuple(std::dynamic_pointer_cast<expressions::TupleLiteralAst>(ast));
   case NodeType::StructType:
-    return visitStructType(std::static_pointer_cast<types::StructTypeAst>(ast));
+    return visitStructType(std::dynamic_pointer_cast<types::StructTypeAst>(ast));
   case NodeType::TupleType:
-    return visitTupleType(std::static_pointer_cast<types::TupleTypeAst>(ast));
+    return visitTupleType(std::dynamic_pointer_cast<types::TupleTypeAst>(ast));
   case NodeType::AliasType:
-    return visitAliasType(std::static_pointer_cast<types::AliasTypeAst>(ast));
+    return visitAliasType(std::dynamic_pointer_cast<types::AliasTypeAst>(ast));
   case NodeType::IntegerType:
-    return visitIntegerType(std::static_pointer_cast<types::IntegerTypeAst>(ast));
+    return visitIntegerType(std::dynamic_pointer_cast<types::IntegerTypeAst>(ast));
   case NodeType::RealType:
-    return visitRealType(std::static_pointer_cast<types::RealTypeAst>(ast));
+    return visitRealType(std::dynamic_pointer_cast<types::RealTypeAst>(ast));
   case NodeType::CharType:
-    return visitCharacterType(std::static_pointer_cast<types::CharacterTypeAst>(ast));
+    return visitCharacterType(std::dynamic_pointer_cast<types::CharacterTypeAst>(ast));
   case NodeType::BoolType:
-    return visitBooleanType(std::static_pointer_cast<types::BooleanTypeAst>(ast));
+    return visitBooleanType(std::dynamic_pointer_cast<types::BooleanTypeAst>(ast));
   case NodeType::ArrayType:
-    return visitArrayType(std::static_pointer_cast<types::ArrayTypeAst>(ast));
+    return visitArrayType(std::dynamic_pointer_cast<types::ArrayTypeAst>(ast));
   case NodeType::ArrayLiteral:
-    return visitArray(std::static_pointer_cast<expressions::ArrayLiteralAst>(ast));
+    return visitArray(std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(ast));
   case NodeType::VectorType:
-    return visitVectorType(std::static_pointer_cast<types::VectorTypeAst>(ast));
+    return visitVectorType(std::dynamic_pointer_cast<types::VectorTypeAst>(ast));
+  case NodeType::LenMemberFunc:
+    return visitLenMemberFunc(std::dynamic_pointer_cast<statements::LenMemberFuncAst>(ast));
+  case NodeType::AppendMemberFunc:
+    return visitAppendMemberFunc(std::dynamic_pointer_cast<statements::AppendMemberFuncAst>(ast));
+  case NodeType::PushMemberFunc:
+    return visitPushMemberFunc(std::dynamic_pointer_cast<statements::PushMemberFuncAst>(ast));
+  case NodeType::ConcatMemberFunc:
+    return visitConcatMemberFunc(std::dynamic_pointer_cast<statements::ConcatMemberFuncAst>(ast));
   default:
     return {};
   }

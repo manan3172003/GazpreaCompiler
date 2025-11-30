@@ -10,7 +10,7 @@ private:
   std::shared_ptr<types::StructTypeAst> type;
 
 public:
-  explicit StructDeclarationAst(antlr4::Token *token) : StatementAst(token) {}
+  explicit StructDeclarationAst(antlr4::Token *token) : Ast(token), StatementAst(token) {}
 
   std::shared_ptr<types::StructTypeAst> getType() const { return type; }
   void setType(std::shared_ptr<types::StructTypeAst> type_) { this->type = type_; }

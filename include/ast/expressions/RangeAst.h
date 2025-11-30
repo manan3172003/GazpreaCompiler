@@ -9,7 +9,7 @@ private:
   std::shared_ptr<ExpressionAst> end;
 
 public:
-  explicit RangeAst(antlr4::Token *token) : ExpressionAst(token) {}
+  explicit RangeAst(antlr4::Token *token) : Ast(token), ExpressionAst(token) {}
 
   void setStart(std::shared_ptr<ExpressionAst> startExpr) { start = startExpr; }
   void setEnd(std::shared_ptr<ExpressionAst> endExpr) { end = endExpr; }

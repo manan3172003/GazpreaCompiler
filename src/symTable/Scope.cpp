@@ -2,6 +2,8 @@
 #include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
+
 #include <sstream>
 #include <symTable/Scope.h>
 
@@ -70,7 +72,7 @@ std::shared_ptr<Symbol> GlobalScope::resolveType(const std::string &type) {
   // TODO: Error handling check if the symbol exists
   auto typeSym = std::dynamic_pointer_cast<TypealiasSymbol>(getTypeSymbols().at(type));
 
-  // TODO: do the same thing for vectors and strings?
+  // TODO: do the same thing for strings?
   if (typeSym->getType()->getName() == "tuple") {
     auto tupleTypeSym = std::dynamic_pointer_cast<TupleTypeSymbol>(typeSym->getType());
     return tupleTypeSym;
@@ -83,6 +85,10 @@ std::shared_ptr<Symbol> GlobalScope::resolveType(const std::string &type) {
 
   if (typeSym->getType()->getName().substr(0, 5) == "array") {
     return std::dynamic_pointer_cast<ArrayTypeSymbol>(typeSym->getType());
+  }
+
+  if (typeSym->getType()->getName().substr(0, 6) == "vector") {
+    return std::dynamic_pointer_cast<VectorTypeSymbol>(typeSym->getType());
   }
 
   return resolveType(typeSym->getType()->getName());

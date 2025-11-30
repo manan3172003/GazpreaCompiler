@@ -6,7 +6,7 @@ class CharLiteralAst final : public ExpressionAst {
   char value;
 
 public:
-  explicit CharLiteralAst(antlr4::Token *token) : ExpressionAst(token) {}
+  explicit CharLiteralAst(antlr4::Token *token) : Ast(token), ExpressionAst(token) {}
 
   void setValue(char value_) { value = value_; }
   char getValue() const { return value; }

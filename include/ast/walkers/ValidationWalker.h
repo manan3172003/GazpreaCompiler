@@ -66,6 +66,10 @@ public:
   std::any visitStructType(std::shared_ptr<types::StructTypeAst> ctx) override;
   std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) override;
   std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) override;
+  std::any visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) override;
+  std::any visitAppendMemberFunc(std::shared_ptr<statements::AppendMemberFuncAst> ctx) override;
+  std::any visitPushMemberFunc(std::shared_ptr<statements::PushMemberFuncAst> ctx) override;
+  std::any visitConcatMemberFunc(std::shared_ptr<statements::ConcatMemberFuncAst> ctx) override;
 
   // Helpers
   std::shared_ptr<symTable::Type>
@@ -110,9 +114,6 @@ public:
                            const std::vector<std::shared_ptr<expressions::ArgAst>> &args);
   static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);
   static bool isLiteralExpression(const std::shared_ptr<expressions::ExpressionAst> &expr);
-  static void accumulateSizes(std::vector<size_t> &maxElementSizes,
-                              const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
-                              size_t depth);
   static void ensureArrayLiteralType(const std::shared_ptr<expressions::ExpressionAst> &expr,
                                      const std::shared_ptr<symTable::Type> &targetType);
   static void inferVectorSize(const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,

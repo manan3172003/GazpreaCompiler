@@ -821,4 +821,40 @@ std::any ValidationWalker::visitVectorType(std::shared_ptr<types::VectorTypeAst>
   }
   return {};
 }
+std::any ValidationWalker::visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) {
+  visit(ctx->getLeft());
+  auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);
+  ctx->setInferredDataType(intType);
+  ctx->setInferredSymbolType(resolvedInferredType(intType));
+  return {};
+}
+std::any
+ValidationWalker::visitAppendMemberFunc(std::shared_ptr<statements::AppendMemberFuncAst> ctx) {
+  visit(ctx->getLeft());
+  for (const auto &arg : ctx->getArgs()) {
+    visit(arg);
+  }
+  ctx->setInferredSymbolType(ctx->getLeft()->getInferredSymbolType());
+  ctx->setInferredDataType(ctx->getLeft()->getInferredDataType());
+  return {};
+}
+std::any ValidationWalker::visitPushMemberFunc(std::shared_ptr<statements::PushMemberFuncAst> ctx) {
+  visit(ctx->getLeft());
+  for (const auto &arg : ctx->getArgs()) {
+    visit(arg);
+  }
+  ctx->setInferredSymbolType(ctx->getLeft()->getInferredSymbolType());
+  ctx->setInferredDataType(ctx->getLeft()->getInferredDataType());
+  return {};
+}
+std::any
+ValidationWalker::visitConcatMemberFunc(std::shared_ptr<statements::ConcatMemberFuncAst> ctx) {
+  visit(ctx->getLeft());
+  for (const auto &arg : ctx->getArgs()) {
+    visit(arg);
+  }
+  ctx->setInferredSymbolType(ctx->getLeft()->getInferredSymbolType());
+  ctx->setInferredDataType(ctx->getLeft()->getInferredDataType());
+  return {};
+}
 } // namespace gazprea::ast::walkers

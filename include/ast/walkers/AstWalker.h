@@ -30,6 +30,7 @@
 #include "ast/statements/InputAst.h"
 #include "ast/statements/IteratorLoopAst.h"
 #include "ast/statements/LoopAst.h"
+#include "ast/statements/MemberFunctionAst.h"
 #include "ast/statements/OutputAst.h"
 #include "ast/statements/ProcedureCallAst.h"
 #include "ast/statements/ReturnAst.h"
@@ -122,7 +123,18 @@ public:
     return {};
   }
   virtual std::any visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) { return {}; }
-
+  virtual std::any visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) {
+    return {};
+  }
+  virtual std::any visitAppendMemberFunc(std::shared_ptr<statements::AppendMemberFuncAst> ctx) {
+    return {};
+  }
+  virtual std::any visitPushMemberFunc(std::shared_ptr<statements::PushMemberFuncAst> ctx) {
+    return {};
+  }
+  virtual std::any visitConcatMemberFunc(std::shared_ptr<statements::ConcatMemberFuncAst> ctx) {
+    return {};
+  }
   virtual std::any visitAliasType(std::shared_ptr<types::AliasTypeAst> ctx) { return {}; }
   virtual std::any visitIntegerType(std::shared_ptr<types::IntegerTypeAst> ctx) { return {}; }
   virtual std::any visitRealType(std::shared_ptr<types::RealTypeAst> ctx) { return {}; }

@@ -8,7 +8,7 @@ class ProcedureCallAst final : public StatementAst {
   std::vector<std::shared_ptr<expressions::ArgAst>> args;
 
 public:
-  explicit ProcedureCallAst(antlr4::Token *token) : StatementAst(token) {}
+  explicit ProcedureCallAst(antlr4::Token *token) : Ast(token), StatementAst(token) {}
 
   void setName(const std::string &name_) { name = name_; }
   std::string getName() const { return name; }

@@ -9,7 +9,7 @@ private:
   std::string alias;
 
 public:
-  TypealiasAst(antlr4::Token *token) : StatementAst(token) {}
+  TypealiasAst(antlr4::Token *token) : Ast(token), StatementAst(token) {}
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
   std::shared_ptr<types::DataTypeAst> getType() const;

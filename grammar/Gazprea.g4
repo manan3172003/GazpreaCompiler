@@ -24,20 +24,20 @@ stat
     | output_stat
     | input_stat
     | procedure_call_stat
-    | member_function_stat
+//    | member_function_stat
     ;
 
 // TODO: Can string builtin operations done on string expressions
-member_function_stat
-    : expr DCONCAT LPAREN args? RPAREN SC #concatBuiltinExpr
-    | expr DPUSH LPAREN args? RPAREN SC #pushBuiltinExpr
-    | expr DLEN LPAREN RPAREN SC #lenBuiltinExpr
-    | expr DAPPEND LPAREN args? RPAREN SC #appendBuiltinExpr
-    | IDCONCAT LPAREN args? RPAREN SC #concatBuiltin
-    | IDPUSH LPAREN args? RPAREN SC #pushBuiltin
-    | IDAPPEND LPAREN args? RPAREN SC #appendBuiltin
-    | IDLEN LPAREN RPAREN SC #lenBuiltin
-    ;
+//member_function_stat:;
+//    : expr DCONCAT LPAREN args? RPAREN SC #concatBuiltinExpr
+//    | expr DPUSH LPAREN args? RPAREN SC #pushBuiltinExpr
+//    | expr DLEN LPAREN RPAREN SC #lenBuiltinExpr
+//    | expr DAPPEND LPAREN args? RPAREN SC #appendBuiltinExpr
+//    : IDCONCAT LPAREN args? RPAREN SC #concatBuiltin
+//    | IDPUSH LPAREN args? RPAREN SC #pushBuiltin
+//    | IDAPPEND LPAREN args? RPAREN SC #appendBuiltin
+//    | IDLEN LPAREN RPAREN SC #lenBuiltin
+//    ;
 
 procedure_stat
     : PROCEDURE ID LPAREN procedure_params? RPAREN (RETURNS type)? SC
@@ -163,7 +163,15 @@ expr
     | (TRUE | FALSE) #boolLiteral
     | ID #identifier
     | ID LPAREN args? RPAREN #funcProcExpr // This also handles construction of structs
+    | expr DCONCAT LPAREN args? RPAREN #concatBuiltinExpr
+    | expr DPUSH LPAREN args? RPAREN #pushBuiltinExpr
+    | expr DLEN LPAREN RPAREN #lenBuiltinExpr
+    | expr DAPPEND LPAREN args? RPAREN #appendBuiltinExpr
     | expr DOT ID LPAREN args? RPAREN #builtinFuncExpr
+    | IDCONCAT LPAREN args? RPAREN #concatBuiltin
+    | IDPUSH LPAREN args? RPAREN #pushBuiltin
+    | IDAPPEND LPAREN args? RPAREN #appendBuiltin
+    | IDLEN LPAREN RPAREN #lenBuiltin
     | LENGTH LPAREN expr RPAREN #lengthExpr
     | SHAPE LPAREN expr RPAREN #shapeExpr
     | REVERSE LPAREN expr RPAREN #reverseExpr

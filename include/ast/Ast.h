@@ -14,6 +14,7 @@ struct Location {
 };
 enum class NodeType {
   AliasType,
+  AppendMemberFunc,
   ArrayAccess,
   ArrayElementAssign,
   ArrayLiteral,
@@ -31,6 +32,7 @@ enum class NodeType {
   Cast,
   CharLiteral,
   CharType,
+  ConcatMemberFunc,
   Declaration,
   DomainExpr,
   Function,
@@ -41,6 +43,7 @@ enum class NodeType {
   ProcedureParam,
   ProcedureCall,
   Prototype,
+  PushMemberFunc,
   Output,
   Identifier,
   IdentifierLeft,
@@ -48,6 +51,7 @@ enum class NodeType {
   IntegerLiteral,
   IntegerType,
   Input,
+  LenMemberFunc,
   RangedIndexExpr,
   RealLiteral,
   RealType,
@@ -70,7 +74,7 @@ enum class NodeType {
   TupleUnpackAssign,
   Typealias,
   UnaryExpression,
-  VectorType
+  VectorType,
 };
 
 enum class Qualifier {

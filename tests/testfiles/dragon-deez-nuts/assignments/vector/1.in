@@ -1,0 +1,9 @@
+procedure main() returns integer {
+    vector<integer> x = [1, 2, 3];
+    var vector<integer> y;
+    y -> std_output;
+    y = x;
+    y -> std_output;
+    return 0;
+}
+//CHECK:[][1 2 3]

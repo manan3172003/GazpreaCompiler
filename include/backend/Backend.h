@@ -58,6 +58,7 @@ public:
   std::any visitInput(std::shared_ptr<ast::statements::InputAst> ctx) override;
   std::any visitOutput(std::shared_ptr<ast::statements::OutputAst> ctx) override;
   std::any visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> ctx) override;
+  std::any makeLenMemberFunc();
   std::any visitProcedureParams(std::shared_ptr<ast::prototypes::ProcedureParamAst> ctx) override;
   std::any visitProcedureCall(std::shared_ptr<ast::statements::ProcedureCallAst> ctx) override;
   std::any visitReturn(std::shared_ptr<ast::statements::ReturnAst> ctx) override;
@@ -83,6 +84,12 @@ public:
   std::any visitStruct(std::shared_ptr<ast::expressions::StructLiteralAst> ctx) override;
   std::any visitFuncProcCall(std::shared_ptr<ast::expressions::FuncProcCallAst> ctx) override;
   std::any visitArg(std::shared_ptr<ast::expressions::ArgAst> ctx) override;
+  std::any visitLenMemberFunc(std::shared_ptr<ast::statements::LenMemberFuncAst> ctx) override;
+  std::any
+  visitAppendMemberFunc(std::shared_ptr<ast::statements::AppendMemberFuncAst> ctx) override;
+  std::any visitPushMemberFunc(std::shared_ptr<ast::statements::PushMemberFuncAst> ctx) override;
+  std::any
+  visitConcatMemberFunc(std::shared_ptr<ast::statements::ConcatMemberFuncAst> ctx) override;
   std::any visitBool(std::shared_ptr<ast::expressions::BoolLiteralAst> ctx) override;
   std::any visitCast(std::shared_ptr<ast::expressions::CastAst> ctx) override;
   std::any visitChar(std::shared_ptr<ast::expressions::CharLiteralAst> ctx) override;

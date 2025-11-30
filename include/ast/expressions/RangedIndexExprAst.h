@@ -10,7 +10,7 @@ private:
   std::shared_ptr<ExpressionAst> rightIndexExpr;
 
 public:
-  explicit RangedIndexExprAst(antlr4::Token *token) : IndexExprAst(token) {}
+  explicit RangedIndexExprAst(antlr4::Token *token) : Ast(token), IndexExprAst(token) {}
 
   std::shared_ptr<ExpressionAst> getLeftIndexExpr() const { return leftIndexExpr; }
   std::shared_ptr<ExpressionAst> getRightIndexExpr() const { return rightIndexExpr; }

@@ -14,7 +14,8 @@ private:
   std::shared_ptr<expressions::ExpressionAst> expr;
 
 public:
-  explicit DeclarationAst(antlr4::Token *token) : StatementAst(token), qualifier(), type() {}
+  explicit DeclarationAst(antlr4::Token *token)
+      : Ast(token), StatementAst(token), qualifier(), type() {}
 
   std::string getName() const { return name; }
   std::shared_ptr<expressions::ExpressionAst> getExpr() const { return expr; }

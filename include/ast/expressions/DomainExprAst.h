@@ -9,7 +9,7 @@ class DomainExprAst final : public ExpressionAst {
   std::shared_ptr<ExpressionAst> domainExpression;
 
 public:
-  explicit DomainExprAst(antlr4::Token *token) : ExpressionAst(token) {}
+  explicit DomainExprAst(antlr4::Token *token) : Ast(token), ExpressionAst(token) {}
 
   void setIteratorName(const std::string &name) { iteratorName = name; }
   std::string getIteratorName() const { return iteratorName; }

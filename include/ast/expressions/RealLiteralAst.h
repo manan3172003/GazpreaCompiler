@@ -7,7 +7,7 @@ class RealLiteralAst : public ExpressionAst {
 public:
   float realValue;
   RealLiteralAst(antlr4::Token *token, float realValue)
-      : ExpressionAst(token), realValue(realValue) {}
+      : Ast(token), ExpressionAst(token), realValue(realValue) {}
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
   bool isLValue() override { return false; }

@@ -7,7 +7,7 @@ class IdentifierAst final : public ExpressionAst {
   std::string name;
 
 public:
-  explicit IdentifierAst(antlr4::Token *token) : ExpressionAst(token) {}
+  explicit IdentifierAst(antlr4::Token *token) : Ast(token), ExpressionAst(token) {}
   void setName(const std::string &name_) { name = name_; }
   std::string getName() const { return name; }
   NodeType getNodeType() const override;

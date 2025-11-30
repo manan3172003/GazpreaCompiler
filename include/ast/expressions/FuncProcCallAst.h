@@ -9,7 +9,7 @@ class FuncProcCallAst final : public ExpressionAst {
   std::vector<std::shared_ptr<ArgAst>> args;
 
 public:
-  explicit FuncProcCallAst(antlr4::Token *token) : ExpressionAst(token) {}
+  explicit FuncProcCallAst(antlr4::Token *token) : Ast(token), ExpressionAst(token) {}
 
   void setName(const std::string &name_) { name = name_; }
   std::string getName() const { return name; }

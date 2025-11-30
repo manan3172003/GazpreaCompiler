@@ -11,7 +11,7 @@ class ConditionalAst : public StatementAst {
   std::shared_ptr<BlockAst> elseBody;
 
 public:
-  explicit ConditionalAst(antlr4::Token *token) : StatementAst(token) {}
+  explicit ConditionalAst(antlr4::Token *token) : Ast(token), StatementAst(token) {}
 
   // setters
   void setCondition(std::shared_ptr<expressions::ExpressionAst> condition);

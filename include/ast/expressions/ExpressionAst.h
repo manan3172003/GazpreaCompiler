@@ -4,7 +4,7 @@
 
 namespace gazprea::ast::expressions {
 
-class ExpressionAst : public Ast {
+class ExpressionAst : public virtual Ast {
   std::shared_ptr<symTable::Type> inferredSymbolType;
   std::shared_ptr<types::DataTypeAst> inferredDataType;
 

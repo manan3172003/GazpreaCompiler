@@ -75,6 +75,10 @@ public:
   std::any visitBooleanType(std::shared_ptr<types::BooleanTypeAst> ctx) override;
   std::any visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) override;
   std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) override;
+  std::any visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) override;
+  std::any visitAppendMemberFunc(std::shared_ptr<statements::AppendMemberFuncAst> ctx) override;
+  std::any visitPushMemberFunc(std::shared_ptr<statements::PushMemberFuncAst> ctx) override;
+  std::any visitConcatMemberFunc(std::shared_ptr<statements::ConcatMemberFuncAst> ctx) override;
   std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) override;
   std::any visitStructDeclaration(std::shared_ptr<statements::StructDeclarationAst> ctx) override;
   std::any visitStructType(std::shared_ptr<types::StructTypeAst> ctx) override;

@@ -11,6 +11,7 @@ class AstBuilder : public GazpreaBaseVisitor {
 
 public:
   std::any visitFile(GazpreaParser::FileContext *ctx) override;
+  std::shared_ptr<prototypes::ProcedureAst> makeLenMemberFunc(GazpreaParser::FileContext *ctx);
   std::any visitGlobal_stat(GazpreaParser::Global_statContext *ctx) override;
   std::any visitTypealias_stat(GazpreaParser::Typealias_statContext *ctx) override;
   std::any visitStat(GazpreaParser::StatContext *ctx) override;

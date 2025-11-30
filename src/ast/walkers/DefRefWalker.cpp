@@ -1,6 +1,7 @@
 #include "CompileTimeExceptions.h"
 #include "ast/expressions/StructLiteralAst.h"
 #include "ast/types/AliasTypeAst.h"
+#include "ast/types/ArrayTypeAst.h"
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
@@ -565,6 +566,10 @@ std::any DefRefWalker::visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx
   visit(ctx->getElementType());
   const auto vectorTypeSymbol = std::make_shared<symTable::VectorTypeSymbol>("vector");
   vectorTypeSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getElementType()));
+  if (const auto elementArrayType =
+          std::dynamic_pointer_cast<types::ArrayTypeAst>(ctx->getElementType())) {
+    vectorTypeSymbol->setElementSizeInferenceFlags(elementArrayType->isSizeInferred());
+  }
   vectorTypeSymbol->setDef(ctx);
   ctx->setSymbol(vectorTypeSymbol);
   return {};
@@ -820,5 +825,25 @@ std::any DefRefWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
 }
 std::any DefRefWalker::visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {
   return AstWalker::visitIteratorLoop(ctx);
+}
+std::any DefRefWalker::visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) {
+  visit(ctx->getLeft());
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitAppendMemberFunc(std::shared_ptr<statements::AppendMemberFuncAst> ctx) {
+  visit(ctx->getLeft());
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitPushMemberFunc(std::shared_ptr<statements::PushMemberFuncAst> ctx) {
+  visit(ctx->getLeft());
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitConcatMemberFunc(std::shared_ptr<statements::ConcatMemberFuncAst> ctx) {
+  visit(ctx->getLeft());
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
 }
 } // namespace gazprea::ast::walkers

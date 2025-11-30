@@ -4,7 +4,7 @@
 namespace gazprea::ast::statements {
 class BreakAst : public StatementAst {
 public:
-  BreakAst(antlr4::Token *token) : StatementAst(token) {}
+  BreakAst(antlr4::Token *token) : Ast(token), StatementAst(token) {}
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
 };

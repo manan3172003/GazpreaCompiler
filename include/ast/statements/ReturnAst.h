@@ -7,7 +7,7 @@ class ReturnAst final : public StatementAst {
   std::shared_ptr<expressions::ExpressionAst> expr;
 
 public:
-  explicit ReturnAst(antlr4::Token *token) : StatementAst(token), expr(nullptr) {}
+  explicit ReturnAst(antlr4::Token *token) : Ast(token), StatementAst(token), expr(nullptr) {}
   void setExpr(std::shared_ptr<expressions::ExpressionAst> expression) { expr = expression; }
   std::shared_ptr<expressions::ExpressionAst> getExpr() const { return expr; }
   NodeType getNodeType() const override;

@@ -13,7 +13,8 @@ private:
   std::shared_ptr<StructLiteralAst> structLiteralAst;
 
 public:
-  explicit StructFuncCallRouterAst(antlr4::Token *token) : ExpressionAst(token), isStruct(false) {}
+  explicit StructFuncCallRouterAst(antlr4::Token *token)
+      : Ast(token), ExpressionAst(token), isStruct(false) {}
 
   void setIsStruct(bool isStructCall);
   void setCallName(const std::string &callId);

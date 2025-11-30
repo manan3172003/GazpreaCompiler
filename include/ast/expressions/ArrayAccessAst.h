@@ -10,7 +10,7 @@ private:
   std::shared_ptr<IndexExprAst> elementIndex;
 
 public:
-  explicit ArrayAccessAst(antlr4::Token *token) : ExpressionAst(token) {}
+  explicit ArrayAccessAst(antlr4::Token *token) : Ast(token), ExpressionAst(token) {}
 
   void setArrayInstance(const std::shared_ptr<ExpressionAst> &instance) {
     arrayInstance = instance;

@@ -96,6 +96,34 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
     return inferredSizes;
   };
 
+  auto enforceInferredVectorLimit = [&](mlir::Value arrayStruct,
+                                        const std::shared_ptr<symTable::Type> &arrayType) {
+    if (!throwSizeErrorFunc || !arrayStruct || !arrayType)
+      return;
+    if (!vectorType || vectorType->inferredElementSize.empty())
+      return;
+    if (!declaredSizes.empty())
+      return;
+    const auto &flags = vectorType->getElementSizeInferenceFlags();
+    const bool shouldCheck =
+        std::any_of(flags.begin(), flags.end(), [](bool flag) { return flag; });
+    if (!shouldCheck)
+      return;
+
+    auto inferredLimit = builder->create<mlir::LLVM::ConstantOp>(
+        loc, intTy(), vectorType->inferredElementSize.front());
+    auto actualMax = maxSubArraySize(arrayStruct, arrayType);
+    auto exceeds = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sgt,
+                                                       actualMax, inferredLimit);
+    builder->create<mlir::scf::IfOp>(
+        loc, exceeds,
+        [&](mlir::OpBuilder &b, mlir::Location l) {
+          b.create<mlir::LLVM::CallOp>(l, throwSizeErrorFunc, mlir::ValueRange{});
+          b.create<mlir::scf::YieldOp>(l);
+        },
+        [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
+  };
+
   auto vectorStructTy = getMLIRType(vectorType);
   auto vectorStructAddr =
       builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), vectorStructTy, constOne());
@@ -133,6 +161,7 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
         builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructTy, constOne());
 
     copyArrayStruct(sourceType, sourceAddr, clonedArrayStruct);
+    enforceInferredVectorLimit(clonedArrayStruct, sourceType);
 
     auto ensureVectorElementCapacity = [&](mlir::Value targetInnerSize) {
       if (!targetInnerSize)
@@ -203,6 +232,7 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
       builder->create<mlir::LLVM::StoreOp>(loc, srcIs2DValue, is2dAddr);
 
       copyArrayStruct(pseudoArrayType, sourceArrayStruct, clonedArrayStruct);
+      enforceInferredVectorLimit(clonedArrayStruct, pseudoArrayType);
 
       if (!declaredSizes.empty()) {
         padArrayIfNeeded(clonedArrayStruct, pseudoArrayType, srcSize, declaredSizes.front());

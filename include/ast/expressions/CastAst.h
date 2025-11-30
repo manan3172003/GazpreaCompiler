@@ -12,7 +12,7 @@ class CastAst final : public ExpressionAst {
   std::shared_ptr<symTable::Type> resolvedTargetType;
 
 public:
-  explicit CastAst(antlr4::Token *token) : ExpressionAst(token) {};
+  explicit CastAst(antlr4::Token *token) : Ast(token), ExpressionAst(token) {};
 
   std::shared_ptr<types::DataTypeAst> getTargetType() { return targetType; };
   void setType(std::shared_ptr<types::DataTypeAst> type_) { targetType = type_; }

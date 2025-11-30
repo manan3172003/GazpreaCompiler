@@ -9,7 +9,7 @@ private:
   std::vector<std::shared_ptr<ExpressionAst>> elements;
 
 public:
-  explicit StructLiteralAst(antlr4::Token *token) : ExpressionAst(token) {}
+  explicit StructLiteralAst(antlr4::Token *token) : Ast(token), ExpressionAst(token) {}
 
   void addElement(const std::shared_ptr<ExpressionAst> &element);
   void setStructTypeName(const std::string &name);

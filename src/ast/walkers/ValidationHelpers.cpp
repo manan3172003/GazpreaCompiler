@@ -7,8 +7,6 @@
 
 #include <ast/walkers/ValidationWalker.h>
 
-#include <algorithm>
-
 namespace gazprea::ast::walkers {
 
 bool ValidationWalker::isScalar(const std::shared_ptr<symTable::Type> &type) {
@@ -276,6 +274,10 @@ ValidationWalker::resolvedInferredType(const std::shared_ptr<types::DataTypeAst>
     const auto vectorTypeSymbol = std::make_shared<symTable::VectorTypeSymbol>("vector");
     const auto vectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(dataType);
     vectorTypeSymbol->setType(resolvedInferredType(vectorDataType->getElementType()));
+    if (const auto elementArrayType =
+            std::dynamic_pointer_cast<types::ArrayTypeAst>(vectorDataType->getElementType())) {
+      vectorTypeSymbol->setElementSizeInferenceFlags(elementArrayType->isSizeInferred());
+    }
     return std::dynamic_pointer_cast<symTable::Type>(vectorTypeSymbol);
   }
   case NodeType::AliasType: {
@@ -491,23 +493,6 @@ bool ValidationWalker::isLiteralExpression(
   return false;
 }
 
-void ValidationWalker::accumulateSizes(std::vector<size_t> &maxElementSizes,
-                                       const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
-                                       size_t depth) {
-  if (!literal)
-    return;
-  if (maxElementSizes.size() <= depth)
-    maxElementSizes.emplace_back(0);
-  maxElementSizes[depth] = std::max(maxElementSizes[depth], literal->getElements().size());
-
-  for (const auto &nestedElement : literal->getElements()) {
-    if (const auto nestedLiteral =
-            std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(nestedElement)) {
-      accumulateSizes(maxElementSizes, nestedLiteral, depth + 1);
-    }
-  }
-}
-
 void ValidationWalker::ensureArrayLiteralType(
     const std::shared_ptr<expressions::ExpressionAst> &expr,
     const std::shared_ptr<symTable::Type> &targetType) {
@@ -531,6 +516,43 @@ void ValidationWalker::ensureArrayLiteralType(
   }
 }
 
+static void
+recordVectorFirstElementSizes(const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
+                              size_t depth, std::vector<int> &recordedSizes) {
+  if (!literal)
+    return;
+
+  if (recordedSizes.size() <= depth) {
+    recordedSizes.push_back(static_cast<int>(literal->getElements().size()));
+  } else {
+    recordedSizes[depth] = static_cast<int>(literal->getElements().size());
+  }
+
+  if (!literal->getElements().empty()) {
+    const auto nestedLiteral =
+        std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(literal->getElements().front());
+    if (nestedLiteral)
+      recordVectorFirstElementSizes(nestedLiteral, depth + 1, recordedSizes);
+  }
+}
+
+static void
+validateVectorLiteralWithinInferred(const std::vector<int> &limits,
+                                    const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
+                                    size_t depth, int lineNumber) {
+  if (!literal || depth >= limits.size())
+    return;
+  const auto currentSize = literal->getElements().size();
+  if (currentSize > static_cast<size_t>(limits[depth]))
+    throw SizeError(lineNumber, "Inferred vector element size mismatch");
+
+  for (const auto &child : literal->getElements()) {
+    if (const auto nestedLiteral = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(child)) {
+      validateVectorLiteralWithinInferred(limits, nestedLiteral, depth + 1, lineNumber);
+    }
+  }
+}
+
 void ValidationWalker::inferVectorSize(
     const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
     const std::shared_ptr<expressions::ExpressionAst> &expr) {
@@ -541,6 +563,9 @@ void ValidationWalker::inferVectorSize(
   vectorType->inferredElementSize.clear();
   vectorType->isScalar = true;
   vectorType->isElement2D = false;
+  const auto &inferenceFlags = vectorType->getElementSizeInferenceFlags();
+  const bool shouldInfer =
+      std::any_of(inferenceFlags.begin(), inferenceFlags.end(), [](bool flag) { return flag; });
 
   const auto arrayLiteral = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(expr);
   if (!arrayLiteral)
@@ -551,21 +576,29 @@ void ValidationWalker::inferVectorSize(
   if (elements.empty())
     return;
 
-  std::vector<size_t> maxElementSizes;
-  for (const auto &element : elements) {
-    const auto elementLiteral = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(element);
-    if (!elementLiteral)
-      continue;
+  const auto firstElement =
+      !elements.empty() ? std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(elements.front())
+                        : nullptr;
 
+  if (firstElement) {
     vectorType->isScalar = false;
-    accumulateSizes(maxElementSizes, elementLiteral, 0);
-  }
+    if (shouldInfer) {
+      recordVectorFirstElementSizes(firstElement, 0, vectorType->inferredElementSize);
+      vectorType->isElement2D = vectorType->inferredElementSize.size() > 1;
 
-  vectorType->inferredElementSize.reserve(maxElementSizes.size());
-  for (const auto size : maxElementSizes) {
-    vectorType->inferredElementSize.push_back(static_cast<int>(size));
+      for (size_t i = 1; i < elements.size(); ++i) {
+        const auto elementLiteral =
+            std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(elements[i]);
+        if (!elementLiteral)
+          continue;
+        validateVectorLiteralWithinInferred(vectorType->inferredElementSize, elementLiteral, 0,
+                                            elements[i]->getLineNumber());
+      }
+    }
+  } else {
+    vectorType->isScalar = true;
+    vectorType->isElement2D = false;
   }
-  vectorType->isElement2D = vectorType->inferredElementSize.size() > 1;
 }
 
 } // namespace gazprea::ast::walkers

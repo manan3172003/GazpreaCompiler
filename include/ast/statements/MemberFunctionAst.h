@@ -5,7 +5,7 @@
 namespace gazprea::ast::statements {
 enum class MemberFunctionType { Concat, Push, Append, Len };
 
-class MemberFunctionAst final : public StatementAst {
+class MemberFunctionAst : public StatementAst, public expressions::ExpressionAst {
   // Any expression that's on the left of the dot operator
   std::shared_ptr<expressions::ExpressionAst> left;
   MemberFunctionType memberType;
@@ -13,7 +13,7 @@ class MemberFunctionAst final : public StatementAst {
 
 public:
   MemberFunctionAst(antlr4::Token *token, const MemberFunctionType method)
-      : StatementAst(token), memberType(method) {}
+      : Ast(token), StatementAst(token), ExpressionAst(token), memberType(method) {}
 
   void setLeft(const std::shared_ptr<expressions::ExpressionAst> &_left) { left = _left; }
   const std::shared_ptr<expressions::ExpressionAst> &getLeft() const { return left; }
@@ -27,6 +27,8 @@ public:
 
   NodeType getNodeType() const override;
   std::string toStringTree(std::string prefix) const override;
+
+  bool isLValue() override { return false; }
 
   static std::string MemberFunctionTypeToString(const MemberFunctionType method) {
     switch (method) {
@@ -42,5 +44,34 @@ public:
       return "UnknownBuiltin";
     }
   }
+};
+class LenMemberFuncAst final : public MemberFunctionAst {
+public:
+  explicit LenMemberFuncAst(antlr4::Token *token)
+      : Ast(token), MemberFunctionAst(token, MemberFunctionType::Len) {}
+
+  NodeType getNodeType() const override { return NodeType::LenMemberFunc; };
+};
+
+class AppendMemberFuncAst final : public MemberFunctionAst {
+public:
+  explicit AppendMemberFuncAst(antlr4::Token *token)
+      : Ast(token), MemberFunctionAst(token, MemberFunctionType::Append) {}
+
+  NodeType getNodeType() const override { return NodeType::AppendMemberFunc; }
+};
+class PushMemberFuncAst final : public MemberFunctionAst {
+public:
+  explicit PushMemberFuncAst(antlr4::Token *token)
+      : Ast(token), MemberFunctionAst(token, MemberFunctionType::Push) {}
+
+  NodeType getNodeType() const override { return NodeType::PushMemberFunc; }
+};
+class ConcatMemberFuncAst final : public MemberFunctionAst {
+public:
+  explicit ConcatMemberFuncAst(antlr4::Token *token)
+      : Ast(token), MemberFunctionAst(token, MemberFunctionType::Concat) {}
+
+  NodeType getNodeType() const override { return NodeType::ConcatMemberFunc; }
 };
 } // namespace gazprea::ast::statements
