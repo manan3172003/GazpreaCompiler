@@ -11,7 +11,6 @@ class AstBuilder : public GazpreaBaseVisitor {
 
 public:
   std::any visitFile(GazpreaParser::FileContext *ctx) override;
-  std::shared_ptr<prototypes::ProcedureAst> makeLenMemberFunc(GazpreaParser::FileContext *ctx);
   std::any visitGlobal_stat(GazpreaParser::Global_statContext *ctx) override;
   std::any visitTypealias_stat(GazpreaParser::Typealias_statContext *ctx) override;
   std::any visitStat(GazpreaParser::StatContext *ctx) override;
@@ -125,6 +124,16 @@ public:
   std::any visitPushBuiltin(GazpreaParser::PushBuiltinContext *ctx) override;
   std::any visitAppendBuiltin(GazpreaParser::AppendBuiltinContext *ctx) override;
   std::any visitLenBuiltin(GazpreaParser::LenBuiltinContext *ctx) override;
+  std::any
+  visitConcatMemberFuncExprStat(GazpreaParser::ConcatMemberFuncExprStatContext *ctx) override;
+  std::any visitPushMemberFuncExprStat(GazpreaParser::PushMemberFuncExprStatContext *ctx) override;
+  std::any visitLenMemberFuncExprStat(GazpreaParser::LenMemberFuncExprStatContext *ctx) override;
+  std::any
+  visitAppendMemberFuncExprStat(GazpreaParser::AppendMemberFuncExprStatContext *ctx) override;
+  std::any visitConcatMemberFuncStat(GazpreaParser::ConcatMemberFuncStatContext *ctx) override;
+  std::any visitPushMemberFuncStat(GazpreaParser::PushMemberFuncStatContext *ctx) override;
+  std::any visitAppendMemberFuncStat(GazpreaParser::AppendMemberFuncStatContext *ctx) override;
+  std::any visitLenMemberFuncStat(GazpreaParser::LenMemberFuncStatContext *ctx) override;
 
 private:
   static expressions::BinaryOpType stringToBinaryOpType(const std::string &op);

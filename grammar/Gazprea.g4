@@ -24,20 +24,20 @@ stat
     | output_stat
     | input_stat
     | procedure_call_stat
-//    | member_function_stat
+    | member_function_stat
     ;
 
 // TODO: Can string builtin operations done on string expressions
-//member_function_stat:;
-//    : expr DCONCAT LPAREN args? RPAREN SC #concatBuiltinExpr
-//    | expr DPUSH LPAREN args? RPAREN SC #pushBuiltinExpr
-//    | expr DLEN LPAREN RPAREN SC #lenBuiltinExpr
-//    | expr DAPPEND LPAREN args? RPAREN SC #appendBuiltinExpr
-//    : IDCONCAT LPAREN args? RPAREN SC #concatBuiltin
-//    | IDPUSH LPAREN args? RPAREN SC #pushBuiltin
-//    | IDAPPEND LPAREN args? RPAREN SC #appendBuiltin
-//    | IDLEN LPAREN RPAREN SC #lenBuiltin
-//    ;
+member_function_stat
+    : expr DCONCAT LPAREN args? RPAREN SC #concatMemberFuncExprStat
+    | expr DPUSH LPAREN args? RPAREN SC #pushMemberFuncExprStat
+    | expr DLEN LPAREN RPAREN SC #lenMemberFuncExprStat
+    | expr DAPPEND LPAREN args? RPAREN SC #appendMemberFuncExprStat
+    | IDCONCAT LPAREN args? RPAREN SC #concatMemberFuncStat
+    | IDPUSH LPAREN args? RPAREN SC #pushMemberFuncStat
+    | IDAPPEND LPAREN args? RPAREN SC #appendMemberFuncStat
+    | IDLEN LPAREN RPAREN SC #lenMemberFuncStat
+    ;
 
 procedure_stat
     : PROCEDURE ID LPAREN procedure_params? RPAREN (RETURNS type)? SC
