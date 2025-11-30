@@ -1,0 +1,10 @@
+procedure main() returns integer{
+    string x = format(3.4);
+    string y = format(3);
+    string c = format('T');
+    format(3.4) -> std_output;
+
+    return 0;
+}
+
+//CHECK:3.4

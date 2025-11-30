@@ -1,0 +1,12 @@
+procedure main() returns integer{
+
+    character[*] carry = ['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd'];
+    string vec = carry;
+    carry -> std_output;
+    vec -> std_output;
+
+    return 0;
+}
+
+
+//CHECK:[h e l l o   w o r l d]hello world

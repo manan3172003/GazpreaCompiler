@@ -37,6 +37,7 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   setupThrowArrayIndexError();
   setupThrowStrideError();
   setupPrintArray();
+  setupPrintString();
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%c", "charInputFormat");
   createGlobalString("%d\0", "intFormat");
@@ -167,6 +168,14 @@ void Backend::setupPrintArray() const {
   builder->create<mlir::LLVM::LLVMFuncOp>(loc, kPrintArrayName, llvmFnType);
 }
 
+void Backend::setupPrintString() const {
+  auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy()},
+                                                      /*isVarArg=*/false);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printString_d526a5bb_a01a_4579_9d33_c725c674e1c5",
+                                          llvmFnType);
+}
+
 void Backend::printFloat(mlir::Value floatValue) {
   mlir::LLVM::GlobalOp formatString;
   if (!(formatString = module.lookupSymbol<mlir::LLVM::GlobalOp>("floatFormat"))) {
@@ -242,8 +251,17 @@ void Backend::printVector(mlir::Value vectorStructAddr,
     elementType = arrayElement->getType();
   }
 
-  int elementTypeCode = 0;
   auto elementTypeName = elementType ? elementType->getName() : "";
+
+  if (elementTypeName == "character" &&
+      !std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(vectorTypeSym->getType())) {
+    auto printStringFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+        "printString_d526a5bb_a01a_4579_9d33_c725c674e1c5");
+    builder->create<mlir::LLVM::CallOp>(loc, printStringFunc, mlir::ValueRange{vectorStructAddr});
+    return;
+  }
+
+  int elementTypeCode = 0;
   if (elementTypeName == "integer") {
     elementTypeCode = 0;
   } else if (elementTypeName == "real") {

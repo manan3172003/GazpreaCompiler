@@ -1657,11 +1657,10 @@ ValidationWalker::visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuil
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
   const auto argType = ctx->arg->getInferredSymbolType();
-  // TODO: support strings
-  if (!argType ||
-      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector" &&
-       argType->getName() != "empty_array")) {
-    throw CallError(ctx->getLineNumber(), "length builtin must be called on arrays or vectors");
+  if (!argType || (argType->getName().substr(0, 5) != "array" &&
+                   argType->getName().substr(0, 6) != "vector" && argType->getName() != "string" && argType->getName() != "empty_array")) {
+    throw CallError(ctx->getLineNumber(),
+                    "length builtin must be called on arrays or vectors or strings");
   }
   ctx->setInferredSymbolType(methodSymbol->getReturnType());
   ctx->setInferredDataType(std::make_shared<types::IntegerTypeAst>(ctx->token));
@@ -1672,11 +1671,10 @@ ValidationWalker::visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuilti
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
   const auto argType = ctx->arg->getInferredSymbolType();
-  // TODO: Support strings
-  if (!argType ||
-      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector" &&
-       argType->getName() != "empty_array")) {
-    throw CallError(ctx->getLineNumber(), "shape builtin must be called on arrays or vectors");
+  if (!argType || (argType->getName().substr(0, 5) != "array" &&
+                   argType->getName().substr(0, 6) != "vector" && argType->getName() != "string" && argType->getName() != "empty_array")) {
+    throw CallError(ctx->getLineNumber(),
+                    "shape builtin must be called on arrays or vectors or strings");
   }
   ctx->setInferredSymbolType(methodSymbol->getReturnType());
   ctx->setInferredDataType(std::make_shared<types::ArrayTypeAst>(ctx->token));
@@ -1687,10 +1685,10 @@ ValidationWalker::visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBu
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
   const auto argType = ctx->arg->getInferredSymbolType();
-  // TODO: support strings
-  if (!argType ||
-      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
-    throw CallError(ctx->getLineNumber(), "reverse builtin must be called on arrays or vectors");
+  if (!argType || (argType->getName().substr(0, 5) != "array" &&
+                   argType->getName().substr(0, 6) != "vector" && argType->getName() != "string")) {
+    throw CallError(ctx->getLineNumber(),
+                    "reverse builtin must be called on arrays or vectors or strings");
   }
 
   // Set the method symbol's return type to match the argument type
@@ -1704,13 +1702,28 @@ ValidationWalker::visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuil
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
   const auto argType = ctx->arg->getInferredSymbolType();
-  if (!argType ||
-      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
-    throw CallError(ctx->getLineNumber(), "format builtin must be called on arrays or vectors");
+
+  // format() takes scalars (integer, real, character, boolean) and returns string
+  if (!argType) {
+    throw CallError(ctx->getLineNumber(), "format builtin requires an argument");
   }
-  ctx->setInferredSymbolType(methodSymbol->getReturnType());
-  // TODO: Update it for strings
-  ctx->setInferredDataType(std::make_shared<types::IntegerTypeAst>(ctx->token));
+
+  const std::string typeName = argType->getName();
+  if (typeName != "integer" && typeName != "real" && typeName != "character" &&
+      typeName != "boolean") {
+    throw CallError(
+        ctx->getLineNumber(),
+        "format builtin must be called on scalar types (integer, real, character, boolean)");
+  }
+
+  // Return type is string (vector of character)
+  auto stringType = std::make_shared<symTable::VectorTypeSymbol>("vector");
+  auto charType =
+      std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType("character"));
+  stringType->setType(charType);
+  ctx->setInferredSymbolType(stringType);
+  ctx->setInferredDataType(std::make_shared<types::VectorTypeAst>(ctx->token));
+
   return {};
 }
 

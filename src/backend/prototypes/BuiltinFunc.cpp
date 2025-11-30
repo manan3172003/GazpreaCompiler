@@ -496,6 +496,201 @@ Backend::visitReverseBuiltinFunc(std::shared_ptr<ast::expressions::ReverseBuilti
 }
 std::any
 Backend::visitFormatBuiltinFunc(std::shared_ptr<ast::expressions::FormatBuiltinFuncAst> ctx) {
+  visit(ctx->arg);
+  auto [argType, argAddr] = popElementFromStack(ctx->arg);
+
+  if (!argType) {
+    return {};
+  }
+  auto argMLIRType = getMLIRType(argType);
+  mlir::Value scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, argMLIRType, argAddr);
+
+  const std::string typeName = argType->getName();
+  auto vectorStructTy = vectorTy();
+  auto resultAlloca =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), vectorStructTy, constOne());
+  auto falseVal = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+  auto byteTy = builder->getI8Type();
+
+  if (typeName == "character") {
+    // Character: single character string
+    auto oneConst = constOne();
+    auto resultData = mallocArray(byteTy, oneConst);
+    builder->create<mlir::LLVM::StoreOp>(loc, scalarValue, resultData);
+
+    auto sizePtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Size);
+    builder->create<mlir::LLVM::StoreOp>(loc, oneConst, sizePtr);
+
+    auto capacityPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Capacity);
+    builder->create<mlir::LLVM::StoreOp>(loc, oneConst, capacityPtr);
+
+    auto dataPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Data);
+    builder->create<mlir::LLVM::StoreOp>(loc, resultData, dataPtr);
+
+    auto is2dPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Is2D);
+    builder->create<mlir::LLVM::StoreOp>(loc, falseVal, is2dPtr);
+  } else if (typeName == "boolean") {
+    // Boolean: 'T' or 'F'
+    auto oneConst = constOne();
+    auto resultData = mallocArray(byteTy, oneConst);
+
+    auto charT = builder->create<mlir::LLVM::ConstantOp>(loc, byteTy, 'T');
+    auto charF = builder->create<mlir::LLVM::ConstantOp>(loc, byteTy, 'F');
+    auto charToStore = builder->create<mlir::LLVM::SelectOp>(loc, scalarValue, charT, charF);
+    builder->create<mlir::LLVM::StoreOp>(loc, charToStore, resultData);
+
+    auto sizePtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Size);
+    builder->create<mlir::LLVM::StoreOp>(loc, oneConst, sizePtr);
+
+    auto capacityPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Capacity);
+    builder->create<mlir::LLVM::StoreOp>(loc, oneConst, capacityPtr);
+
+    auto dataPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Data);
+    builder->create<mlir::LLVM::StoreOp>(loc, resultData, dataPtr);
+
+    auto is2dPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Is2D);
+    builder->create<mlir::LLVM::StoreOp>(loc, falseVal, is2dPtr);
+  } else if (typeName == "integer") {
+
+    auto snprintfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("snprintf");
+    if (!snprintfFunc) {
+      auto savedIp = builder->saveInsertionPoint();
+      builder->setInsertionPointToStart(module.getBody());
+      auto snprintfType = mlir::LLVM::LLVMFunctionType::get(intTy(), {ptrTy(), intTy(), ptrTy()},
+                                                            /*isVarArg=*/true);
+      snprintfFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "snprintf", snprintfType);
+      builder->restoreInsertionPoint(savedIp);
+    }
+
+    auto bufferSize = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 20);
+    auto buffer = mallocArray(byteTy, bufferSize);
+
+    auto intFormatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("intFormat");
+    auto formatStrPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, intFormatGlobal);
+
+    auto length = builder->create<mlir::LLVM::CallOp>(
+        loc, snprintfFunc, mlir::ValueRange{buffer, bufferSize, formatStrPtr, scalarValue});
+
+    auto resultLength = length.getResult();
+    auto resultData = mallocArray(byteTy, resultLength);
+
+    auto zero = constZero();
+    auto one = constOne();
+    builder->create<mlir::scf::ForOp>(
+        loc, zero, resultLength, one, mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange) {
+          auto srcPtr =
+              b.create<mlir::LLVM::GEPOp>(l, ptrTy(), byteTy, buffer, mlir::ValueRange{i});
+          auto dstPtr =
+              b.create<mlir::LLVM::GEPOp>(l, ptrTy(), byteTy, resultData, mlir::ValueRange{i});
+          auto byteVal = b.create<mlir::LLVM::LoadOp>(l, byteTy, srcPtr);
+          b.create<mlir::LLVM::StoreOp>(l, byteVal, dstPtr);
+          b.create<mlir::scf::YieldOp>(l);
+        });
+
+    auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+    if (!freeFunc) {
+      auto savedIp = builder->saveInsertionPoint();
+      builder->setInsertionPointToStart(module.getBody());
+      auto freeType = mlir::LLVM::LLVMFunctionType::get(
+          mlir::LLVM::LLVMVoidType::get(builder->getContext()), {ptrTy()}, false);
+      freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "free", freeType);
+      builder->restoreInsertionPoint(savedIp);
+    }
+    builder->create<mlir::LLVM::CallOp>(loc, freeFunc, mlir::ValueRange{buffer});
+
+    auto sizePtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Size);
+    builder->create<mlir::LLVM::StoreOp>(loc, resultLength, sizePtr);
+
+    auto capacityPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Capacity);
+    builder->create<mlir::LLVM::StoreOp>(loc, resultLength, capacityPtr);
+
+    auto dataPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Data);
+    builder->create<mlir::LLVM::StoreOp>(loc, resultData, dataPtr);
+
+    auto is2dPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Is2D);
+    builder->create<mlir::LLVM::StoreOp>(loc, falseVal, is2dPtr);
+  } else if (typeName == "real") {
+    auto snprintfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("snprintf");
+    if (!snprintfFunc) {
+      auto savedIp = builder->saveInsertionPoint();
+      builder->setInsertionPointToStart(module.getBody());
+      auto snprintfType = mlir::LLVM::LLVMFunctionType::get(intTy(), {ptrTy(), intTy(), ptrTy()},
+                                                            /*isVarArg=*/true);
+      snprintfFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "snprintf", snprintfType);
+      builder->restoreInsertionPoint(savedIp);
+    }
+
+    auto bufferSize = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 50);
+    auto buffer = mallocArray(byteTy, bufferSize);
+
+    auto floatFormatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("floatFormat");
+    auto formatStrPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, floatFormatGlobal);
+
+    auto doubleTy = builder->getF64Type();
+    auto doubleVal = builder->create<mlir::LLVM::FPExtOp>(loc, doubleTy, scalarValue);
+
+    auto length = builder->create<mlir::LLVM::CallOp>(
+        loc, snprintfFunc, mlir::ValueRange{buffer, bufferSize, formatStrPtr, doubleVal});
+
+    auto resultLength = length.getResult();
+    auto resultData = mallocArray(byteTy, resultLength);
+
+    auto zero = constZero();
+    auto one = constOne();
+    builder->create<mlir::scf::ForOp>(
+        loc, zero, resultLength, one, mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange) {
+          auto srcPtr =
+              b.create<mlir::LLVM::GEPOp>(l, ptrTy(), byteTy, buffer, mlir::ValueRange{i});
+          auto dstPtr =
+              b.create<mlir::LLVM::GEPOp>(l, ptrTy(), byteTy, resultData, mlir::ValueRange{i});
+          auto byteVal = b.create<mlir::LLVM::LoadOp>(l, byteTy, srcPtr);
+          b.create<mlir::LLVM::StoreOp>(l, byteVal, dstPtr);
+          b.create<mlir::scf::YieldOp>(l);
+        });
+
+    auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+    if (!freeFunc) {
+      auto savedIp = builder->saveInsertionPoint();
+      builder->setInsertionPointToStart(module.getBody());
+      auto freeType = mlir::LLVM::LLVMFunctionType::get(
+          mlir::LLVM::LLVMVoidType::get(builder->getContext()), {ptrTy()}, false);
+      freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "free", freeType);
+      builder->restoreInsertionPoint(savedIp);
+    }
+    builder->create<mlir::LLVM::CallOp>(loc, freeFunc, mlir::ValueRange{buffer});
+
+    auto sizePtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Size);
+    builder->create<mlir::LLVM::StoreOp>(loc, resultLength, sizePtr);
+
+    auto capacityPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Capacity);
+    builder->create<mlir::LLVM::StoreOp>(loc, resultLength, capacityPtr);
+
+    auto dataPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Data);
+    builder->create<mlir::LLVM::StoreOp>(loc, resultData, dataPtr);
+
+    auto is2dPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Is2D);
+    builder->create<mlir::LLVM::StoreOp>(loc, falseVal, is2dPtr);
+  } else {
+    auto zeroVal = constZero();
+    auto nullPtr = builder->create<mlir::LLVM::ZeroOp>(loc, ptrTy());
+
+    auto sizePtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Size);
+    builder->create<mlir::LLVM::StoreOp>(loc, zeroVal, sizePtr);
+
+    auto capacityPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Capacity);
+    builder->create<mlir::LLVM::StoreOp>(loc, zeroVal, capacityPtr);
+
+    auto dataPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Data);
+    builder->create<mlir::LLVM::StoreOp>(loc, nullPtr, dataPtr);
+
+    auto is2dPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Is2D);
+    builder->create<mlir::LLVM::StoreOp>(loc, falseVal, is2dPtr);
+  }
+
+  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), resultAlloca);
+
   return {};
 }
 std::any Backend::visitStreamStateBuiltinFunc(

@@ -71,6 +71,12 @@ bool DefRefWalker::exactTypeMatch(const std::shared_ptr<symTable::Type> &destina
     const auto sourceStruct = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(source);
     return destStruct->getStructName() == sourceStruct->getStructName();
   }
+  if (destination->getName().substr(0, 6) == "vector" &&
+      source->getName().substr(0, 6) == "vector") {
+    const auto destVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(destination);
+    const auto sourceVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(source);
+    return exactTypeMatch(destVector->getType(), sourceVector->getType());
+  }
   return false;
 }
 

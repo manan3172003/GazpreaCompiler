@@ -9,7 +9,7 @@ format-kunal:
 	find src include -type f \( -name "*.cpp" -o -name "*.h" \) -exec clang-format-21 -i {} +
 
 kunal: format-kunal
-	cd build/ && cmake .. && make -j 8 && cd -
+	cd build/ && cmake .. && make -j 4 && cd -
 
 emit-llvm:
 	clang++ -O0 -S -emit-llvm runtime-tests/$(filename) -o runtime-tests/$(filename).ll

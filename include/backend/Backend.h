@@ -155,6 +155,7 @@ protected:
   void setupScanf() const;
   void setupIntPow() const;
   void setupPrintArray() const;
+  void setupPrintString() const;
   void setupThrowDivisionByZeroError() const;
   void setupThrowArraySizeError() const;
   void setupThrowVectorSizeError() const;

@@ -2,6 +2,7 @@
 #include "run_time_errors.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int32_t ipow_019addc8_6352_7de5_8629_b0688522175f(int32_t base, int32_t exp) {
   int32_t result = 1;
@@ -52,6 +53,16 @@ typedef struct {
   int8_t is2D; // boolean
 } ArrayStruct;
 
+void printString_d526a5bb_a01a_4579_9d33_c725c674e1c5(ArrayStruct* vectorStruct) {
+  int8_t* charData = (int8_t*)vectorStruct->data;
+  for (int32_t i = 0; i < vectorStruct->size; i++) {
+    if (charData[i] == '\0') {
+      break; // Stop at null terminator for strings
+    }
+    printf("%c", charData[i]);
+  }
+}
+
 void printArray_019addab_1674_72d4_aa4a_ac782e511e7a(ArrayStruct *arrayStruct,
                                                      int32_t elementType) {
   printf("[");
@@ -92,3 +103,4 @@ void printArray_019addab_1674_72d4_aa4a_ac782e511e7a(ArrayStruct *arrayStruct,
 
   printf("]");
 }
+
