@@ -116,10 +116,7 @@ public:
   std::any visitFloat_dot(GazpreaParser::Float_dotContext *ctx) override;
   std::any visitFloat_lit(GazpreaParser::Float_litContext *ctx) override;
   std::any visitStruct_dec_stat(GazpreaParser::Struct_dec_statContext *ctx) override;
-  std::any visitConcatBuiltinExpr(GazpreaParser::ConcatBuiltinExprContext *ctx) override;
-  std::any visitPushBuiltinExpr(GazpreaParser::PushBuiltinExprContext *ctx) override;
   std::any visitLenBuiltinExpr(GazpreaParser::LenBuiltinExprContext *ctx) override;
-  std::any visitAppendBuiltinExpr(GazpreaParser::AppendBuiltinExprContext *ctx) override;
   std::any visitConcatBuiltin(GazpreaParser::ConcatBuiltinContext *ctx) override;
   std::any visitPushBuiltin(GazpreaParser::PushBuiltinContext *ctx) override;
   std::any visitAppendBuiltin(GazpreaParser::AppendBuiltinContext *ctx) override;

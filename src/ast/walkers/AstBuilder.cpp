@@ -970,40 +970,10 @@ std::any AstBuilder::visitAliasType(GazpreaParser::AliasTypeContext *ctx) {
   aliasType->setAlias(ctx->ID()->getText());
   return std::static_pointer_cast<types::DataTypeAst>(aliasType);
 }
-std::any AstBuilder::visitConcatBuiltinExpr(GazpreaParser::ConcatBuiltinExprContext *ctx) {
-  const auto builtinAst = std::make_shared<statements::ConcatMemberFuncAst>(ctx->getStart());
-  builtinAst->setLeft(
-      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
-  if (ctx->args()) {
-    builtinAst->setArgs(
-        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
-  }
-  return std::static_pointer_cast<expressions::ExpressionAst>(builtinAst);
-}
-std::any AstBuilder::visitPushBuiltinExpr(GazpreaParser::PushBuiltinExprContext *ctx) {
-  const auto builtinAst = std::make_shared<statements::PushMemberFuncAst>(ctx->getStart());
-  builtinAst->setLeft(
-      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
-  if (ctx->args()) {
-    builtinAst->setArgs(
-        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
-  }
-  return std::static_pointer_cast<expressions::ExpressionAst>(builtinAst);
-}
 std::any AstBuilder::visitLenBuiltinExpr(GazpreaParser::LenBuiltinExprContext *ctx) {
   const auto builtinAst = std::make_shared<statements::LenMemberFuncAst>(ctx->getStart());
   builtinAst->setLeft(
       std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
-  return std::static_pointer_cast<expressions::ExpressionAst>(builtinAst);
-}
-std::any AstBuilder::visitAppendBuiltinExpr(GazpreaParser::AppendBuiltinExprContext *ctx) {
-  const auto builtinAst = std::make_shared<statements::AppendMemberFuncAst>(ctx->getStart());
-  builtinAst->setLeft(
-      std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
-  if (ctx->args()) {
-    builtinAst->setArgs(
-        std::any_cast<std::vector<std::shared_ptr<expressions::ArgAst>>>(visit(ctx->args())));
-  }
   return std::static_pointer_cast<expressions::ExpressionAst>(builtinAst);
 }
 std::any AstBuilder::visitConcatBuiltin(GazpreaParser::ConcatBuiltinContext *ctx) {

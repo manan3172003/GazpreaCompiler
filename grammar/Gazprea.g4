@@ -163,10 +163,7 @@ expr
     | (TRUE | FALSE) #boolLiteral
     | ID #identifier
     | ID LPAREN args? RPAREN #funcProcExpr // This also handles construction of structs
-    | expr DCONCAT LPAREN args? RPAREN #concatBuiltinExpr
-    | expr DPUSH LPAREN args? RPAREN #pushBuiltinExpr
     | expr DLEN LPAREN RPAREN #lenBuiltinExpr
-    | expr DAPPEND LPAREN args? RPAREN #appendBuiltinExpr
     | expr DOT ID LPAREN args? RPAREN #builtinFuncExpr
     | IDCONCAT LPAREN args? RPAREN #concatBuiltin
     | IDPUSH LPAREN args? RPAREN #pushBuiltin
