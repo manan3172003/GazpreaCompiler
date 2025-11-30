@@ -59,7 +59,6 @@ public:
   std::any visitOutput(std::shared_ptr<ast::statements::OutputAst> ctx) override;
   std::any visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> ctx) override;
   std::any makeLenMemberFunc();
-  std::any makePushMemberFunc();
   std::any visitProcedureParams(std::shared_ptr<ast::prototypes::ProcedureParamAst> ctx) override;
   std::any visitProcedureCall(std::shared_ptr<ast::statements::ProcedureCallAst> ctx) override;
   std::any visitReturn(std::shared_ptr<ast::statements::ReturnAst> ctx) override;

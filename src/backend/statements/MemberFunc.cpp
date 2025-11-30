@@ -59,12 +59,6 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
     return {};
   }
 
-  auto pushFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("@vector_push");
-  if (!pushFunc) {
-    makePushMemberFunc();
-    pushFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("@vector_push");
-  }
-
   auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
   if (!freeFunc) {
     auto savedInsertionPoint = builder->saveInsertionPoint();
@@ -84,6 +78,7 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
 
   auto zeroConst = constZero();
   auto oneConst = constOne();
+  auto twoConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 2);
 
   for (const auto &arg : ctx->getArgs()) {
     visit(arg);
@@ -93,10 +88,26 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
     }
 
     auto currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sizeAddr);
+    auto currentCapacity = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), capacityAddr);
     auto newSize = builder->create<mlir::LLVM::AddOp>(loc, intTy(), currentSize, oneConst);
 
     auto oldDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), dataAddr);
-    auto newDataPtr = mallocArray(elementMLIRType, newSize);
+
+    auto needsGrowth = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq,
+                                                           currentSize, currentCapacity);
+
+    auto growthIf = builder->create<mlir::scf::IfOp>(loc, mlir::TypeRange{ptrTy(), intTy()},
+                                                     needsGrowth, /*withElseRegion*/ true);
+    auto afterIfIp = builder->saveInsertionPoint();
+
+    builder->setInsertionPointToStart(&growthIf.getThenRegion().front());
+    auto isZeroCapacity = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq,
+                                                              currentCapacity, zeroConst);
+    auto doubledCapacity =
+        builder->create<mlir::LLVM::MulOp>(loc, intTy(), currentCapacity, twoConst);
+    auto desiredCapacity =
+        builder->create<mlir::LLVM::SelectOp>(loc, isZeroCapacity, oneConst, doubledCapacity);
+    auto newDataPtr = mallocArray(elementMLIRType, desiredCapacity);
 
     builder->create<mlir::scf::ForOp>(
         loc, zeroConst, currentSize, oneConst, mlir::ValueRange{},
@@ -110,14 +121,8 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
           b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
         });
 
-    auto insertPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), elementMLIRType, newDataPtr,
-                                                        mlir::ValueRange{currentSize});
-    copyValue(elementType, argAddr, insertPtr);
-
-    auto currentCapacity = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), capacityAddr);
     auto hasAlloc = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sgt,
                                                         currentCapacity, zeroConst);
-
     builder->create<mlir::scf::IfOp>(
         loc, hasAlloc,
         [&](mlir::OpBuilder &b, mlir::Location l) {
@@ -126,8 +131,24 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
         },
         [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
 
-    builder->create<mlir::LLVM::CallOp>(loc, pushFunc,
-                                        mlir::ValueRange{vectorAddr, newDataPtr, newSize});
+    builder->create<mlir::scf::YieldOp>(loc, mlir::ValueRange{newDataPtr, desiredCapacity});
+
+    builder->setInsertionPointToStart(&growthIf.getElseRegion().front());
+    builder->create<mlir::scf::YieldOp>(loc, mlir::ValueRange{oldDataPtr, currentCapacity});
+
+    builder->restoreInsertionPoint(afterIfIp);
+
+    auto ensuredDataPtr = growthIf.getResult(0);
+    auto ensuredCapacity = growthIf.getResult(1);
+
+    builder->create<mlir::LLVM::StoreOp>(loc, ensuredDataPtr, dataAddr);
+    builder->create<mlir::LLVM::StoreOp>(loc, ensuredCapacity, capacityAddr);
+
+    auto insertPtr = builder->create<mlir::LLVM::GEPOp>(
+        loc, ptrTy(), elementMLIRType, ensuredDataPtr, mlir::ValueRange{currentSize});
+    copyValue(elementType, argAddr, insertPtr);
+
+    builder->create<mlir::LLVM::StoreOp>(loc, newSize, sizeAddr);
   }
 
   return {};
