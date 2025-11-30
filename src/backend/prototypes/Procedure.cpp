@@ -104,4 +104,48 @@ std::any Backend::makeLenMemberFunc() {
   return {};
 }
 
+std::any Backend::makePushMemberFunc() {
+  if (module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("@vector_push")) {
+    return {};
+  }
+
+  auto savedInsertionPoint = builder->saveInsertionPoint();
+  builder->setInsertionPointToStart(module.getBody());
+
+  auto voidReturnTy = mlir::LLVM::LLVMVoidType::get(&context);
+  auto procType = mlir::LLVM::LLVMFunctionType::get(voidReturnTy,
+                                                    {/*self*/ ptrTy(),
+                                                     /*new data*/ ptrTy(),
+                                                     /*new size*/ intTy()},
+                                                    false);
+  auto pushFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "@vector_push", procType);
+  mlir::Block *entry = pushFunc.addEntryBlock();
+  builder->setInsertionPointToStart(entry);
+
+  auto vectorStructTy = structTy({intTy(), intTy(), ptrTy(), boolTy()});
+  auto selfPtr = entry->getArgument(0);
+  auto newDataPtr = entry->getArgument(1);
+  auto newSize = entry->getArgument(2);
+
+  auto idxZero = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0);
+  auto idxOne = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 1);
+  auto idxTwo = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 2);
+
+  auto sizePtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), vectorStructTy, selfPtr,
+                                                    mlir::ValueRange{idxZero, idxZero});
+  auto capacityPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), vectorStructTy, selfPtr,
+                                                        mlir::ValueRange{idxZero, idxOne});
+  auto dataPtrAddr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), vectorStructTy, selfPtr,
+                                                        mlir::ValueRange{idxZero, idxTwo});
+
+  builder->create<mlir::LLVM::StoreOp>(loc, newSize, sizePtr);
+  builder->create<mlir::LLVM::StoreOp>(loc, newSize, capacityPtr);
+  builder->create<mlir::LLVM::StoreOp>(loc, newDataPtr, dataPtrAddr);
+  builder->create<mlir::LLVM::ReturnOp>(loc, mlir::ValueRange{});
+
+  builder->restoreInsertionPoint(savedInsertionPoint);
+
+  return {};
+}
+
 } // namespace gazprea::backend

@@ -7,6 +7,7 @@
 #include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
 #include "utils/ValidationUtils.h"
 #include <ast/walkers/ValidationWalker.h>
 
@@ -823,6 +824,11 @@ std::any ValidationWalker::visitVectorType(std::shared_ptr<types::VectorTypeAst>
 }
 std::any ValidationWalker::visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) {
   visit(ctx->getLeft());
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(
+      ctx->getLeft()->getInferredSymbolType());
+  if (!vectorTypeSym) {
+    throw TypeError(ctx->getLineNumber(), "len can only be used on vector types");
+  }
   auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);
   ctx->setInferredDataType(intType);
   ctx->setInferredSymbolType(resolvedInferredType(intType));
@@ -831,6 +837,11 @@ std::any ValidationWalker::visitLenMemberFunc(std::shared_ptr<statements::LenMem
 std::any
 ValidationWalker::visitAppendMemberFunc(std::shared_ptr<statements::AppendMemberFuncAst> ctx) {
   visit(ctx->getLeft());
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(
+      ctx->getLeft()->getInferredSymbolType());
+  if (!vectorTypeSym) {
+    throw TypeError(ctx->getLineNumber(), "append can only be used on vector types");
+  }
   for (const auto &arg : ctx->getArgs()) {
     visit(arg);
   }
@@ -840,8 +851,19 @@ ValidationWalker::visitAppendMemberFunc(std::shared_ptr<statements::AppendMember
 }
 std::any ValidationWalker::visitPushMemberFunc(std::shared_ptr<statements::PushMemberFuncAst> ctx) {
   visit(ctx->getLeft());
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(
+      ctx->getLeft()->getInferredSymbolType());
+  if (!vectorTypeSym) {
+    throw TypeError(ctx->getLineNumber(), "push can only be used on vector types");
+  }
+  auto elementType = vectorTypeSym->getType();
   for (const auto &arg : ctx->getArgs()) {
     visit(arg);
+    auto argType =
+        arg->getExpr() ? arg->getExpr()->getInferredSymbolType() : arg->getInferredSymbolType();
+    if (!elementType || !argType || argType->getName() != elementType->getName()) {
+      throw TypeError(arg->getLineNumber(), "push argument type mismatch");
+    }
   }
   ctx->setInferredSymbolType(ctx->getLeft()->getInferredSymbolType());
   ctx->setInferredDataType(ctx->getLeft()->getInferredDataType());
