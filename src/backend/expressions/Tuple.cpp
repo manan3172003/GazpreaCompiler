@@ -8,8 +8,7 @@ std::any Backend::visitTuple(std::shared_ptr<ast::expressions::TupleLiteralAst> 
   auto structAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), sTy, constOne());
   for (size_t i = 0; i < ctx->getElements().size(); i++) {
     visit(ctx->getElements()[i]);
-    auto [elementType, elementValueAddr] =
-        ctx->getElements()[i]->getScope()->getTopElementInStack();
+    auto [elementType, elementValueAddr] = popElementFromStack(ctx->getElements()[i]);
 
     auto gepIndices = std::vector<mlir::Value>{
         builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),

@@ -104,27 +104,31 @@ void Backend::setupIntPow() const {
   // Signature: i32 ipow(i32 base, i32 exp)
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(intTy(), {intTy(), intTy()},
                                                       /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "ipow", llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "ipow_019addc8_6352_7de5_8629_b0688522175f",
+                                          llvmFnType);
 }
 
 void Backend::setupThrowDivisionByZeroError() const {
   // Signature: void throwDivisionByZeroError()
   auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "throwDivisionByZeroError", llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(
+      loc, "throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a", llvmFnType);
 }
 
 void Backend::setupThrowArraySizeError() const {
   // Signature: void throwArraySizeError()
   auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "throwArraySizeError", llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(
+      loc, "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c", llvmFnType);
 }
 void Backend::setupThrowVectorSizeError() const {
   // Signature: void throwVectorSizeError()
   auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "throwVectorSizeError", llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(
+      loc, "throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029", llvmFnType);
 }
 
 void Backend::setupPrintArray() const {
@@ -132,7 +136,8 @@ void Backend::setupPrintArray() const {
   auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy(), intTy()},
                                                       /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printArray", llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printArray_019addab_1674_72d4_aa4a_ac782e511e7a",
+                                          llvmFnType);
 }
 
 void Backend::printFloat(mlir::Value floatValue) {
@@ -222,7 +227,8 @@ void Backend::printVector(mlir::Value vectorStructAddr,
     elementTypeCode = 3;
   }
 
-  auto printArrayFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printArray");
+  auto printArrayFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+      "printArray_019addab_1674_72d4_aa4a_ac782e511e7a");
   auto elementTypeConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), elementTypeCode);
   mlir::ValueRange args = {vectorStructAddr, elementTypeConst};
   builder->create<mlir::LLVM::CallOp>(loc, printArrayFunc, args);
@@ -556,8 +562,8 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
       auto isZeroCond = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq,
                                                             rightValue, constZero());
       builder->create<mlir::scf::IfOp>(loc, isZeroCond, [&](mlir::OpBuilder &b, mlir::Location l) {
-        auto throwDivByZeroFunc =
-            module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("throwDivisionByZeroError");
+        auto throwDivByZeroFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+            "throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a");
         b.create<mlir::LLVM::CallOp>(l, throwDivByZeroFunc, mlir::ValueRange{});
         b.create<mlir::scf::YieldOp>(l);
       });
@@ -592,7 +598,8 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
       result = builder->create<mlir::LLVM::SRemOp>(loc, leftValue, rightValue);
       break;
     case ast::expressions::BinaryOpType::POWER: {
-      auto ipowFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("ipow");
+      auto ipowFunc =
+          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("ipow_019addc8_6352_7de5_8629_b0688522175f");
       result =
           builder
               ->create<mlir::LLVM::CallOp>(loc, ipowFunc, mlir::ValueRange{leftValue, rightValue})
@@ -652,8 +659,8 @@ mlir::Value Backend::floatBinaryOperandToValue(ast::expressions::BinaryOpType op
     auto isZeroCond = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::oeq,
                                                           rightValue, floatZero);
     builder->create<mlir::scf::IfOp>(loc, isZeroCond, [&](mlir::OpBuilder &b, mlir::Location l) {
-      auto throwDivByZeroFunc =
-          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("throwDivisionByZeroError");
+      auto throwDivByZeroFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+          "throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a");
       b.create<mlir::LLVM::CallOp>(l, throwDivByZeroFunc, mlir::ValueRange{});
       b.create<mlir::scf::YieldOp>(l);
     });
@@ -869,6 +876,8 @@ void Backend::copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAd
     }
   } else if (isTypeArray(type)) {
     copyArrayStruct(type, fromAddr, destAddr);
+  } else if (isTypeVector(type)) {
+    copyVectorStruct(type, fromAddr, destAddr);
   } else {
     auto value = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(type), fromAddr);
     builder->create<mlir::LLVM::StoreOp>(loc, value, destAddr);
@@ -877,6 +886,10 @@ void Backend::copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAd
 
 bool Backend::isTypeArray(std::shared_ptr<symTable::Type> type) {
   return (type->getName().substr(0, 5) == "array") ? true : false;
+}
+
+bool Backend::isTypeVector(std::shared_ptr<symTable::Type> type) {
+  return (type->getName().substr(0, 6) == "vector") ? true : false;
 }
 
 void Backend::pushElementToScopeStack(std::shared_ptr<ast::Ast> ctx,
@@ -893,9 +906,9 @@ Backend::popElementFromStack(std::shared_ptr<ast::Ast> ctx) {
   return topElement;
 }
 
-void Backend::freeElementsFromMemory(std::shared_ptr<ast::Ast> ctx) {
-  const auto elements = ctx->getScope()->getElementsToFree();
-  const auto stackElements = ctx->getScope()->getScopeStack();
+void Backend::freeScopeResources(std::shared_ptr<symTable::Scope> scope, bool clear) {
+  const auto elements = scope->getElementsToFree();
+  const auto stackElements = scope->getScopeStack();
   for (auto element : stackElements) {
     if (element.first->getName().substr(0, 5) == "array") {
       freeArray(element.first, element.second);
@@ -910,8 +923,47 @@ void Backend::freeElementsFromMemory(std::shared_ptr<ast::Ast> ctx) {
       freeVector(element.first, element.second);
     }
   }
-  ctx->getScope()->getScopeStack().clear();
-  ctx->getScope()->clearElementsToFree();
+
+  if (auto baseScope = std::dynamic_pointer_cast<symTable::BaseScope>(scope)) {
+    for (const auto &[name, symbol] : baseScope->getSymbols()) {
+      if (auto varSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(symbol)) {
+        auto type = varSymbol->getType();
+        if (type->getName().substr(0, 5) == "array") {
+          if (varSymbol->value) {
+            freeArray(type, varSymbol->value);
+          }
+        } else if (type->getName().substr(0, 6) == "vector") {
+          if (varSymbol->value) {
+            freeVector(type, varSymbol->value);
+          }
+        }
+      }
+    }
+  }
+
+  if (clear) {
+    scope->getScopeStack().clear();
+    scope->clearElementsToFree();
+  }
+}
+
+void Backend::freeElementsFromMemory(std::shared_ptr<ast::Ast> ctx) {
+  freeScopeResources(ctx->getScope(), true);
+}
+
+void Backend::freeResourcesUntilFunction(std::shared_ptr<symTable::Scope> startScope) {
+  auto currentScope = startScope;
+  while (currentScope) {
+    freeScopeResources(currentScope, false);
+
+    auto type = currentScope->getScopeType();
+    if (type == symTable::ScopeType::Function || type == symTable::ScopeType::Procedure ||
+        type == symTable::ScopeType::Global) {
+      break;
+    }
+
+    currentScope = currentScope->getEnclosingScope();
+  }
 }
 
 void Backend::createGlobalDeclaration(const std::string &typeName,

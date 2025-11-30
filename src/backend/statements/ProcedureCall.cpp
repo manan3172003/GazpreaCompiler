@@ -16,7 +16,7 @@ std::any Backend::visitProcedureCall(std::shared_ptr<ast::statements::ProcedureC
 
   for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
     visit(args[i]);
-    const auto topElement = args[i]->getScope()->getTopElementInStack();
+    const auto topElement = popElementFromStack(args[i]);
     params[i]->getSymbol()->value = topElement.second;
     auto value = topElement.second;
     mlirArgs.push_back(value);

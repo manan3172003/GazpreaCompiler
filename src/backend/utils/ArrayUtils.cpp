@@ -28,7 +28,8 @@ void Backend::printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::
     elementTypeCode = 3;
   }
 
-  auto printArrayFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printArray");
+  auto printArrayFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+      "printArray_019addab_1674_72d4_aa4a_ac782e511e7a");
   auto elementTypeConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), elementTypeCode);
   mlir::ValueRange args = {arrayStructAddr, elementTypeConst};
   builder->create<mlir::LLVM::CallOp>(loc, printArrayFunc, args);
@@ -102,7 +103,8 @@ void Backend::arraySizeValidation(std::shared_ptr<symTable::VariableSymbol> vari
     auto arrayType =
         std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType());
     if (arrayType->getSizes().empty()) {
-      auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("throwArraySizeError");
+      auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+          "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
       builder->create<mlir::LLVM::CallOp>(loc, throwFunc, mlir::ValueRange{});
     }
     mlir::Value oneDimensionSizeAddr = arrayType->getSizes()[0];
@@ -120,7 +122,8 @@ void Backend::arraySizeValidation(std::shared_ptr<symTable::VariableSymbol> vari
 
     builder->create<mlir::scf::IfOp>(
         loc, isSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
-          auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("throwArraySizeError");
+          auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+              "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
           b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
           b.create<mlir::scf::YieldOp>(l);
         });
@@ -140,7 +143,8 @@ void Backend::arraySizeValidation(std::shared_ptr<symTable::VariableSymbol> vari
 
       builder->create<mlir::scf::IfOp>(
           loc, isTwoDimSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
-            auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("throwArraySizeError");
+            auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+                "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
             b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
             b.create<mlir::scf::YieldOp>(l);
           });
@@ -741,14 +745,19 @@ void Backend::createArrayFromVector(
     mlir::Type elementMLIRType, mlir::Value dest) {
   for (size_t i = 0; i < elements.size(); i++) {
     visit(elements[i]);
-    auto [elemType, elementValueAddr] = elements[i]->getScope()->getTopElementInStack();
+    auto [elemType, elementValueAddr] = popElementFromStack(elements[i]);
 
     auto index = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), static_cast<int>(i));
     auto elementPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), elementMLIRType, dest,
                                                          mlir::ValueRange{index});
 
-    auto elementValue = builder->create<mlir::LLVM::LoadOp>(loc, elementMLIRType, elementValueAddr);
-    builder->create<mlir::LLVM::StoreOp>(loc, elementValue, elementPtr);
+    if (isTypeArray(elemType)) {
+      copyArrayStruct(elemType, elementValueAddr, elementPtr);
+    } else {
+      auto elementValue =
+          builder->create<mlir::LLVM::LoadOp>(loc, elementMLIRType, elementValueAddr);
+      builder->create<mlir::LLVM::StoreOp>(loc, elementValue, elementPtr);
+    }
   }
 }
 } // namespace gazprea::backend

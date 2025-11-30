@@ -21,7 +21,7 @@ std::any Backend::visitFuncProcCall(std::shared_ptr<ast::expressions::FuncProcCa
   std::vector<mlir::Value> mlirArgs;
   for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
     visit(args[i]);
-    const auto [_, valueAddr] = args[i]->getScope()->getTopElementInStack();
+    const auto [_, valueAddr] = popElementFromStack(args[i]);
     params[i]->getSymbol()->value = valueAddr;
     mlirArgs.push_back(valueAddr);
   }

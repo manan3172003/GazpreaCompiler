@@ -329,7 +329,7 @@ ValidationWalker::visitTupleElementAssign(std::shared_ptr<statements::TupleEleme
   if (not tupleTypeSymbol)
     throw TypeError(ctx->getLineNumber(), "Identifier symbol is not a tuple type");
   if (ctx->getFieldIndex() == 0 ||
-      ctx->getFieldIndex() > tupleTypeSymbol->getResolvedTypes().size())
+      ctx->getFieldIndex() > static_cast<int>(tupleTypeSymbol->getResolvedTypes().size()))
     throw SizeError(ctx->getLineNumber(), "Invalid tuple index");
   return {};
 }

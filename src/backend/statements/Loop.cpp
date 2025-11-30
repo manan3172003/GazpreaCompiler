@@ -38,7 +38,7 @@ std::any Backend::visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) {
   if (!isDoWhile && conditionBlock) {
     builder->setInsertionPointToStart(conditionBlock);
     visit(ctx->getCondition());
-    auto [_, condAddr] = ctx->getCondition()->getScope()->getTopElementInStack();
+    auto [_, condAddr] = popElementFromStack(ctx->getCondition());
     auto condLoad = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), condAddr);
     auto condValue = condLoad.getResult();
     builder->create<mlir::cf::CondBranchOp>(loc, condValue, bodyBlock, exitBlock);
@@ -62,7 +62,7 @@ std::any Backend::visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) {
   if (isDoWhile && conditionReachable) {
     builder->setInsertionPointToStart(conditionBlock);
     visit(ctx->getCondition());
-    auto [_, condAddr] = ctx->getCondition()->getScope()->getTopElementInStack();
+    auto [_, condAddr] = popElementFromStack(ctx->getCondition());
     auto condLoad = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), condAddr);
     auto condValue = condLoad.getResult();
     builder->create<mlir::cf::CondBranchOp>(loc, condValue, bodyBlock, exitBlock);

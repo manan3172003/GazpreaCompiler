@@ -4,10 +4,7 @@ namespace gazprea::backend {
 
 std::any Backend::visitUnary(std::shared_ptr<ast::expressions::UnaryAst> ctx) {
   visit(ctx->getExpression());
-  auto operandScope = ctx->getExpression()->getScope();
-  auto [type, valueAddr] = operandScope->getTopElementInStack();
-  operandScope->popElementFromScopeStack();
-
+  auto [type, valueAddr] = popElementFromStack(ctx->getExpression());
   switch (ctx->getUnaryOpType()) {
   case ast::expressions::UnaryOpType::MINUS: {
     auto newAddr =

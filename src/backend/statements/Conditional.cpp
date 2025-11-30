@@ -4,7 +4,7 @@ namespace gazprea::backend {
 
 std::any Backend::visitConditional(std::shared_ptr<ast::statements::ConditionalAst> ctx) {
   visit(ctx->getCondition());
-  auto [_, condAddr] = ctx->getCondition()->getScope()->getTopElementInStack();
+  auto [_, condAddr] = popElementFromStack(ctx->getCondition());
   auto condLoad = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), condAddr);
   auto condValue = condLoad.getResult();
 

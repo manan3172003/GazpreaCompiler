@@ -1,0 +1,61 @@
+{
+    "testDir": "testfiles",
+    "testedExecutablePaths": {
+        "dragon-deez-nuts": "../bin/gazc"
+    },
+    "runtimes": {
+        "dragon-deez-nuts": "../bin/libgazrt.so"
+    },
+    "toolchains": {
+        "gazprea-llc": [
+            {
+                "stepName": "gazprea",
+                "executablePath": "$EXE",
+                "arguments": [
+                    "$INPUT",
+                    "$OUTPUT"
+                ],
+                "output": "gaz.ll",
+                "allowError": true
+            },
+            {
+                "stepName": "llc",
+                "executablePath": "/cshome/cmput415/415-resources/llvm-project/build/bin/llc",
+                "arguments": [
+                    "-filetype=obj",
+                    "-relocation-model=pic",
+                    "$INPUT",
+                    "-o",
+                    "$OUTPUT"
+                ],
+                "output": "gaz.o"
+            },
+            {
+                "stepName": "clang",
+                "executablePath": "/usr/bin/clang",
+                "arguments": [
+                    "$INPUT",
+                    "-o",
+                    "$OUTPUT",
+                    "-L$RT_PATH",
+                    "-l$RT_LIB",
+                    "-lm"
+                ],
+                "output": "gaz"
+            },
+            {
+                "stepName": "valgrind",
+                "executablePath": "/usr/bin/valgrind",
+                "arguments": [
+                    "--leak-check=full",
+                    "--error-exitcode=111",
+                    "--log-file=/dev/null",
+                    "$INPUT"
+                ],
+                "usesInStr": true,
+                "usesRuntime": true,
+                "allowError": true
+            }
+        ]
+    }
+}

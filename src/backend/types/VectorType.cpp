@@ -25,8 +25,7 @@ std::any Backend::visitVectorType(std::shared_ptr<ast::types::VectorTypeAst> ctx
   for (size_t i = 0; i < sizeExpr.size(); ++i) {
     visit(sizeExpr[i]);
 
-    auto [type, valueAddr] = ctx->getScope()->getTopElementInStack();
-    ctx->getScope()->popElementFromScopeStack();
+    auto [type, valueAddr] = popElementFromStack(sizeExpr[i]);
 
     // Could be * or an integer value
     mlir::Value recordedSizeAddr = valueAddr;
@@ -66,7 +65,8 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
   };
 
   const auto declaredSizes = loadSizesFromVector(vectorType);
-  auto throwSizeErrorFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("throwVectorSizeError");
+  auto throwSizeErrorFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+      "throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029");
 
   auto emitSizeValidation = [&](const std::vector<mlir::Value> &actualSizes) {
     if (!throwSizeErrorFunc || declaredSizes.empty() || actualSizes.empty())
@@ -165,5 +165,86 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
   storeVectorField(VectorOffset::Data, nullPtr);
   storeVectorField(VectorOffset::Is2D, boolZero);
   return vectorStructAddr;
+}
+
+void Backend::copyVectorStruct(std::shared_ptr<symTable::Type> type, mlir::Value fromVectorStruct,
+                               mlir::Value destVectorStruct) {
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type);
+  if (!vectorTypeSym) {
+    return;
+  }
+
+  auto vectorStructType = getMLIRType(type);
+  auto elementType = vectorTypeSym->getType();
+  auto elementMLIRType = getMLIRType(elementType);
+
+  auto makeIndexConst = [&](int idx) {
+    return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), idx);
+  };
+
+  auto makeFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr, VectorOffset offset) {
+    return builder->create<mlir::LLVM::GEPOp>(
+        loc, ptrTy(), structTy, baseAddr,
+        mlir::ValueRange{makeIndexConst(0), makeIndexConst(static_cast<int>(offset))});
+  };
+
+  // Copy Size
+  auto srcSizePtr = makeFieldPtr(vectorStructType, fromVectorStruct, VectorOffset::Size);
+  auto srcSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcSizePtr);
+  auto destSizePtr = makeFieldPtr(vectorStructType, destVectorStruct, VectorOffset::Size);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcSize, destSizePtr);
+
+  // Copy Capacity
+  auto srcCapacityPtr = makeFieldPtr(vectorStructType, fromVectorStruct, VectorOffset::Capacity);
+  auto srcCapacity = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcCapacityPtr);
+  auto destCapacityPtr = makeFieldPtr(vectorStructType, destVectorStruct, VectorOffset::Capacity);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcCapacity, destCapacityPtr);
+
+  // Copy Is2D
+  auto srcIs2DPtr = makeFieldPtr(vectorStructType, fromVectorStruct, VectorOffset::Is2D);
+  auto srcIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), srcIs2DPtr);
+  auto destIs2DPtr = makeFieldPtr(vectorStructType, destVectorStruct, VectorOffset::Is2D);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcIs2D, destIs2DPtr);
+
+  // Deep Copy Data
+  auto srcDataPtrField = makeFieldPtr(vectorStructType, fromVectorStruct, VectorOffset::Data);
+  auto srcDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataPtrField);
+
+  // Allocate new memory for destination data (Capacity)
+  mlir::Value destDataPtr = mallocArray(elementMLIRType, srcCapacity);
+  auto destDataPtrField = makeFieldPtr(vectorStructType, destVectorStruct, VectorOffset::Data);
+  builder->create<mlir::LLVM::StoreOp>(loc, destDataPtr, destDataPtrField);
+
+  // Copy elements (Size)
+  if (isTypeArray(elementType) || isTypeVector(elementType)) {
+    // For nested types, use copyValue (which handles recursion)
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), srcSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, srcDataPtr,
+                                                        mlir::ValueRange{i});
+          auto destElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, destDataPtr,
+                                                         mlir::ValueRange{i});
+
+          copyValue(elementType, srcElemPtr, destElemPtr);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  } else {
+    // For scalar elements, simple load/store
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), srcSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, srcDataPtr,
+                                                        mlir::ValueRange{i});
+          auto destElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, destDataPtr,
+                                                         mlir::ValueRange{i});
+
+          auto elementValue = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcElemPtr);
+          b.create<mlir::LLVM::StoreOp>(l, elementValue, destElemPtr);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  }
 }
 } // namespace gazprea::backend

@@ -145,11 +145,16 @@ protected:
                     std::shared_ptr<symTable::Type> toType);
   void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);
   bool isTypeArray(std::shared_ptr<symTable::Type> type);
+  bool isTypeVector(std::shared_ptr<symTable::Type> type);
+  void copyVectorStruct(std::shared_ptr<symTable::Type> type, mlir::Value fromVectorStruct,
+                        mlir::Value destVectorStruct);
   void pushElementToScopeStack(std::shared_ptr<ast::Ast> ctx,
                                std::shared_ptr<symTable::Type> elementType, mlir::Value val);
   std::pair<std::shared_ptr<symTable::Type>, mlir::Value>
   popElementFromStack(std::shared_ptr<ast::Ast> ctx);
   void freeElementsFromMemory(std::shared_ptr<ast::Ast> ctx);
+  void freeScopeResources(std::shared_ptr<symTable::Scope> scope, bool clear = true);
+  void freeResourcesUntilFunction(std::shared_ptr<symTable::Scope> startScope);
   void createGlobalDeclaration(const std::string &typeName, std::shared_ptr<ast::Ast> exprAst,
                                std::shared_ptr<symTable::Symbol> symbol,
                                const std::string &variableName);

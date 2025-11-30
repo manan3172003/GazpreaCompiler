@@ -14,7 +14,7 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
   }
   visit(ctx->getType());
   visit(ctx->getExpr());
-  auto [type, valueAddr] = ctx->getScope()->getTopElementInStack();
+  auto [type, valueAddr] = popElementFromStack(ctx);
   auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   if (ctx->getType()->getNodeType() == ast::NodeType::VectorType) {
     auto vectorTypeSymbol =

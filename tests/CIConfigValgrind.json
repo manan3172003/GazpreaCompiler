@@ -11,20 +11,36 @@
       {
         "stepName": "gazprea",
         "executablePath": "$EXE",
-        "arguments": ["$INPUT", "$OUTPUT"],
+        "arguments": [
+          "$INPUT",
+          "$OUTPUT"
+        ],
         "output": "gaz.ll",
         "allowError": true
       },
       {
         "stepName": "llc",
         "executablePath": "/usr/local/llvm/bin/llc",
-        "arguments": ["-filetype=obj", "-relocation-model=pic", "$INPUT", "-o", "$OUTPUT"],
+        "arguments": [
+          "-filetype=obj",
+          "-relocation-model=pic",
+          "$INPUT",
+          "-o",
+          "$OUTPUT"
+        ],
         "output": "gaz.o"
       },
       {
         "stepName": "clang",
         "executablePath": "/usr/local/llvm/bin/clang",
-        "arguments": ["$INPUT", "-o", "$OUTPUT", "-L$RT_PATH", "-l$RT_LIB", "-lm"],
+        "arguments": [
+          "$INPUT",
+          "-o",
+          "$OUTPUT",
+          "-L$RT_PATH",
+          "-l$RT_LIB",
+          "-lm"
+        ],
         "output": "gaz"
       },
       {
@@ -37,6 +53,7 @@
           "$INPUT"
         ],
         "usesInStr": true,
+        "usesRuntime": true,
         "allowError": true
       }
     ]
