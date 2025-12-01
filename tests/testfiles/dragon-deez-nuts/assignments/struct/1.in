@@ -1,0 +1,29 @@
+/*
+Try to reassign a var struct variable and elements
+*/
+
+procedure main() returns integer {
+    struct S( integer i, character j );
+    var S s;
+    s.i -> std_output;
+    '\n' -> std_output;
+    s.j -> std_output;
+    '\n' -> std_output;
+
+    s = S(1, 'c');
+    s.i -> std_output;
+    '\n' -> std_output;
+    s.j -> std_output;
+    '\n' -> std_output;
+
+    s.i = 10;
+    s.j = 'j';
+    s.i -> std_output;
+    '\n' -> std_output;
+    s.j -> std_output;
+    '\n' -> std_output;
+
+    return 0;
+}
+
+// CHECK_FILE:1.out

@@ -1,0 +1,17 @@
+typealias struct S(integer x, integer y) Pair;
+
+function add(Pair p1, Pair p2) returns Pair {
+    Pair p3 = S(p1.x + p2.x, p1.y + p2.y); // Pair can not be used in place of S
+    return p3;
+}
+
+procedure main() returns integer {
+    const sol = add(S(1, 2), S(1, 2));
+    sol.x -> std_output;
+    '\n' -> std_output;
+    sol.y -> std_output;
+    '\n' -> std_output;
+    return 0;
+}
+
+// CHECK_FILE:2.out

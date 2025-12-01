@@ -1,0 +1,12 @@
+/*
+This test tries to make a nested struct of struct
+*/
+typealias struct s1 (integer i, real r) aliasStruct;
+
+procedure main() returns integer {
+    struct Another (character char, real float, aliasStruct struct_field);
+    var Another t2;
+    return 0;
+}
+
+// CHECK:DefinitionError on Line 7: Invalid struct declaration

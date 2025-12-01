@@ -1,0 +1,12 @@
+/*
+This test tries to use a typealias to initialise a struct literal
+*/
+typealias struct S(integer x, integer y) Pair;
+
+procedure main() returns integer {
+    var p = Pair(1, 2);
+
+    return 0;
+}
+
+// CHECK:SymbolError on Line 7: Unable to find a struct/function/procedure with this Id

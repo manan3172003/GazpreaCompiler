@@ -1,0 +1,11 @@
+/*
+This test tries to make a nested tuple of tuple
+*/
+
+procedure main() returns integer {
+    tuple (integer, real) t1;
+    tuple (character, real, tuple (real, real)) t2;
+    return 0;
+}
+
+// CHECK:DefinitionError on Line 13: Invalid tuple declaration

@@ -1,0 +1,10 @@
+/*
+This test tries to define a struct in procedure parameter
+*/
+procedure doSomething(struct S (integer x, character y) x) {}
+
+procedure main() returns integer {
+    return 0;
+}
+
+// CHECK:DefinitionError on Line 4: Cannot define a struct in a Function/Procedure parameters

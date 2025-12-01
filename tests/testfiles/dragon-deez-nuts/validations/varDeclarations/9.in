@@ -1,0 +1,10 @@
+/*
+This test tries to make a nested tuple of struct
+*/
+
+procedure main() returns integer {
+    tuple (character, real, struct S (integer x, character y)) t1;
+    return 0;
+}
+
+// CHECK:DefinitionError on Line 6: Invalid tuple declaration

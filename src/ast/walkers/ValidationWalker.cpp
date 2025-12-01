@@ -219,6 +219,7 @@ std::any ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ct
   return {};
 }
 std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureAst> ctx) {
+  visit(ctx->getProto());
   auto proto = ctx->getProto();
   if (proto->getName() == "main") {
     if (!proto->getParams().empty())
@@ -251,10 +252,14 @@ std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureA
 }
 std::any
 ValidationWalker::visitProcedureParams(std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
-  return AstWalker::visitProcedureParams(ctx);
+  visit(ctx->getParamType());
+  return {};
 }
 std::any ValidationWalker::visitProcedureCall(std::shared_ptr<statements::ProcedureCallAst> ctx) {
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  if (not methodSymbol)
+    throw CallError(ctx->getLineNumber(), "Call statement used on non-procedure type");
+
   // need to re-resolve to get defined function and setSymbol to latest symbol with body defined
   methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
       symTab->getGlobalScope()->resolveSymbol(methodSymbol->getName()));
@@ -408,7 +413,8 @@ std::any ValidationWalker::visitStruct(std::shared_ptr<expressions::StructLitera
 }
 std::any
 ValidationWalker::visitStructDeclaration(std::shared_ptr<statements::StructDeclarationAst> ctx) {
-  return AstWalker::visitStructDeclaration(ctx);
+  visit(ctx->getType());
+  return {};
 }
 std::any ValidationWalker::visitStructElementAssign(
     std::shared_ptr<statements::StructElementAssignAst> ctx) {
@@ -447,9 +453,14 @@ std::any ValidationWalker::visitStructAccess(std::shared_ptr<expressions::Struct
   return {};
 }
 std::any ValidationWalker::visitStructType(std::shared_ptr<types::StructTypeAst> ctx) {
-  const auto typeSymbol = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(ctx->getSymbol());
   for (const auto &elementAst : ctx->getTypes())
     visit(elementAst);
+
+  if (const auto scope = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getScope()))
+    throw DefinitionError(ctx->getLineNumber(),
+                          "Cannot define a struct in a Function/Procedure parameters");
+
+  const auto typeSymbol = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(ctx->getSymbol());
   for (const auto &resolvedType : typeSymbol->getResolvedTypes()) {
     if (std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(resolvedType) ||
         std::dynamic_pointer_cast<symTable::StructTypeSymbol>(resolvedType)) {
@@ -475,6 +486,7 @@ std::any ValidationWalker::visitTypealias(std::shared_ptr<statements::TypealiasA
   return {};
 }
 std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {
+  visit(ctx->getProto());
   if (!ctx->getProto()->getReturnType()) {
     throw ReturnError(ctx->getLineNumber(), "Function must have a return type");
   }
@@ -497,10 +509,14 @@ std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst
   return {};
 }
 std::any ValidationWalker::visitFunctionParam(std::shared_ptr<prototypes::FunctionParamAst> ctx) {
-  return AstWalker::visitFunctionParam(ctx);
+  visit(ctx->getParamType());
+  return {};
 }
 std::any ValidationWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
-  return AstWalker::visitPrototype(ctx);
+  for (const auto &param : ctx->getParams())
+    visit(param);
+  visit(ctx->getReturnType());
+  return {};
 }
 std::any ValidationWalker::visitStructFuncCallRouter(
     std::shared_ptr<expressions::StructFuncCallRouterAst> ctx) {
@@ -524,6 +540,9 @@ std::any ValidationWalker::visitStructFuncCallRouter(
 }
 std::any ValidationWalker::visitFuncProcCall(std::shared_ptr<expressions::FuncProcCallAst> ctx) {
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  if (not methodSymbol)
+    throw CallError(ctx->getLineNumber(), "Can only call functions/procedures");
+
   // need to re-resolve to get defined function and setSymbol to latest symbol with body defined
   methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
       symTab->getGlobalScope()->resolveSymbol(methodSymbol->getName()));
@@ -588,6 +607,7 @@ std::any ValidationWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst
 }
 std::any ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   visit(ctx->getExpression());
+  visit(ctx->getTargetType());
   const auto exprType = ctx->getExpression()->getInferredSymbolType();
   const auto targetType = ctx->getResolvedTargetType();
 
