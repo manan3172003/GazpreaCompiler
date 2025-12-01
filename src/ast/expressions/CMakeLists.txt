@@ -6,6 +6,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/IdentifierAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleAccessAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/BinaryAst.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/BuiltinFuncAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/CastAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ArgAst.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/CharLiteralAst.cpp"

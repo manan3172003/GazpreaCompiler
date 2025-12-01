@@ -1,7 +1,7 @@
 #include <ast/statements/MemberFunctionAst.h>
 
 namespace gazprea::ast::statements {
-NodeType MemberFunctionAst::getNodeType() const { return NodeType::Builtin; }
+NodeType MemberFunctionAst::getNodeType() const { return NodeType::MemberFunc; }
 std::string MemberFunctionAst::toStringTree(std::string prefix) const {
   std::stringstream ss;
   ss << prefix << left->toStringTree("");

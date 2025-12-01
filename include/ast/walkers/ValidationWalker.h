@@ -70,6 +70,11 @@ public:
   std::any visitAppendMemberFunc(std::shared_ptr<statements::AppendMemberFuncAst> ctx) override;
   std::any visitPushMemberFunc(std::shared_ptr<statements::PushMemberFuncAst> ctx) override;
   std::any visitConcatMemberFunc(std::shared_ptr<statements::ConcatMemberFuncAst> ctx) override;
+  std::any visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuiltinFuncAst> ctx) override;
+  std::any visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuiltinFuncAst> ctx) override;
+  std::any
+  visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBuiltinFuncAst> ctx) override;
+  std::any visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinFuncAst> ctx) override;
 
   // Helpers
   std::shared_ptr<symTable::Type>

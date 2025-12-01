@@ -16,13 +16,14 @@ std::any Backend::visitLenMemberFunc(std::shared_ptr<ast::statements::LenMemberF
     return {};
   }
 
-  auto lenFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("@vector_len");
+  auto lenFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("length");
   if (!lenFunc) {
-    makeLenMemberFunc();
-    lenFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("@vector_len");
+    makeLengthBuiltin();
+    lenFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("length");
   }
-
-  auto lenCall = builder->create<mlir::LLVM::CallOp>(loc, lenFunc, mlir::ValueRange{vectorAddr});
+  auto typeCodeConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1);
+  auto lenCall = builder->create<mlir::LLVM::CallOp>(loc, lenFunc,
+                                                     mlir::ValueRange{vectorAddr, typeCodeConst});
   auto lenValue = lenCall.getResult();
 
   auto lenAlloca = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());

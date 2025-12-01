@@ -4,6 +4,7 @@
 #include "ast/expressions/ArrayLiteralAst.h"
 #include "ast/expressions/BinaryAst.h"
 #include "ast/expressions/BoolLiteralAst.h"
+#include "ast/expressions/BuiltinFuncAst.h"
 #include "ast/expressions/CastAst.h"
 #include "ast/expressions/CharLiteralAst.h"
 #include "ast/expressions/DomainExprAst.h"
@@ -764,7 +765,9 @@ std::any AstBuilder::visitMatrixLiteral(GazpreaParser::MatrixLiteralContext *ctx
   return GazpreaBaseVisitor::visitMatrixLiteral(ctx);
 }
 std::any AstBuilder::visitFormatExpr(GazpreaParser::FormatExprContext *ctx) {
-  return GazpreaBaseVisitor::visitFormatExpr(ctx);
+  const auto formatAst = std::make_shared<expressions::FormatBuiltinFuncAst>(ctx->getStart());
+  formatAst->arg = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(formatAst);
 }
 std::any AstBuilder::visitStructAccessExpr(GazpreaParser::StructAccessExprContext *ctx) {
   const auto structExpression = std::make_shared<expressions::StructAccessAst>(ctx->getStart());
@@ -775,10 +778,14 @@ std::any AstBuilder::visitStructAccessExpr(GazpreaParser::StructAccessExprContex
   return std::static_pointer_cast<expressions::ExpressionAst>(structExpression);
 }
 std::any AstBuilder::visitLengthExpr(GazpreaParser::LengthExprContext *ctx) {
-  return GazpreaBaseVisitor::visitLengthExpr(ctx);
+  const auto lengthAst = std::make_shared<expressions::LengthBuiltinFuncAst>(ctx->getStart());
+  lengthAst->arg = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(lengthAst);
 }
 std::any AstBuilder::visitReverseExpr(GazpreaParser::ReverseExprContext *ctx) {
-  return GazpreaBaseVisitor::visitReverseExpr(ctx);
+  const auto reverseAst = std::make_shared<expressions::ReverseBuiltinFuncAst>(ctx->getStart());
+  reverseAst->arg = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(reverseAst);
 }
 std::any AstBuilder::visitArrayAccessExpr(GazpreaParser::ArrayAccessExprContext *ctx) {
   const auto arrayExpr =
@@ -805,7 +812,9 @@ std::any AstBuilder::visitDstarExpr(GazpreaParser::DstarExprContext *ctx) {
   return GazpreaBaseVisitor::visitDstarExpr(ctx);
 }
 std::any AstBuilder::visitShapeExpr(GazpreaParser::ShapeExprContext *ctx) {
-  return GazpreaBaseVisitor::visitShapeExpr(ctx);
+  const auto shapeAst = std::make_shared<expressions::ShapeBuiltinFuncAst>(ctx->getStart());
+  shapeAst->arg = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
+  return std::static_pointer_cast<expressions::ExpressionAst>(shapeAst);
 }
 std::any AstBuilder::visitSliceRangeExpr(GazpreaParser::SliceRangeExprContext *ctx) {
   const auto rangedIndexExpr = std::make_shared<expressions::RangedIndexExprAst>(ctx->getStart());

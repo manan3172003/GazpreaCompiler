@@ -855,4 +855,57 @@ std::any DefRefWalker::visitConcatMemberFunc(std::shared_ptr<statements::ConcatM
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
+std::any
+DefRefWalker::visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuiltinFuncAst> ctx) {
+  visit(ctx->arg);
+  ctx->setScope(symTab->getCurrentScope());
+  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
+      symTab->getCurrentScope()->resolveSymbol("length"));
+  methodSymbol->setReturnType(
+      resolvedType(ctx->getLineNumber(), std::make_shared<types::IntegerTypeAst>(ctx->token)));
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
+  ctx->setSymbol(methodSymbol);
+  return {};
+}
+std::any
+DefRefWalker::visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuiltinFuncAst> ctx) {
+  visit(ctx->arg);
+  ctx->setScope(symTab->getCurrentScope());
+  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
+      symTab->getCurrentScope()->resolveSymbol("shape"));
+  methodSymbol->setReturnType(
+      resolvedType(ctx->getLineNumber(), std::make_shared<types::ArrayTypeAst>(ctx->token)));
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
+  ctx->setSymbol(methodSymbol);
+  return {};
+}
+std::any
+DefRefWalker::visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBuiltinFuncAst> ctx) {
+  visit(ctx->arg);
+  ctx->setScope(symTab->getCurrentScope());
+  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
+      symTab->getCurrentScope()->resolveSymbol("reverse"));
+  if (ctx->arg->getNodeType() == ast::NodeType::ArrayLiteral) {
+    methodSymbol->setReturnType(
+        resolvedType(ctx->getLineNumber(), std::make_shared<types::ArrayTypeAst>(ctx->token)));
+  } else {
+    methodSymbol->setReturnType(
+        resolvedType(ctx->getLineNumber(), std::make_shared<types::VectorTypeAst>(ctx->token)));
+  }
+  // TODO: Add strings?
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
+  ctx->setSymbol(methodSymbol);
+  return {};
+}
+std::any
+DefRefWalker::visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinFuncAst> ctx) {
+  visit(ctx->arg);
+  ctx->setScope(symTab->getCurrentScope());
+  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
+      symTab->getCurrentScope()->resolveSymbol("format"));
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
+  // TODO: set return type as string
+  ctx->setSymbol(methodSymbol);
+  return {};
+}
 } // namespace gazprea::ast::walkers

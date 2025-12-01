@@ -879,4 +879,42 @@ ValidationWalker::visitConcatMemberFunc(std::shared_ptr<statements::ConcatMember
   ctx->setInferredDataType(ctx->getLeft()->getInferredDataType());
   return {};
 }
+std::any
+ValidationWalker::visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuiltinFuncAst> ctx) {
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  visit(ctx->arg);
+  ctx->setInferredSymbolType(methodSymbol->getReturnType());
+  ctx->setInferredDataType(std::make_shared<types::IntegerTypeAst>(ctx->token));
+  return {};
+}
+std::any
+ValidationWalker::visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuiltinFuncAst> ctx) {
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  visit(ctx->arg);
+  ctx->setInferredSymbolType(methodSymbol->getReturnType());
+  ctx->setInferredDataType(std::make_shared<types::ArrayTypeAst>(ctx->token));
+  return {};
+}
+std::any
+ValidationWalker::visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBuiltinFuncAst> ctx) {
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  visit(ctx->arg);
+  ctx->setInferredSymbolType(methodSymbol->getReturnType());
+  if (ctx->arg->getNodeType() == NodeType::ArrayLiteral) {
+    ctx->setInferredDataType(std::make_shared<types::ArrayTypeAst>(ctx->token));
+  } else {
+    ctx->setInferredDataType(std::make_shared<types::VectorTypeAst>(ctx->token));
+  }
+  // TODO: add strings?
+  return {};
+}
+std::any
+ValidationWalker::visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinFuncAst> ctx) {
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  visit(ctx->arg);
+  ctx->setInferredSymbolType(methodSymbol->getReturnType());
+  // TODO: Update it for strings
+  ctx->setInferredDataType(std::make_shared<types::IntegerTypeAst>(ctx->token));
+  return {};
+}
 } // namespace gazprea::ast::walkers

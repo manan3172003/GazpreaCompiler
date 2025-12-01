@@ -1,4 +1,6 @@
+#include "ast/prototypes/PrototypeAst.h"
 #include "symTable/BuiltInTypeSymbol.h"
+#include "symTable/MethodSymbol.h"
 
 #include <sstream>
 #include <symTable/SymTable.h>
@@ -10,7 +12,12 @@ void SymbolTable::initTypeSystem() const {
   globalScope->defineTypeSymbol(std::make_shared<BuiltInTypeSymbol>("character"));
   globalScope->defineTypeSymbol(std::make_shared<BuiltInTypeSymbol>("boolean"));
 
-  // TODO: Add more built-in types for part 2
+  // Builtins
+  globalScope->defineSymbol(std::make_shared<MethodSymbol>("length", ScopeType::Function));
+  globalScope->defineSymbol(std::make_shared<MethodSymbol>("shape", ScopeType::Function));
+  globalScope->defineSymbol(std::make_shared<MethodSymbol>("reverse", ScopeType::Function));
+  globalScope->defineSymbol(std::make_shared<MethodSymbol>("format", ScopeType::Function));
+  globalScope->defineSymbol(std::make_shared<MethodSymbol>("stream_state", ScopeType::Procedure));
 }
 SymbolTable::SymbolTable() {
   globalScope = std::make_shared<GlobalScope>();

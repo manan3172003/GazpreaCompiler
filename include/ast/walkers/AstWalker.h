@@ -5,6 +5,7 @@
 #include "ast/expressions/ArrayLiteralAst.h"
 #include "ast/expressions/BinaryAst.h"
 #include "ast/expressions/BoolLiteralAst.h"
+#include "ast/expressions/BuiltinFuncAst.h"
 #include "ast/expressions/CastAst.h"
 #include "ast/expressions/CharLiteralAst.h"
 #include "ast/expressions/FuncProcCallAst.h"
@@ -123,6 +124,19 @@ public:
     return {};
   }
   virtual std::any visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) { return {}; }
+  virtual std::any visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuiltinFuncAst> ctx) {
+    return {};
+  }
+  virtual std::any visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuiltinFuncAst> ctx) {
+    return {};
+  }
+  virtual std::any
+  visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBuiltinFuncAst> ctx) {
+    return {};
+  }
+  virtual std::any visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinFuncAst> ctx) {
+    return {};
+  }
   virtual std::any visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) {
     return {};
   }

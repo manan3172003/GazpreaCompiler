@@ -115,6 +115,17 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
     return visitPushMemberFunc(std::dynamic_pointer_cast<statements::PushMemberFuncAst>(ast));
   case NodeType::ConcatMemberFunc:
     return visitConcatMemberFunc(std::dynamic_pointer_cast<statements::ConcatMemberFuncAst>(ast));
+  case NodeType::LengthBuiltin:
+    return visitLengthBuiltinFunc(
+        std::dynamic_pointer_cast<expressions::LengthBuiltinFuncAst>(ast));
+  case NodeType::ShapeBuiltin:
+    return visitShapeBuiltinFunc(std::dynamic_pointer_cast<expressions::ShapeBuiltinFuncAst>(ast));
+  case NodeType::ReverseBuiltin:
+    return visitReverseBuiltinFunc(
+        std::dynamic_pointer_cast<expressions::ReverseBuiltinFuncAst>(ast));
+  case NodeType::FormatBuiltin:
+    return visitFormatBuiltinFunc(
+        std::dynamic_pointer_cast<expressions::FormatBuiltinFuncAst>(ast));
   default:
     return {};
   }

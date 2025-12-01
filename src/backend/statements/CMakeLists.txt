@@ -18,7 +18,6 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/StructElementAssign.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleUnpackAssign.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Typealias.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/MemberFunc.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_statements_src})

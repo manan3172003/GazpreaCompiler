@@ -58,7 +58,6 @@ public:
   std::any visitInput(std::shared_ptr<ast::statements::InputAst> ctx) override;
   std::any visitOutput(std::shared_ptr<ast::statements::OutputAst> ctx) override;
   std::any visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> ctx) override;
-  std::any makeLenMemberFunc();
   std::any visitProcedureParams(std::shared_ptr<ast::prototypes::ProcedureParamAst> ctx) override;
   std::any visitProcedureCall(std::shared_ptr<ast::statements::ProcedureCallAst> ctx) override;
   std::any visitReturn(std::shared_ptr<ast::statements::ReturnAst> ctx) override;
@@ -102,6 +101,14 @@ public:
   std::any visitIteratorLoop(std::shared_ptr<ast::statements::IteratorLoopAst> ctx) override;
   std::any visitArray(std::shared_ptr<ast::expressions::ArrayLiteralAst> ctx) override;
   std::any visitVectorType(std::shared_ptr<ast::types::VectorTypeAst> ctx) override;
+  std::any
+  visitLengthBuiltinFunc(std::shared_ptr<ast::expressions::LengthBuiltinFuncAst> ctx) override;
+  std::any
+  visitShapeBuiltinFunc(std::shared_ptr<ast::expressions::ShapeBuiltinFuncAst> ctx) override;
+  std::any
+  visitReverseBuiltinFunc(std::shared_ptr<ast::expressions::ReverseBuiltinFuncAst> ctx) override;
+  std::any
+  visitFormatBuiltinFunc(std::shared_ptr<ast::expressions::FormatBuiltinFuncAst> ctx) override;
 
 protected:
   void setupPrintf() const;
@@ -114,6 +121,7 @@ protected:
   void printInt(mlir::Value integer);
   void printIntChar(mlir::Value integer);
   void printBool(mlir::Value boolValue);
+  void makeLengthBuiltin();
   void printChar(char c);
   void printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType);
   void computeArraySizeIfArray(std::shared_ptr<ast::statements::DeclarationAst> ctx,
@@ -194,6 +202,8 @@ private:
   mlir::Value constZero() const;
 
   mlir::Type structTy(const mlir::ArrayRef<mlir::Type> &memberTypes);
+  mlir::Type arrayTy();
+  mlir::Type vectorTy();
   mlir::Type floatTy() const;
   mlir::Type charTy() const;
   mlir::Type boolTy() const;

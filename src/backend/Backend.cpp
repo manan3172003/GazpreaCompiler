@@ -253,6 +253,8 @@ mlir::Value Backend::constZero() const {
 mlir::Type Backend::structTy(const mlir::ArrayRef<mlir::Type> &memberTypes) {
   return mlir::LLVM::LLVMStructType::getLiteral(&context, memberTypes);
 }
+mlir::Type Backend::arrayTy() { return structTy({intTy(), ptrTy(), boolTy()}); }
+mlir::Type Backend::vectorTy() { return structTy({intTy(), intTy(), ptrTy(), boolTy()}); }
 mlir::Type Backend::floatTy() const { return mlir::Float32Type::get(builder->getContext()); }
 mlir::Type Backend::charTy() const { return mlir::IntegerType::get(builder->getContext(), 8); }
 mlir::Type Backend::boolTy() const { return mlir::IntegerType::get(builder->getContext(), 1); }
