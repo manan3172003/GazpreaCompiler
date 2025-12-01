@@ -893,6 +893,13 @@ bool Backend::isTypeArray(std::shared_ptr<symTable::Type> type) {
 bool Backend::isTypeVector(std::shared_ptr<symTable::Type> type) {
   return (type->getName().substr(0, 6) == "vector") ? true : false;
 }
+bool Backend::isScalarType(std::shared_ptr<symTable::Type> type) const {
+  if (!type) {
+    return false;
+  }
+  const auto &name = type->getName();
+  return name == "integer" || name == "real" || name == "character" || name == "boolean";
+}
 
 void Backend::pushElementToScopeStack(std::shared_ptr<ast::Ast> ctx,
                                       std::shared_ptr<symTable::Type> elementType,

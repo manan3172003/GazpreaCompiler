@@ -1,0 +1,7 @@
+procedure main() returns integer {
+    integer x =  1;
+    integer[3] y = reverse(x);
+    y -> std_output;
+    return 0;
+}
+//CHECK:CallError on line 3

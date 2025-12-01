@@ -889,14 +889,6 @@ DefRefWalker::visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBuilti
   ctx->setScope(symTab->getCurrentScope());
   const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
       symTab->getCurrentScope()->resolveSymbol("reverse"));
-  if (ctx->arg->getNodeType() == ast::NodeType::ArrayLiteral) {
-    methodSymbol->setReturnType(
-        resolvedType(ctx->getLineNumber(), std::make_shared<types::ArrayTypeAst>(ctx->token)));
-  } else {
-    methodSymbol->setReturnType(
-        resolvedType(ctx->getLineNumber(), std::make_shared<types::VectorTypeAst>(ctx->token)));
-  }
-  // TODO: Add strings?
   throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
   ctx->setSymbol(methodSymbol);
   return {};

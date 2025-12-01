@@ -1,0 +1,9 @@
+procedure main() returns integer {
+    integer[3] x =  [1, 2, 3];
+    integer[3] y = reverse(x);
+    vector<integer[1]> z = [[1], [2], [3]];
+    vector<integer[1]> a = reverse(z);
+    y -> std_output;
+    return 0;
+}
+//CHECK:[3 2 1]

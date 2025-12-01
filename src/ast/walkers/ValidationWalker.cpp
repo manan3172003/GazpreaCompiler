@@ -910,17 +910,16 @@ ValidationWalker::visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBu
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
   const auto argType = ctx->arg->getInferredSymbolType();
+  // TODO: support strings
   if (!argType ||
       (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
     throw CallError(ctx->getLineNumber(), "reverse builtin must be called on arrays or vectors");
   }
-  ctx->setInferredSymbolType(methodSymbol->getReturnType());
-  if (ctx->arg->getNodeType() == NodeType::ArrayLiteral) {
-    ctx->setInferredDataType(std::make_shared<types::ArrayTypeAst>(ctx->token));
-  } else {
-    ctx->setInferredDataType(std::make_shared<types::VectorTypeAst>(ctx->token));
-  }
-  // TODO: add strings?
+
+  // Set the method symbol's return type to match the argument type
+  methodSymbol->setReturnType(argType);
+  ctx->setInferredSymbolType(argType);
+  ctx->setInferredDataType(ctx->arg->getInferredDataType());
   return {};
 }
 std::any

@@ -233,20 +233,22 @@ mlir::Value Backend::maxSubArraySize(mlir::Value arrayStruct,
   return forOp.getResult(0);
 }
 
-mlir::Value Backend::mallocArray(mlir::Type elementMLIRType, mlir::Value elementCount) {
+mlir::LLVM::LLVMFuncOp Backend::getOrCreateMallocFunc() {
   auto mallocFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("malloc");
-  if (!mallocFunc) {
-    auto savedInsertionPoint = builder->saveInsertionPoint();
-    builder->setInsertionPointToStart(module.getBody());
-
-    auto i64Type = builder->getI64Type();
-    auto mallocFnType = mlir::LLVM::LLVMFunctionType::get(ptrTy(), {i64Type},
-                                                          /*isVarArg=*/false);
-    mallocFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "malloc", mallocFnType);
-
-    builder->restoreInsertionPoint(savedInsertionPoint);
+  if (mallocFunc) {
+    return mallocFunc;
   }
+  auto savedInsertionPoint = builder->saveInsertionPoint();
+  builder->setInsertionPointToStart(module.getBody());
+  auto i64Type = builder->getI64Type();
+  auto mallocFnType = mlir::LLVM::LLVMFunctionType::get(ptrTy(), {i64Type}, /*isVarArg=*/false);
+  mallocFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "malloc", mallocFnType);
+  builder->restoreInsertionPoint(savedInsertionPoint);
+  return mallocFunc;
+}
 
+mlir::Value Backend::mallocArray(mlir::Type elementMLIRType, mlir::Value elementCount) {
+  auto mallocFunc = getOrCreateMallocFunc();
   auto i64Type = builder->getI64Type();
 
   auto tempAlloc = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), elementMLIRType, constOne());
@@ -265,6 +267,18 @@ mlir::Value Backend::mallocArray(mlir::Type elementMLIRType, mlir::Value element
 
   return builder->create<mlir::LLVM::CallOp>(loc, mallocFunc, mlir::ValueRange{bytesToAllocate})
       .getResult();
+}
+
+mlir::Value Backend::getTypeSizeInBytes(mlir::Type elementType) {
+  auto tempAlloc = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), elementType, constOne());
+  auto i64Type = builder->getI64Type();
+  auto one = builder->create<mlir::LLVM::ConstantOp>(loc, i64Type, 1);
+  auto nextPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), elementType, tempAlloc,
+                                                    mlir::ValueRange{one});
+  auto baseInt = builder->create<mlir::LLVM::PtrToIntOp>(loc, i64Type, tempAlloc);
+  auto nextInt = builder->create<mlir::LLVM::PtrToIntOp>(loc, i64Type, nextPtr);
+  auto elementSizeI64 = builder->create<mlir::LLVM::SubOp>(loc, i64Type, nextInt, baseInt);
+  return builder->create<mlir::LLVM::TruncOp>(loc, intTy(), elementSizeI64);
 }
 
 mlir::Value Backend::getDefaultValue(std::shared_ptr<symTable::Type> type) {

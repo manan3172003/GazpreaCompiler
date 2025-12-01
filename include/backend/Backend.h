@@ -123,6 +123,7 @@ protected:
   void printBool(mlir::Value boolValue);
   void makeLengthBuiltin();
   void makeShapeBuiltin();
+  void makeReverseBuiltin();
   void printChar(char c);
   void printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType);
   void computeArraySizeIfArray(std::shared_ptr<ast::statements::DeclarationAst> ctx,
@@ -137,8 +138,10 @@ protected:
                                  mlir::Value arrayStruct) const;
   mlir::Value gepOpVector(mlir::Type vectorStructType, mlir::Value vectorStruct,
                           VectorOffset offset) const;
+  mlir::LLVM::LLVMFuncOp getOrCreateMallocFunc();
   mlir::Value maxSubArraySize(mlir::Value arrayStruct, std::shared_ptr<symTable::Type> arrayType);
   mlir::Value mallocArray(mlir::Type elementMLIRType, mlir::Value elementCount);
+  mlir::Value getTypeSizeInBytes(mlir::Type elementType);
   mlir::Value getDefaultValue(std::shared_ptr<symTable::Type> type);
   void padArrayWithValue(mlir::Value arrayStruct, std::shared_ptr<symTable::Type> arrayType,
                          mlir::Value currentSize, mlir::Value targetSize, mlir::Value defaultValue);
@@ -164,6 +167,7 @@ protected:
   bool isTypeVector(std::shared_ptr<symTable::Type> type);
   void copyVectorStruct(std::shared_ptr<symTable::Type> type, mlir::Value fromVectorStruct,
                         mlir::Value destVectorStruct);
+  bool isScalarType(std::shared_ptr<symTable::Type> type) const;
   void pushElementToScopeStack(std::shared_ptr<ast::Ast> ctx,
                                std::shared_ptr<symTable::Type> elementType, mlir::Value val);
   std::pair<std::shared_ptr<symTable::Type>, mlir::Value>
