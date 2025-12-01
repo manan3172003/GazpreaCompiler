@@ -515,7 +515,8 @@ std::any ValidationWalker::visitFunctionParam(std::shared_ptr<prototypes::Functi
 std::any ValidationWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
   for (const auto &param : ctx->getParams())
     visit(param);
-  visit(ctx->getReturnType());
+  if (ctx->getReturnType())
+    visit(ctx->getReturnType());
   return {};
 }
 std::any ValidationWalker::visitStructFuncCallRouter(

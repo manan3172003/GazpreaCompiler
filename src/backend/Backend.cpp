@@ -849,6 +849,24 @@ void Backend::copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAd
           builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(fromSubType), newAddrForElement);
       builder->create<mlir::LLVM::StoreOp>(loc, loadedValue, newElementPtr);
     }
+  } else if (type->getName() == "struct") {
+    auto sTy = getMLIRType(type);
+    const auto fromStructTypeSymbol = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(type);
+    for (size_t i = 0; i < fromStructTypeSymbol->getResolvedTypes().size(); i++) {
+      auto fromSubType = fromStructTypeSymbol->getResolvedTypes()[i];
+      auto gepIndices = std::vector<mlir::Value>{
+          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
+      auto elementPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, fromAddr, gepIndices);
+      auto newElementPtr =
+          builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, destAddr, gepIndices);
+      auto newAddrForElement =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(fromSubType), constOne());
+      copyValue(fromSubType, elementPtr, newAddrForElement);
+      auto loadedValue =
+          builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(fromSubType), newAddrForElement);
+      builder->create<mlir::LLVM::StoreOp>(loc, loadedValue, newElementPtr);
+    }
   } else if (isTypeArray(type)) {
     copyArrayStruct(type, fromAddr, destAddr);
   } else {

@@ -9,4 +9,4 @@ procedure main() returns integer {
     return 0;
 }
 
-// CHECK:DefinitionError on Line 13: Invalid tuple declaration
+// CHECK:DefinitionError on Line 8: Invalid tuple declaration
