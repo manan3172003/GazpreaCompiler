@@ -1,0 +1,7 @@
+procedure main() returns integer {
+    vector<integer[1]> x = [[1], [2], [3]];
+    x.push([4]);
+    x -> std_output;
+    return 0;
+}
+//CHECK:[[1] [2] [3] [4]]

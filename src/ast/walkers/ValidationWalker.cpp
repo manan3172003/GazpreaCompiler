@@ -883,6 +883,11 @@ std::any
 ValidationWalker::visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuiltinFuncAst> ctx) {
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
+  const auto argType = ctx->arg->getInferredSymbolType();
+  if (!argType ||
+      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
+    throw CallError(ctx->getLineNumber(), "length builtin must be called on arrays or vectors");
+  }
   ctx->setInferredSymbolType(methodSymbol->getReturnType());
   ctx->setInferredDataType(std::make_shared<types::IntegerTypeAst>(ctx->token));
   return {};
@@ -891,6 +896,11 @@ std::any
 ValidationWalker::visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuiltinFuncAst> ctx) {
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
+  const auto argType = ctx->arg->getInferredSymbolType();
+  if (!argType ||
+      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
+    throw CallError(ctx->getLineNumber(), "shape builtin must be called on arrays or vectors");
+  }
   ctx->setInferredSymbolType(methodSymbol->getReturnType());
   ctx->setInferredDataType(std::make_shared<types::ArrayTypeAst>(ctx->token));
   return {};
@@ -899,6 +909,11 @@ std::any
 ValidationWalker::visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBuiltinFuncAst> ctx) {
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
+  const auto argType = ctx->arg->getInferredSymbolType();
+  if (!argType ||
+      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
+    throw CallError(ctx->getLineNumber(), "reverse builtin must be called on arrays or vectors");
+  }
   ctx->setInferredSymbolType(methodSymbol->getReturnType());
   if (ctx->arg->getNodeType() == NodeType::ArrayLiteral) {
     ctx->setInferredDataType(std::make_shared<types::ArrayTypeAst>(ctx->token));
@@ -912,6 +927,11 @@ std::any
 ValidationWalker::visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinFuncAst> ctx) {
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
+  const auto argType = ctx->arg->getInferredSymbolType();
+  if (!argType ||
+      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
+    throw CallError(ctx->getLineNumber(), "format builtin must be called on arrays or vectors");
+  }
   ctx->setInferredSymbolType(methodSymbol->getReturnType());
   // TODO: Update it for strings
   ctx->setInferredDataType(std::make_shared<types::IntegerTypeAst>(ctx->token));

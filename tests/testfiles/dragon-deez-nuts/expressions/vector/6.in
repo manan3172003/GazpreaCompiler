@@ -1,0 +1,6 @@
+procedure main() returns integer {
+    integer[1] x = [1];
+    x.len() -> std_output;
+    return 0;
+}
+//CHECK:TypeError on Line 3

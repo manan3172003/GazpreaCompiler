@@ -1,0 +1,8 @@
+procedure main() returns integer {
+    vector<integer> x = [1, 2, 3];
+    vector<integer> y;
+    x.len() -> std_output;
+    y.len() -> std_output;
+    return 0;
+}
+//CHECK:30
