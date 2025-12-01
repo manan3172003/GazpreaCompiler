@@ -1,0 +1,8 @@
+procedure main() returns integer {
+    integer[2][3] x = [[1, 2], [1, 2, 3]];
+    vector<integer> y = [1, 2, 3];
+    shape(x) -> std_output;
+    shape(y) -> std_output;
+    return 0;
+}
+//CHECK:[2 3][3]

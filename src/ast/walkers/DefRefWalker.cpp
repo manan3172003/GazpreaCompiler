@@ -861,8 +861,9 @@ DefRefWalker::visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuiltinF
   ctx->setScope(symTab->getCurrentScope());
   const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
       symTab->getCurrentScope()->resolveSymbol("length"));
-  methodSymbol->setReturnType(
-      resolvedType(ctx->getLineNumber(), std::make_shared<types::IntegerTypeAst>(ctx->token)));
+  auto intType =
+      std::dynamic_pointer_cast<symTable::Type>(symTab->getGlobalScope()->resolveType("integer"));
+  methodSymbol->setReturnType(intType);
   throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
   ctx->setSymbol(methodSymbol);
   return {};
@@ -873,8 +874,11 @@ DefRefWalker::visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuiltinFun
   ctx->setScope(symTab->getCurrentScope());
   const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
       symTab->getCurrentScope()->resolveSymbol("shape"));
-  methodSymbol->setReturnType(
-      resolvedType(ctx->getLineNumber(), std::make_shared<types::ArrayTypeAst>(ctx->token)));
+  auto intType =
+      std::dynamic_pointer_cast<symTable::Type>(symTab->getGlobalScope()->resolveType("integer"));
+  auto arrayTypeSymbol = std::make_shared<symTable::ArrayTypeSymbol>("array");
+  arrayTypeSymbol->setType(intType);
+  methodSymbol->setReturnType(arrayTypeSymbol);
   throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
   ctx->setSymbol(methodSymbol);
   return {};

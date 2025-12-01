@@ -14,6 +14,7 @@ std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> 
 
     // Create Builtins before main
     makeLengthBuiltin();
+    makeShapeBuiltin();
 
     auto mainType = mlir::LLVM::LLVMFunctionType::get(intTy(), {}, false);
     auto mainFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "main", mainType);

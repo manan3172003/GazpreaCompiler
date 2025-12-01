@@ -122,6 +122,7 @@ protected:
   void printIntChar(mlir::Value integer);
   void printBool(mlir::Value boolValue);
   void makeLengthBuiltin();
+  void makeShapeBuiltin();
   void printChar(char c);
   void printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType);
   void computeArraySizeIfArray(std::shared_ptr<ast::statements::DeclarationAst> ctx,

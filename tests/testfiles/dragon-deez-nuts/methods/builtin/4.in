@@ -1,0 +1,6 @@
+procedure main() returns integer {
+    integer x = 5;
+    shape(x) -> std_output;
+    return 0;
+}
+//CHECK:CallError on Line 3
