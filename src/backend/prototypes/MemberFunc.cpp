@@ -122,8 +122,9 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
           b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
         });
 
-    auto hasAlloc = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sgt,
-                                                        currentCapacity, zeroConst);
+    auto nullPtr = builder->create<mlir::LLVM::ZeroOp>(loc, ptrTy());
+    auto hasAlloc = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne,
+                                                        oldDataPtr, nullPtr);
     builder->create<mlir::scf::IfOp>(
         loc, hasAlloc,
         [&](mlir::OpBuilder &b, mlir::Location l) {

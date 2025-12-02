@@ -1,7 +1,7 @@
 procedure main() returns integer {
     vector<integer> x = [1, 2, 3];
     integer[3] y = [1, 2, 3];
-    integer[5][1] z = [[1], [2], [3]];
+    integer[5][1] z = [[1], [2], [3], [4], [5]];
     length(x) -> std_output;
     length(y) -> std_output;
     length(z) -> std_output;

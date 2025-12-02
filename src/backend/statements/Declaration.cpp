@@ -22,6 +22,7 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
     if (vectorTypeSymbol) {
       auto newAddr = createVectorValue(vectorTypeSymbol, type, valueAddr);
       ctx->getSymbol()->value = newAddr;
+      ctx->getScope()->pushElementToFree(std::make_pair(vectorTypeSymbol, newAddr));
       return {};
     }
   }
@@ -32,6 +33,9 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
   arraySizeValidation(variableSymbol, type, newAddr);
   ctx->getSymbol()->value = newAddr;
   castIfNeeded(newAddr, ctx->getExpr()->getInferredSymbolType(), variableSymbol->getType());
+  if (isTypeArray(variableSymbol->getType())) {
+    ctx->getScope()->pushElementToFree(std::make_pair(variableSymbol->getType(), newAddr));
+  }
   return {};
 }
 } // namespace gazprea::backend

@@ -31,16 +31,6 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
   visit(ctx->getExpr());
   inAssignment = false;
 
-  if (ctx->getLVal()->getNodeType() == NodeType::IdentifierLeft) {
-    const auto idAssignStat =
-        std::dynamic_pointer_cast<statements::IdentifierLeftAst>(ctx->getLVal());
-    const auto varSymbol =
-        std::dynamic_pointer_cast<symTable::VariableSymbol>(idAssignStat->getSymbol());
-    if (varSymbol) {
-      ensureArrayLiteralType(ctx->getExpr(), varSymbol->getType());
-    }
-  }
-
   const auto exprTypeSymbol = ctx->getExpr()->getInferredSymbolType();
   if (ctx->getLVal()->getNodeType() == NodeType::IdentifierLeft) {
     const auto idAssignStat =
@@ -861,7 +851,7 @@ std::any ValidationWalker::visitPushMemberFunc(std::shared_ptr<statements::PushM
     visit(arg);
     auto argType =
         arg->getExpr() ? arg->getExpr()->getInferredSymbolType() : arg->getInferredSymbolType();
-    if (!elementType || !argType || argType->getName() != elementType->getName()) {
+    if (!elementType || !argType || !typesMatch(elementType, argType)) {
       throw TypeError(arg->getLineNumber(), "push argument type mismatch");
     }
   }
@@ -884,6 +874,7 @@ ValidationWalker::visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuil
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
   const auto argType = ctx->arg->getInferredSymbolType();
+  // TODO: support strings
   if (!argType ||
       (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
     throw CallError(ctx->getLineNumber(), "length builtin must be called on arrays or vectors");
@@ -897,6 +888,7 @@ ValidationWalker::visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuilti
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
   const auto argType = ctx->arg->getInferredSymbolType();
+  // TODO: Support strings
   if (!argType ||
       (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
     throw CallError(ctx->getLineNumber(), "shape builtin must be called on arrays or vectors");
