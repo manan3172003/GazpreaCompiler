@@ -148,6 +148,7 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
 
     auto insertPtr = builder->create<mlir::LLVM::GEPOp>(
         loc, ptrTy(), elementMLIRType, ensuredDataPtr, mlir::ValueRange{currentSize});
+    castIfNeeded(argAddr, argType, elementType);
     copyValue(elementType, argAddr, insertPtr);
 
     builder->create<mlir::LLVM::StoreOp>(loc, newSize, sizeAddr);
