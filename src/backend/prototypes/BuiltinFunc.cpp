@@ -378,9 +378,6 @@ Backend::visitReverseBuiltinFunc(std::shared_ptr<ast::expressions::ReverseBuilti
     return {};
   }
 
-  // Get the MLIR type and size for the element
-  // This works for any element type (scalar or composite like arrays/structs)
-  // The reverse performs a 1D swap of elements at the top level
   auto elementMLIRType = getMLIRType(elementType);
   auto elementSizeValue = getTypeSizeInBytes(elementMLIRType);
 
@@ -395,6 +392,48 @@ Backend::visitReverseBuiltinFunc(std::shared_ptr<ast::expressions::ReverseBuilti
                             loc, reverseFunc,
                             mlir::ValueRange{dataPtr, sizeValue, elementSizeValue, capacityValue})
                         .getResult();
+
+  const auto elemTypeName = elementType->getName();
+  const bool isElemArray = elemTypeName.rfind("array", 0) == 0;
+  const bool isElemVector = elemTypeName.rfind("vector", 0) == 0;
+
+  if (isElemArray || isElemVector) {
+    auto zero = constZero();
+    auto one = constOne();
+    auto idx32Ty = builder->getI32Type();
+    auto zeroIdx = builder->create<mlir::LLVM::ConstantOp>(loc, idx32Ty, 0);
+    auto oneIdx = builder->create<mlir::LLVM::ConstantOp>(loc, idx32Ty, 1);
+    builder->create<mlir::scf::ForOp>(
+        loc, zero, sizeValue, one, mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value idx, mlir::ValueRange) {
+          auto elemStructPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                           mlir::ValueRange{idx});
+
+          auto elemSizePtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, elemStructPtr,
+                                                         mlir::ValueRange{zeroIdx, zeroIdx});
+          auto elemSize = b.create<mlir::LLVM::LoadOp>(l, intTy(), elemSizePtr);
+
+          auto elemDataPtrPtr = b.create<mlir::LLVM::GEPOp>(
+              l, ptrTy(), elementMLIRType, elemStructPtr, mlir::ValueRange{zeroIdx, oneIdx});
+          auto oldElemDataPtr = b.create<mlir::LLVM::LoadOp>(l, ptrTy(), elemDataPtrPtr);
+
+          auto newElemDataPtr = mallocArray(intTy(), elemSize);
+          auto i8Ty = b.getI8Type();
+          b.create<mlir::scf::ForOp>(
+              l, zero, elemSize, one, mlir::ValueRange{},
+              [&](mlir::OpBuilder &b2, mlir::Location l2, mlir::Value byteIdx, mlir::ValueRange) {
+                auto srcPtr = b2.create<mlir::LLVM::GEPOp>(l2, ptrTy(), i8Ty, oldElemDataPtr,
+                                                           mlir::ValueRange{byteIdx});
+                auto destPtr = b2.create<mlir::LLVM::GEPOp>(l2, ptrTy(), i8Ty, newElemDataPtr,
+                                                            mlir::ValueRange{byteIdx});
+                auto byteVal = b2.create<mlir::LLVM::LoadOp>(l2, i8Ty, srcPtr);
+                b2.create<mlir::LLVM::StoreOp>(l2, byteVal, destPtr);
+                b2.create<mlir::scf::YieldOp>(l2);
+              });
+          b.create<mlir::LLVM::StoreOp>(l, newElemDataPtr, elemDataPtrPtr);
+          b.create<mlir::scf::YieldOp>(l);
+        });
+  }
 
   auto resultStructType = getMLIRType(argType);
   auto resultAlloca =
@@ -419,7 +458,6 @@ Backend::visitReverseBuiltinFunc(std::shared_ptr<ast::expressions::ReverseBuilti
   }
 
   ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), resultAlloca);
-
   return {};
 }
 std::any
