@@ -1,3 +1,4 @@
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 #include <backend/Backend.h>
 
@@ -150,6 +151,30 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
         loc, ptrTy(), elementMLIRType, ensuredDataPtr, mlir::ValueRange{currentSize});
     castIfNeeded(argAddr, argType, elementType);
     copyValue(elementType, argAddr, insertPtr);
+
+    // Pad array element if the element type is an array
+    if (auto arrayElementType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+      mlir::Value targetOuterSize;
+      mlir::Value targetInnerSize;
+      if (!vectorTypeSym->declaredElementSize.empty()) {
+        targetOuterSize = builder->create<mlir::LLVM::LoadOp>(
+            loc, intTy(), vectorTypeSym->declaredElementSize[0]);
+        if (vectorTypeSym->declaredElementSize.size() > 1) {
+          targetInnerSize = builder->create<mlir::LLVM::LoadOp>(
+              loc, intTy(), vectorTypeSym->declaredElementSize[1]);
+        }
+      } else if (!vectorTypeSym->inferredElementSize.empty()) {
+        targetOuterSize = builder->create<mlir::LLVM::ConstantOp>(
+            loc, intTy(), vectorTypeSym->inferredElementSize[0]);
+        if (vectorTypeSym->inferredElementSize.size() > 1) {
+          targetInnerSize = builder->create<mlir::LLVM::ConstantOp>(
+              loc, intTy(), vectorTypeSym->inferredElementSize[1]);
+        }
+      }
+      if (targetOuterSize) {
+        padArrayIfNeeded(insertPtr, elementType, targetOuterSize, targetInnerSize);
+      }
+    }
 
     builder->create<mlir::LLVM::StoreOp>(loc, newSize, sizeAddr);
   }
