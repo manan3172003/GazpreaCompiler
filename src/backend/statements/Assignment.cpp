@@ -12,13 +12,13 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
   auto [type, valueAddr] = popElementFromStack(ctx);
   auto variableSymbol =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLVal()->getSymbol());
-  if (not variableSymbol) { // Tuple Unpack Assignment
-    auto tupleUnpackAssignAst =
-        std::dynamic_pointer_cast<ast::statements::TupleUnpackAssignAst>(ctx->getLVal());
+  if (auto tupleUnpackAssignAst = std::dynamic_pointer_cast<ast::statements::TupleUnpackAssignAst>(
+          ctx->getLVal())) { // Tuple Unpack Assignment
     auto tupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(
         ctx->getExpr()->getInferredSymbolType());
     for (size_t i = 0; i < tupleUnpackAssignAst->getLVals().size(); i++) {
       auto lVal = tupleUnpackAssignAst->getLVals()[i];
+      visit(lVal);
       auto lValSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(lVal->getSymbol());
       auto gepIndices = std::vector<mlir::Value>{
           builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
@@ -27,28 +27,22 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       auto elementPtr = builder->create<mlir::LLVM::GEPOp>(
           loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()),
           getMLIRType(tupleTypeSymbol), valueAddr, gepIndices);
+      const auto destinationPtr = lVal->getEvaluatedAddr();
       if (isTypeArray(lValSymbol->getType())) {
-        freeArray(lValSymbol->getType(), lValSymbol->value);
+        freeArray(lValSymbol->getType(), destinationPtr);
       } else if (isTypeVector(lValSymbol->getType())) {
-        freeVector(lValSymbol->getType(), lValSymbol->value);
+        freeVector(lValSymbol->getType(), destinationPtr);
       }
-      copyValue(lValSymbol->getType(), elementPtr, lValSymbol->value);
-      castIfNeeded(lValSymbol->value, tupleTypeSymbol->getResolvedTypes()[i],
-                   lValSymbol->getType());
+      copyValue(lValSymbol->getType(), elementPtr, destinationPtr);
+      castIfNeeded(destinationPtr, tupleTypeSymbol->getResolvedTypes()[i],
+                   lVal->getAssignSymbolType());
     }
-    return {};
-  }
-  if (auto tupleElementAssign = std::dynamic_pointer_cast<ast::statements::TupleElementAssignAst>(
-          ctx->getLVal())) { // check if tuple assign
+  } else if (auto tupleElementAssign =
+                 std::dynamic_pointer_cast<ast::statements::TupleElementAssignAst>(
+                     ctx->getLVal())) { // check if tuple assign
+    visit(tupleElementAssign);
+    auto elementAddr = tupleElementAssign->getEvaluatedAddr();
     auto tupleTy = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(variableSymbol->getType());
-    auto sTy = getMLIRType(tupleTy);
-    auto gepIndices = std::vector<mlir::Value>{
-        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
-        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(),
-                                                tupleElementAssign->getFieldIndex() - 1)};
-    auto elementAddr = builder->create<mlir::LLVM::GEPOp>(
-        loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, variableSymbol->value,
-        gepIndices);
     if (isTypeArray(variableSymbol->getType())) {
       freeArray(variableSymbol->getType(), variableSymbol->value);
     } else if (isTypeVector(variableSymbol->getType())) {
@@ -57,21 +51,13 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
     copyValue(type, valueAddr, elementAddr);
     castIfNeeded(elementAddr, ctx->getExpr()->getInferredSymbolType(),
                  tupleTy->getResolvedTypes()[tupleElementAssign->getFieldIndex() - 1]);
-  }
-  if (const auto structElementAssign =
-          std::dynamic_pointer_cast<ast::statements::StructElementAssignAst>(
-              ctx->getLVal())) { // check if tuple assign
+  } else if (const auto structElementAssign =
+                 std::dynamic_pointer_cast<ast::statements::StructElementAssignAst>(
+                     ctx->getLVal())) { // check if struct assign
+    visit(structElementAssign);
     const auto structTy =
         std::dynamic_pointer_cast<symTable::StructTypeSymbol>(variableSymbol->getType());
-    auto sTy = getMLIRType(structTy);
-    auto gepIndices = std::vector<mlir::Value>{
-        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
-        builder->create<mlir::LLVM::ConstantOp>(
-            loc, builder->getI32Type(),
-            structTy->getIdx(structElementAssign->getElementName()) - 1)};
-    auto elementAddr = builder->create<mlir::LLVM::GEPOp>(
-        loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()), sTy, variableSymbol->value,
-        gepIndices);
+    auto elementAddr = structElementAssign->getEvaluatedAddr();
     if (isTypeArray(variableSymbol->getType())) {
       freeArray(variableSymbol->getType(), variableSymbol->value);
     } else if (isTypeVector(variableSymbol->getType())) {
@@ -80,6 +66,24 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
     copyValue(type, valueAddr, elementAddr);
     castIfNeeded(elementAddr, ctx->getExpr()->getInferredSymbolType(),
                  structTy->getResolvedType(structElementAssign->getElementName()));
+  } else if (const auto arrayElementAssign =
+                 std::dynamic_pointer_cast<ast::statements::ArrayElementAssignAst>(
+                     ctx->getLVal())) {
+    visit(arrayElementAssign);
+    if (arrayElementAssign->getElementIndex()->getNodeType() == ast::NodeType::SingularIndexExpr) {
+      const auto elementAddr = arrayElementAssign->getEvaluatedAddr();
+      // TODO: not sure if this is correct
+      if (isTypeArray(arrayElementAssign->getAssignSymbolType())) {
+        freeArray(arrayElementAssign->getAssignSymbolType(), elementAddr);
+      } else if (isTypeVector(arrayElementAssign->getAssignSymbolType())) {
+        freeVector(arrayElementAssign->getAssignSymbolType(), elementAddr);
+      }
+      copyValue(type, valueAddr, elementAddr);
+      castIfNeeded(elementAddr, ctx->getExpr()->getInferredSymbolType(),
+                   arrayElementAssign->getAssignSymbolType());
+    } else if (arrayElementAssign->getElementIndex()->getNodeType() ==
+               ast::NodeType::RangedIndexExpr) {
+    }
   } else {
     if (isTypeArray(variableSymbol->getType())) {
       freeArray(variableSymbol->getType(), variableSymbol->value);
