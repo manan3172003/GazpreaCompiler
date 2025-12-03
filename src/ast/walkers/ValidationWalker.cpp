@@ -48,7 +48,11 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
     const auto tupleUnpackAssignStat =
         std::dynamic_pointer_cast<statements::TupleUnpackAssignAst>(ctx->getLVal());
     validateTupleUnpackAssignmentTypes(tupleUnpackAssignStat, exprTypeSymbol);
-  } // TODO: add more assignment types here in part 2
+  } else if (ctx->getLVal()->getNodeType() == NodeType::ArrayElementAssign) {
+    const auto arrayElementAssignStat =
+        std::dynamic_pointer_cast<statements::ArrayElementAssignAst>(ctx->getLVal());
+    validateArrayElementAssignmentTypes(arrayElementAssignStat, exprTypeSymbol);
+  }
   return {};
 }
 std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {

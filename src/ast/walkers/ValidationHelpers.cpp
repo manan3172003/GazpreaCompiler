@@ -75,6 +75,24 @@ void ValidationWalker::validateStructElementAssignmentTypes(
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
 }
 
+void ValidationWalker::validateArrayElementAssignmentTypes(
+    std::shared_ptr<statements::ArrayElementAssignAst> ctx,
+    std::shared_ptr<symTable::Type> exprTypeSymbol) {
+  const auto lValAst = ctx->getArrayInstance();
+  const auto lValSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(lValAst->getSymbol());
+
+  if (lValSymbol->getQualifier() == Qualifier::Const)
+    throw AssignError(ctx->getLineNumber(), "Cannot re-assign a constant value");
+
+  const auto arrayType =
+      std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lValAst->getAssignSymbolType());
+
+  const auto arraySubType = arrayType->getType();
+
+  if (not typesMatch(arraySubType, exprTypeSymbol))
+    throw TypeError(ctx->getLineNumber(), "Type mismatch");
+}
+
 void ValidationWalker::validateTupleUnpackAssignmentTypes(
     std::shared_ptr<statements::TupleUnpackAssignAst> ctx,
     std::shared_ptr<symTable::Type> exprTypeSymbol) {
@@ -101,7 +119,11 @@ void ValidationWalker::validateTupleUnpackAssignmentTypes(
       const auto structElementAssignStat =
           std::dynamic_pointer_cast<statements::StructElementAssignAst>(varList[i]);
       validateStructElementAssignmentTypes(structElementAssignStat, tupleElements[i]);
-    } // TODO: add more assignment types in part 2
+    } else if (varList[i]->getNodeType() == NodeType::ArrayElementAssign) {
+      const auto arrayElementAssignStat =
+          std::dynamic_pointer_cast<statements::ArrayElementAssignAst>(varList[i]);
+      validateArrayElementAssignmentTypes(arrayElementAssignStat, tupleElements[i]);
+    }
   }
 }
 
@@ -356,6 +378,108 @@ void ValidationWalker::validateArgs(const std::vector<std::shared_ptr<Ast>> &par
   }
 }
 
+void ValidationWalker::identifierAliasingCheck(
+    std::unordered_map<std::string,
+                       std::vector<std::pair<std::shared_ptr<expressions::ExpressionAst>, bool>>>
+        &seenVarMap,
+    std::shared_ptr<expressions::ExpressionAst> expr, bool isVar) {
+  const auto identifier = std::dynamic_pointer_cast<expressions::IdentifierAst>(expr);
+  std::string varIdentifier = identifier->getName();
+  // First time seeing this identifier
+  if (seenVarMap.find(varIdentifier) == seenVarMap.end()) {
+    seenVarMap[varIdentifier].emplace_back(identifier, isVar);
+    return;
+  }
+
+  // If this identifier was already seen
+  for (const auto &seenArg : seenVarMap[varIdentifier]) {
+    if (seenArg.second || isVar) {
+      throw AliasingError(expr->getLineNumber(),
+                          "var parameter cannot share a variable with another parameter");
+    }
+  }
+}
+
+void ValidationWalker::tupleAccessAliasingCheck(
+    std::unordered_map<std::string,
+                       std::vector<std::pair<std::shared_ptr<expressions::ExpressionAst>, bool>>>
+        &seenVarMap,
+    std::shared_ptr<expressions::ExpressionAst> expr, bool isVar) {
+  const auto tupleAccess = std::dynamic_pointer_cast<expressions::TupleAccessAst>(expr);
+  std::string varIdentifier = tupleAccess->getTupleName();
+  // First time seeing this identifier
+  if (seenVarMap.find(varIdentifier) == seenVarMap.end()) {
+    seenVarMap[varIdentifier].emplace_back(tupleAccess, isVar);
+    return;
+  }
+
+  // If this identifier was already seen
+  for (const auto &seenArg : seenVarMap[varIdentifier]) {
+    if (seenArg.second || isVar) {
+      const auto lVal = seenArg.first;
+      if (lVal->getNodeType() == NodeType::Identifier)
+        throw AliasingError(expr->getLineNumber(),
+                            "var parameter cannot share a variable with another parameter");
+      if (lVal->getNodeType() == NodeType::TupleAccess) {
+        const auto tupleAccessLVal = std::dynamic_pointer_cast<expressions::TupleAccessAst>(lVal);
+        if (tupleAccessLVal->getFieldIndex() == tupleAccess->getFieldIndex())
+          throw AliasingError(expr->getLineNumber(),
+                              "var parameter cannot share a variable with another parameter");
+        seenVarMap[varIdentifier].emplace_back(tupleAccess, isVar);
+      }
+    }
+  }
+}
+
+void ValidationWalker::structAccessAliasingCheck(
+    std::unordered_map<std::string,
+                       std::vector<std::pair<std::shared_ptr<expressions::ExpressionAst>, bool>>>
+        &seenVarMap,
+    std::shared_ptr<expressions::ExpressionAst> expr, bool isVar) {
+  const auto structAccess = std::dynamic_pointer_cast<expressions::StructAccessAst>(expr);
+  std::string varIdentifier = structAccess->getStructName();
+
+  // First time seeing this identifier
+  if (seenVarMap.find(varIdentifier) == seenVarMap.end()) {
+    seenVarMap[varIdentifier].emplace_back(structAccess, isVar);
+    return;
+  }
+
+  // If this identifier was already seen
+  for (const auto &seenArg : seenVarMap[varIdentifier]) {
+    if (seenArg.second || isVar) {
+      const auto lVal = seenArg.first;
+      if (lVal->getNodeType() == NodeType::Identifier)
+        throw AliasingError(expr->getLineNumber(),
+                            "var parameter cannot share a variable with another parameter");
+      if (lVal->getNodeType() == NodeType::StructAccess) {
+        const auto structAccessLVal = std::dynamic_pointer_cast<expressions::StructAccessAst>(lVal);
+        if (structAccessLVal->getElementName() == structAccess->getElementName())
+          throw AliasingError(expr->getLineNumber(),
+                              "var parameter cannot share a variable with another parameter");
+        seenVarMap[varIdentifier].emplace_back(structAccess, isVar);
+      }
+    }
+  }
+}
+
+void ValidationWalker::arrayAccessAliasingCheck(
+    std::unordered_map<std::string,
+                       std::vector<std::pair<std::shared_ptr<expressions::ExpressionAst>, bool>>>
+        &seenVarMap,
+    std::shared_ptr<expressions::ExpressionAst> expr, bool isVar) {
+  const auto arrayAccess = std::dynamic_pointer_cast<expressions::ArrayAccessAst>(expr);
+  if (arrayAccess->getArrayInstance()->getNodeType() == NodeType::Identifier) {
+    identifierAliasingCheck(seenVarMap, arrayAccess->getArrayInstance(), isVar);
+  } else if (arrayAccess->getArrayInstance()->getNodeType() == NodeType::TupleAccess) {
+    tupleAccessAliasingCheck(seenVarMap, arrayAccess->getArrayInstance(), isVar);
+  } else if (arrayAccess->getArrayInstance()->getNodeType() == NodeType::StructAccess) {
+    structAccessAliasingCheck(seenVarMap, arrayAccess->getArrayInstance(), isVar);
+  } else if (arrayAccess->getArrayInstance()->getNodeType() == NodeType::ArrayAccess) {
+    arrayAccessAliasingCheck(seenVarMap, arrayAccess->getArrayInstance(), isVar);
+  }
+}
+
 // helper to check for var parameter aliasing
 void ValidationWalker::checkVarArgs(const std::vector<std::shared_ptr<Ast>> &params,
                                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args) {
@@ -368,83 +492,13 @@ void ValidationWalker::checkVarArgs(const std::vector<std::shared_ptr<Ast>> &par
     const bool isVar = (param->getQualifier() == Qualifier::Var);
 
     if (args[i]->getExpr()->getNodeType() == NodeType::Identifier) {
-      const auto identifier =
-          std::dynamic_pointer_cast<expressions::IdentifierAst>(args[i]->getExpr());
-      std::string varIdentifier = identifier->getName();
-      // First time seeing this identifier
-      if (seenVarMap.find(varIdentifier) == seenVarMap.end()) {
-        seenVarMap[varIdentifier].emplace_back(identifier, isVar);
-        continue;
-      }
-
-      // If this identifier was already seen
-      for (const auto &seenArg : seenVarMap[varIdentifier]) {
-        if (seenArg.second || isVar) {
-          throw AliasingError(args[i]->getLineNumber(),
-                              "var parameter cannot share a variable with another parameter");
-        }
-      }
-
+      identifierAliasingCheck(seenVarMap, args[i]->getExpr(), isVar);
     } else if (args[i]->getExpr()->getNodeType() == NodeType::TupleAccess) {
-      const auto tupleAccess =
-          std::dynamic_pointer_cast<expressions::TupleAccessAst>(args[i]->getExpr());
-      std::string varIdentifier = tupleAccess->getTupleName();
-      // First time seeing this identifier
-      if (seenVarMap.find(varIdentifier) == seenVarMap.end()) {
-        seenVarMap[varIdentifier].emplace_back(tupleAccess, isVar);
-        continue;
-      }
-
-      // If this identifier was already seen
-      for (const auto &seenArg : seenVarMap[varIdentifier]) {
-        if (seenArg.second || isVar) {
-          const auto lVal = seenArg.first;
-          if (lVal->getNodeType() == NodeType::Identifier)
-            throw AliasingError(args[i]->getLineNumber(),
-                                "var parameter cannot share a variable with another parameter");
-          if (lVal->getNodeType() == NodeType::TupleAccess) {
-            const auto tupleAccessLVal =
-                std::dynamic_pointer_cast<expressions::TupleAccessAst>(lVal);
-            if (tupleAccessLVal->getFieldIndex() == tupleAccess->getFieldIndex())
-              throw AliasingError(args[i]->getLineNumber(),
-                                  "var parameter cannot share a variable with another parameter");
-            seenVarMap[varIdentifier].emplace_back(tupleAccess, isVar);
-          }
-        }
-      }
-
+      tupleAccessAliasingCheck(seenVarMap, args[i]->getExpr(), isVar);
     } else if (args[i]->getExpr()->getNodeType() == NodeType::StructAccess) {
-      const auto structAccess =
-          std::dynamic_pointer_cast<expressions::StructAccessAst>(args[i]->getExpr());
-      std::string varIdentifier = structAccess->getStructName();
-
-      // First time seeing this identifier
-      if (seenVarMap.find(varIdentifier) == seenVarMap.end()) {
-        seenVarMap[varIdentifier].emplace_back(structAccess, isVar);
-        continue;
-      }
-
-      // If this identifier was already seen
-      for (const auto &seenArg : seenVarMap[varIdentifier]) {
-        if (seenArg.second || isVar) {
-          const auto lVal = seenArg.first;
-          if (lVal->getNodeType() == NodeType::Identifier)
-            throw AliasingError(args[i]->getLineNumber(),
-                                "var parameter cannot share a variable with another parameter");
-          if (lVal->getNodeType() == NodeType::StructAccess) {
-            const auto structAccessLVal =
-                std::dynamic_pointer_cast<expressions::StructAccessAst>(lVal);
-            if (structAccessLVal->getElementName() == structAccess->getElementName())
-              throw AliasingError(args[i]->getLineNumber(),
-                                  "var parameter cannot share a variable with another parameter");
-            seenVarMap[varIdentifier].emplace_back(structAccess, isVar);
-          }
-        }
-      }
-
-    } else {
-      // TODO: Handle array slices in future
-      continue;
+      structAccessAliasingCheck(seenVarMap, args[i]->getExpr(), isVar);
+    } else if (args[i]->getExpr()->getNodeType() == NodeType::ArrayAccess) {
+      arrayAccessAliasingCheck(seenVarMap, args[i]->getExpr(), isVar);
     }
   }
 }

@@ -1,0 +1,14 @@
+/*
+Tries to alias an array in a struct
+*/
+procedure doSomething(var integer[3] x, var integer y) {}
+
+procedure main() returns integer {
+    var integer[10] x = [10, 10];
+    var struct S(integer[3] x, character y) t= S([1, 1, 1], 'c');
+    call doSomething(t.x[1..4], t.x[4]);
+
+    return 0;
+}
+
+// CHECK:AliasingError on Line 9: var parameter cannot share a variable with another parameter

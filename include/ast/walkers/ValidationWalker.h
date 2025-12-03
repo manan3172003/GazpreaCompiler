@@ -95,6 +95,9 @@ public:
   validateStructElementAssignmentTypes(std::shared_ptr<statements::StructElementAssignAst> ctx,
                                        std::shared_ptr<symTable::Type> exprTypeSymbol);
   static void
+  validateArrayElementAssignmentTypes(std::shared_ptr<statements::ArrayElementAssignAst> ctx,
+                                      std::shared_ptr<symTable::Type> exprTypeSymbol);
+  static void
   validateTupleUnpackAssignmentTypes(std::shared_ptr<statements::TupleUnpackAssignAst> ctx,
                                      std::shared_ptr<symTable::Type> exprTypeSymbol);
   static bool typesMatch(const std::shared_ptr<symTable::Type> &destination,
@@ -119,6 +122,26 @@ public:
   void validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
                     symTable::ScopeType scopeType, int lineNumber);
+  static void identifierAliasingCheck(
+      std::unordered_map<std::string,
+                         std::vector<std::pair<std::shared_ptr<expressions::ExpressionAst>, bool>>>
+          &seenVarMap,
+      std::shared_ptr<expressions::ExpressionAst> expr, bool isVar);
+  static void tupleAccessAliasingCheck(
+      std::unordered_map<std::string,
+                         std::vector<std::pair<std::shared_ptr<expressions::ExpressionAst>, bool>>>
+          &seenVarMap,
+      std::shared_ptr<expressions::ExpressionAst> expr, bool isVar);
+  static void structAccessAliasingCheck(
+      std::unordered_map<std::string,
+                         std::vector<std::pair<std::shared_ptr<expressions::ExpressionAst>, bool>>>
+          &seenVarMap,
+      std::shared_ptr<expressions::ExpressionAst> expr, bool isVar);
+  static void arrayAccessAliasingCheck(
+      std::unordered_map<std::string,
+                         std::vector<std::pair<std::shared_ptr<expressions::ExpressionAst>, bool>>>
+          &seenVarMap,
+      std::shared_ptr<expressions::ExpressionAst> expr, bool isVar);
   static void checkVarArgs(const std::vector<std::shared_ptr<Ast>> &params,
                            const std::vector<std::shared_ptr<expressions::ArgAst>> &args);
   static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);

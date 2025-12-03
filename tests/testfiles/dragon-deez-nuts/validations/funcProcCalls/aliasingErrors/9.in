@@ -1,0 +1,13 @@
+/*
+Tries to alias an array
+*/
+procedure doSomething(var integer x, var integer y) {}
+
+procedure main() returns integer {
+    var integer[10] x = [10, 10];
+    call doSomething(x[1], x[4]);
+
+    return 0;
+}
+
+// CHECK:AliasingError on Line 8: var parameter cannot share a variable with another parameter
