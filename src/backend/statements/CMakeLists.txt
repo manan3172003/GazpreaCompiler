@@ -16,6 +16,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/Return.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleElementAssign.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/StructElementAssign.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ArrayElementAssign.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleUnpackAssign.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Typealias.cpp"
 )

@@ -822,15 +822,15 @@ ValidationWalker::visitSingularIndex(std::shared_ptr<expressions::SingularIndexE
 std::any
 ValidationWalker::visitRangedIndexExpr(std::shared_ptr<expressions::RangedIndexExprAst> ctx) {
   const auto leftExpr = ctx->getLeftIndexExpr();
+  const auto rightExpr = ctx->getRightIndexExpr();
+
   visit(leftExpr);
   if (not isOfSymbolType(leftExpr->getInferredSymbolType(), "integer"))
     throw TypeError(ctx->getLineNumber(), "Non integer index provided");
 
-  if (const auto rightExpr = ctx->getRightIndexExpr()) {
-    visit(rightExpr);
-    if (not isOfSymbolType(rightExpr->getInferredSymbolType(), "integer"))
-      throw TypeError(ctx->getLineNumber(), "Non integer index provided");
-  }
+  visit(rightExpr);
+  if (not isOfSymbolType(rightExpr->getInferredSymbolType(), "integer"))
+    throw TypeError(ctx->getLineNumber(), "Non integer index provided");
 
   // both integers
   ctx->setInferredDataType(leftExpr->getInferredDataType());

@@ -15,7 +15,10 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/Struct.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleAccess.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/StructAccess.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ArrayAccess.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Unary.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/SingularIndex.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/RangedIndexExpr.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_expressions_src})

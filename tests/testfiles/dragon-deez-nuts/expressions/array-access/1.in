@@ -1,0 +1,12 @@
+/*
+This test performs multiple valid array access
+*/
+procedure main() returns integer{
+    integer[2] x = [1, 2];
+    x[1] -> std_output;
+    x[2] -> std_output;
+    x[-1] -> std_output;
+    x[-2] -> std_output;
+    return 0;
+}
+// CHECK:1221

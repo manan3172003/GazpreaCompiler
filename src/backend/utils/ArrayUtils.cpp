@@ -774,4 +774,61 @@ void Backend::createArrayFromVector(
     }
   }
 }
+
+// Normalize a potentially-negative 1-indexed index into a positive 1-indexed index.
+// - index: i32 (maybe negative or positive, 1-indexed semantics)
+// - arraySize: i32 (positive length)
+// Returns: i32 normalized index (1..arraySize). Calls throwIndexError() if out of bounds.
+mlir::Value Backend::normalizeIndex(mlir::Value index, mlir::Value arraySize) {
+  auto i32 = intTy();
+
+  auto zeroOp = builder->create<mlir::LLVM::ConstantOp>(loc, i32, 0);
+  auto oneOp = builder->create<mlir::LLVM::ConstantOp>(loc, i32, 1);
+  mlir::Value zero = zeroOp.getResult();
+  mlir::Value one = oneOp.getResult();
+
+  // isNegative = index < 0  -> i1
+  auto isNegativeOp =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt, index, zero);
+  mlir::Value isNegative = isNegativeOp.getResult();
+
+  // normalizedIfNegative = arraySize + index + 1
+  auto sumSizeIndexOp = builder->create<mlir::LLVM::AddOp>(loc, arraySize, index);
+  mlir::Value sumSizeIndex = sumSizeIndexOp.getResult();
+  auto normalizedIfNegativeOp = builder->create<mlir::LLVM::AddOp>(loc, sumSizeIndex, one);
+  mlir::Value normalizedIfNegative = normalizedIfNegativeOp.getResult();
+
+  // normalized = select(isNegative, normalizedIfNegative, index)
+  auto normalizedOp =
+      builder->create<mlir::LLVM::SelectOp>(loc, isNegative, normalizedIfNegative, index);
+  mlir::Value normalized = normalizedOp.getResult();
+
+  // bounds checks: normalized < 1  OR  normalized > arraySize  -> produce i1
+  auto lessThanOneOp =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt, normalized, one);
+  mlir::Value lessThanOne = lessThanOneOp.getResult();
+
+  auto greaterThanSizeOp = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sgt,
+                                                               normalized, arraySize);
+  mlir::Value greaterThanSize = greaterThanSizeOp.getResult();
+
+  // OR -> outOfBounds (i1)
+  auto outOfBoundsOp = builder->create<mlir::LLVM::OrOp>(loc, lessThanOne, greaterThanSize);
+  mlir::Value outOfBounds = outOfBoundsOp.getResult();
+
+  auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+      "throwArrayIndexError_019ae3a1_54f9_7452_b095_6faaebe8aa2e");
+
+  // Use the no-result scf::IfOp form (matches other IfOps in your file).
+  builder->create<mlir::scf::IfOp>(loc, outOfBounds, [&](mlir::OpBuilder &b, mlir::Location l) {
+    b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+    // mirror the other IfOps: yield (no results)
+    b.create<mlir::scf::YieldOp>(l);
+  });
+
+  // If we reach here, normalized is in range — return the 1-based normalized index.
+  auto zeroBased = builder->create<mlir::LLVM::SubOp>(loc, normalized, one).getResult();
+  return zeroBased;
+}
+
 } // namespace gazprea::backend

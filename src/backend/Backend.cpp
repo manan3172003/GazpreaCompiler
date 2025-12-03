@@ -29,6 +29,7 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   setupThrowDivisionByZeroError();
   setupThrowArraySizeError();
   setupThrowVectorSizeError();
+  setupThrowArrayIndexError();
   setupPrintArray();
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%d\0", "intFormat");
@@ -130,7 +131,13 @@ void Backend::setupThrowVectorSizeError() const {
   builder->create<mlir::LLVM::LLVMFuncOp>(
       loc, "throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029", llvmFnType);
 }
-
+void Backend::setupThrowArrayIndexError() const {
+  // Signature: void throwArrayIndexError()
+  auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
+  builder->create<mlir::LLVM::LLVMFuncOp>(
+      loc, "throwArrayIndexError_019ae3a1_54f9_7452_b095_6faaebe8aa2e", llvmFnType);
+}
 void Backend::setupPrintArray() const {
   // Signature: void printArray(ptr arrayStructAddr, i32 elementType)
   auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());

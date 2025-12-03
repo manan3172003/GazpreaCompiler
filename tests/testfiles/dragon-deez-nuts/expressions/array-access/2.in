@@ -1,0 +1,21 @@
+/*
+This test performs multiple valid array access
+*/
+procedure main() returns integer{
+    integer[2][3] x = [[1, 2, 3], [4, 5, 6]];
+    x[1] -> std_output;
+    '\n' -> std_output;
+    x[2] -> std_output;
+    '\n' -> std_output;
+    x[1][2] -> std_output;
+    '\n' -> std_output;
+    x[2][3] -> std_output;
+    '\n' -> std_output;
+    x[-1][-2] -> std_output;
+    '\n' -> std_output;
+    x[-2][-3] -> std_output;
+    '\n' -> std_output;
+
+    return 0;
+}
+// CHECK_FILE:2.out

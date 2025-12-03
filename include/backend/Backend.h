@@ -109,6 +109,11 @@ public:
   visitReverseBuiltinFunc(std::shared_ptr<ast::expressions::ReverseBuiltinFuncAst> ctx) override;
   std::any
   visitFormatBuiltinFunc(std::shared_ptr<ast::expressions::FormatBuiltinFuncAst> ctx) override;
+  std::any visitArrayAccess(std::shared_ptr<ast::expressions::ArrayAccessAst> ctx) override;
+  std::any
+  visitArrayElementAssign(std::shared_ptr<ast::statements::ArrayElementAssignAst> ctx) override;
+  std::any visitSingularIndex(std::shared_ptr<ast::expressions::SingularIndexExprAst> ctx) override;
+  std::any visitRangedIndexExpr(std::shared_ptr<ast::expressions::RangedIndexExprAst> ctx) override;
 
 protected:
   void setupPrintf() const;
@@ -117,6 +122,7 @@ protected:
   void setupThrowDivisionByZeroError() const;
   void setupThrowArraySizeError() const;
   void setupThrowVectorSizeError() const;
+  void setupThrowArrayIndexError() const;
   void printFloat(mlir::Value floatValue);
   void printInt(mlir::Value integer);
   void printIntChar(mlir::Value integer);
@@ -158,6 +164,7 @@ protected:
   void freeArray(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct);
   void createArrayFromVector(std::vector<std::shared_ptr<ast::expressions::ExpressionAst>> elements,
                              mlir::Type elementMLIRType, mlir::Value dest);
+  mlir::Value normalizeIndex(mlir::Value index, mlir::Value arraySize);
   void printVector(mlir::Value vectorStructAddr, std::shared_ptr<symTable::Type> vectorType);
   void createGlobalString(const char *str, const char *stringName) const;
   void castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,

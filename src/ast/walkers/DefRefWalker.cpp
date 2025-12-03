@@ -505,8 +505,7 @@ std::any DefRefWalker::visitSingularIndex(std::shared_ptr<expressions::SingularI
 }
 std::any DefRefWalker::visitRangedIndexExpr(std::shared_ptr<expressions::RangedIndexExprAst> ctx) {
   visit(ctx->getLeftIndexExpr());
-  if (ctx->getRightIndexExpr())
-    visit(ctx->getRightIndexExpr());
+  visit(ctx->getRightIndexExpr());
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
