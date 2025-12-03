@@ -150,13 +150,16 @@ protected:
   void makeReverseBuiltin();
   void printChar(char c);
   void printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType);
-  void computeArraySizeIfArray(std::shared_ptr<ast::statements::DeclarationAst> ctx,
-                               std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct);
+
   void arraySizeValidationForArrayStructs(mlir::Value lhsArrayStruct,
                                           std::shared_ptr<symTable::Type> lhsType,
                                           mlir::Value srcArrayStruct,
                                           std::shared_ptr<symTable::Type> srcType);
-  void arraySizeValidation(std::shared_ptr<symTable::VariableSymbol> variableSymbol,
+  void computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx, std::shared_ptr<symTable::Type> type,
+                               mlir::Value arrayStruct);
+  void castScalarToArrayIfNeeded(std::shared_ptr<symTable::Type> targetType, mlir::Value valueAddr,
+                                 std::shared_ptr<symTable::Type> sourceType);
+  void arraySizeValidation(std::shared_ptr<symTable::Symbol> symbol,
                            std::shared_ptr<symTable::Type> type, mlir::Value valueAddr);
   mlir::Value getArraySizeAddr(mlir::OpBuilder &b, mlir::Location l, mlir::Type arrayStructType,
                                mlir::Value arrayStruct) const;
@@ -194,7 +197,8 @@ protected:
   void printVector(mlir::Value vectorStructAddr, std::shared_ptr<symTable::Type> vectorType);
   void createGlobalString(const char *str, const char *stringName) const;
   void createGlobalStreamState() const;
-  void castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
+  void castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                    std::shared_ptr<symTable::Type> fromType,
                     std::shared_ptr<symTable::Type> toType);
   void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);
   bool isTypeArray(std::shared_ptr<symTable::Type> type);
@@ -256,14 +260,14 @@ private:
   std::vector<mlir::Type>
   getMethodParamTypes(const std::vector<std::shared_ptr<ast::Ast>> &params) const;
   // Returns the address of mlir::Value of the result of applying the binary operation
-  mlir::Value binaryOperandToValue(ast::expressions::BinaryOpType op,
+  mlir::Value binaryOperandToValue(std::shared_ptr<ast::Ast> ctx, ast::expressions::BinaryOpType op,
                                    std::shared_ptr<symTable::Type> opType,
                                    std::shared_ptr<symTable::Type> leftType,
                                    std::shared_ptr<symTable::Type> rightType,
                                    /*Address of the left value*/
-                                   mlir::Value leftAddr,
+                                   mlir::Value incomingLeftAddr,
                                    /*Address of the right value*/
-                                   mlir::Value rightAddr);
+                                   mlir::Value incomingRightAddr);
   mlir::Value floatBinaryOperandToValue(ast::expressions::BinaryOpType op,
                                         std::shared_ptr<symTable::Type> opType,
                                         std::shared_ptr<symTable::Type> leftType,

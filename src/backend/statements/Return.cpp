@@ -48,7 +48,7 @@ std::any Backend::visitReturn(std::shared_ptr<ast::statements::ReturnAst> ctx) {
 
   freeResourcesUntilFunction(ctx->getScope());
 
-  castIfNeeded(returnValue, returnType, methodScope->getReturnType());
+  castIfNeeded(ctx, returnValue, returnType, methodScope->getReturnType());
   auto loadOp = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(methodScope->getReturnType()),
                                                     returnValue);
   builder->create<mlir::LLVM::ReturnOp>(builder->getUnknownLoc(), loadOp.getResult());

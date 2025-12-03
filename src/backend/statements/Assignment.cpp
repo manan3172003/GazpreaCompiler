@@ -35,7 +35,7 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
         freeVector(lValSymbol->getType(), destinationPtr);
       }
       copyValue(lValSymbol->getType(), elementPtr, destinationPtr);
-      castIfNeeded(destinationPtr, tupleTypeSymbol->getResolvedTypes()[i],
+      castIfNeeded(ctx, destinationPtr, tupleTypeSymbol->getResolvedTypes()[i],
                    lVal->getAssignSymbolType());
     }
   } else if (auto tupleElementAssign =
@@ -50,7 +50,7 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       freeVector(variableSymbol->getType(), variableSymbol->value);
     }
     copyValue(type, valueAddr, elementAddr);
-    castIfNeeded(elementAddr, ctx->getExpr()->getInferredSymbolType(),
+    castIfNeeded(ctx, elementAddr, ctx->getExpr()->getInferredSymbolType(),
                  tupleTy->getResolvedTypes()[tupleElementAssign->getFieldIndex() - 1]);
   } else if (const auto structElementAssign =
                  std::dynamic_pointer_cast<ast::statements::StructElementAssignAst>(
@@ -65,7 +65,7 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       freeVector(variableSymbol->getType(), variableSymbol->value);
     }
     copyValue(type, valueAddr, elementAddr);
-    castIfNeeded(elementAddr, ctx->getExpr()->getInferredSymbolType(),
+    castIfNeeded(ctx, elementAddr, ctx->getExpr()->getInferredSymbolType(),
                  structTy->getResolvedType(structElementAssign->getElementName()));
   } else if (const auto arrayElementAssign =
                  std::dynamic_pointer_cast<ast::statements::ArrayElementAssignAst>(
@@ -80,7 +80,7 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
         freeVector(arrayElementAssign->getAssignSymbolType(), elementAddr);
       }
       copyValue(type, valueAddr, elementAddr);
-      castIfNeeded(elementAddr, ctx->getExpr()->getInferredSymbolType(),
+      castIfNeeded(ctx, elementAddr, ctx->getExpr()->getInferredSymbolType(),
                    arrayElementAssign->getAssignSymbolType());
     } else if (arrayElementAssign->getElementIndex()->getNodeType() ==
                ast::NodeType::RangedIndexExpr) {
@@ -125,8 +125,7 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       return {};
     }
     copyValue(type, valueAddr, variableSymbol->value);
-    arraySizeValidation(variableSymbol, type, variableSymbol->value);
-    castIfNeeded(variableSymbol->value, ctx->getExpr()->getInferredSymbolType(),
+    castIfNeeded(ctx, variableSymbol->value, ctx->getExpr()->getInferredSymbolType(),
                  variableSymbol->getType());
   }
   return {};

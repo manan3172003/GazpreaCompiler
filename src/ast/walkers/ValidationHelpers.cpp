@@ -137,7 +137,7 @@ void ValidationWalker::validateTupleUnpackAssignmentTypes(
 }
 
 bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destination,
-                                  const std::shared_ptr<symTable::Type> &source) {
+                                  const std::shared_ptr<symTable::Type> &source, bool exactMatch) {
   if (isOfSymbolType(destination, "integer") && isOfSymbolType(source, "integer"))
     return true;
   if (isOfSymbolType(destination, "real") && isOfSymbolType(source, "real"))
@@ -158,6 +158,14 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
     const auto sourceStruct = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(source);
     return destStruct->getStructName() == sourceStruct->getStructName();
   }
+  // by default allow array to scalar assignment if element types match
+  if (not exactMatch) {
+    const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
+    if (destArray && typesMatch(destArray->getType(), source)) {
+      return true;
+    }
+  }
+  // exactMatch is used to verify types within the array
   if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "array")) {
     const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
     const auto sourceArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(source);

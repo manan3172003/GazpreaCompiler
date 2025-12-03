@@ -18,7 +18,7 @@ std::any Backend::visitStruct(std::shared_ptr<ast::expressions::StructLiteralAst
     auto elementPtr =
         builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), structType, structAddr, gepIndices);
 
-    castIfNeeded(elementValueAddr, ctx->getElements()[i]->getInferredSymbolType(),
+    castIfNeeded(ctx, elementValueAddr, ctx->getElements()[i]->getInferredSymbolType(),
                  structTypeSymbol->getResolvedTypes()[i]);
     auto elementValue =
         builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(elementType), elementValueAddr);

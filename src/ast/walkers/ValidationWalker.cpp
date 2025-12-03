@@ -860,8 +860,8 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
     }
 
     if (expectedSubtype != nullptr && currentSubtype != nullptr) {
-      if (not(typesMatch(currentSubtype, expectedSubtype) ||
-              typesMatch(expectedSubtype, currentSubtype))) {
+      if (not(typesMatch(currentSubtype, expectedSubtype, true) ||
+              typesMatch(expectedSubtype, currentSubtype, true))) {
         throw TypeError(ctx->getLineNumber(), "Type mismatch in Array");
       }
 

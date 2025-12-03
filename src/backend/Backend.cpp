@@ -349,7 +349,8 @@ Backend::getMethodParamTypes(const std::vector<std::shared_ptr<ast::Ast>> &param
   return paramTypes;
 }
 
-mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
+mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
+                                          ast::expressions::BinaryOpType op,
                                           std::shared_ptr<symTable::Type> opType,
                                           std::shared_ptr<symTable::Type> leftType,
                                           std::shared_ptr<symTable::Type> rightType,
@@ -428,7 +429,7 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
       auto rightElementPtr = builder->create<mlir::LLVM::GEPOp>(
           loc, ptrTy(), getMLIRType(rightTypeSym), rightAddr, gepIndices);
       auto comparationValueAddr = binaryOperandToValue(
-          op, opType, leftTypeSym->getResolvedTypes()[i], rightTypeSym->getResolvedTypes()[i],
+          ctx, op, opType, leftTypeSym->getResolvedTypes()[i], rightTypeSym->getResolvedTypes()[i],
           leftElementPtr, rightElementPtr);
       builder->create<mlir::scf::IfOp>(
           loc, builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), comparationValueAddr),
@@ -528,7 +529,7 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
       auto rightElementPtr = builder->create<mlir::LLVM::GEPOp>(
           loc, ptrTy(), getMLIRType(rightTypeSym), rightAddr, gepIndices);
       auto comparationValueAddr = binaryOperandToValue(
-          op, opType, leftTypeSym->getResolvedTypes()[i], rightTypeSym->getResolvedTypes()[i],
+          ctx, op, opType, leftTypeSym->getResolvedTypes()[i], rightTypeSym->getResolvedTypes()[i],
           leftElementPtr, rightElementPtr);
       builder->create<mlir::scf::IfOp>(
           loc, builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), comparationValueAddr),
@@ -560,8 +561,8 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
     return newAddr;
 
   } else { // other primitive types
-    castIfNeeded(leftAddr, leftType, rightType);
-    castIfNeeded(rightAddr, rightType, leftType);
+    castIfNeeded(ctx, leftAddr, leftType, rightType);
+    castIfNeeded(ctx, rightAddr, rightType, leftType);
 
     bool isFloatType = (leftType->getName() == "real" || rightType->getName() == "real");
     if (isFloatType) {
@@ -838,8 +839,12 @@ void Backend::performExplicitCast(mlir::Value srcPtr, std::shared_ptr<symTable::
   builder->create<mlir::LLVM::StoreOp>(loc, castedValue, dstPtr);
 }
 
-void Backend::castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
+void Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                           std::shared_ptr<symTable::Type> fromType,
                            std::shared_ptr<symTable::Type> toType) {
+  computeArraySizeIfArray(ctx, toType, valueAddr);
+  castScalarToArrayIfNeeded(toType, valueAddr, fromType);
+  arraySizeValidation(ctx->getSymbol(), toType, valueAddr);
   if (auto fromTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType)) {
     auto toTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(toType);
     auto sTy = getMLIRType(fromType);
@@ -851,7 +856,7 @@ void Backend::castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type
           builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
       auto elementPtr =
           builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, valueAddr, gepIndices);
-      castIfNeeded(elementPtr, fromSubType, toSubType);
+      castIfNeeded(ctx, elementPtr, fromSubType, toSubType);
     }
   } else if (fromType->getName() == "integer" && toType->getName() == "real") {
     auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getI32Type(), valueAddr);

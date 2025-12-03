@@ -34,15 +34,23 @@ void Backend::printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::
   builder->create<mlir::LLVM::CallOp>(loc, printArrayFunc, args);
 }
 
-void Backend::computeArraySizeIfArray(std::shared_ptr<ast::statements::DeclarationAst> ctx,
+void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
                                       std::shared_ptr<symTable::Type> type,
                                       mlir::Value arrayStruct) {
-  if (isTypeArray(type)) {
-    auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (isTypeArray(type) && variableSymbol) {
+    std::shared_ptr<ast::types::ArrayTypeAst> arrayDataType = nullptr;
+
+    if (auto DecAst = std::dynamic_pointer_cast<ast::statements::DeclarationAst>(ctx))
+      arrayDataType = std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(DecAst->getType());
+    if (auto ProcedureParamAst = std::dynamic_pointer_cast<ast::prototypes::ProcedureParamAst>(ctx))
+      arrayDataType =
+          std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(ProcedureParamAst->getParamType());
+    if (auto FunctionParamAst = std::dynamic_pointer_cast<ast::prototypes::FunctionParamAst>(ctx))
+      arrayDataType =
+          std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(FunctionParamAst->getParamType());
     auto arrayType =
         std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType());
-    auto arrayDataType = std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(ctx->getType());
-
     size_t dimIndex = 0;
     for (auto sizeExpr : arrayDataType->getSizes()) {
       visit(sizeExpr);
@@ -94,6 +102,75 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::statements::Declarati
         arrayType->addSize(maxSubSizeAddr);
       }
     }
+  }
+}
+void Backend::castScalarToArrayIfNeeded(std::shared_ptr<symTable::Type> targetType,
+                                        mlir::Value valueAddr,
+                                        std::shared_ptr<symTable::Type> sourceType) {
+  if (targetType->getName().substr(0, 5) == "array" &&
+      (sourceType->getName() == "integer" || sourceType->getName() == "real" ||
+       sourceType->getName() == "character" || sourceType->getName() == "boolean")) {
+    auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(targetType);
+    auto elementType = arrayTypeSym->getType();
+
+
+    // Load the scalar value FIRST before we overwrite valueAddr
+    auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(sourceType), valueAddr);
+
+    // Now treat valueAddr as an array struct
+    auto arrayStructType = getMLIRType(targetType);
+    auto arrayDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, valueAddr);
+
+    // Get the target array size from the type symbol
+    auto sizes = arrayTypeSym->getSizes();
+    if (sizes.empty()) {
+      // If no size is specified, default to size 1
+      auto elementPtr =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(elementType), constOne());
+
+      builder->create<mlir::LLVM::StoreOp>(loc, scalarValue, elementPtr);
+
+      builder->create<mlir::LLVM::StoreOp>(loc, elementPtr, arrayDataAddr);
+
+      auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, valueAddr);
+      builder->create<mlir::LLVM::StoreOp>(loc, constOne(), arraySizeAddr);
+
+      // Initialize the is2D field to false
+      auto is2DFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, valueAddr);
+      auto boolFalse = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+      builder->create<mlir::LLVM::StoreOp>(loc, boolFalse, is2DFieldPtr);
+      return;
+    }
+
+    // Load the target size
+    mlir::Value targetSizeAddr = sizes[0];
+    mlir::Value targetSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), targetSizeAddr);
+
+    // Allocate memory for target size elements
+    auto elementMLIRType = getMLIRType(elementType);
+    mlir::Value arrayDataPtr = mallocArray(elementMLIRType, targetSize);
+
+    // Fill all elements with the scalar value
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), targetSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto elementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, arrayDataPtr,
+                                                        mlir::ValueRange{i});
+          b.create<mlir::LLVM::StoreOp>(l, scalarValue, elementPtr);
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    // Store the data pointer into the array struct
+    builder->create<mlir::LLVM::StoreOp>(loc, arrayDataPtr, arrayDataAddr);
+
+    // Set the size to the target size
+    auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, valueAddr);
+    builder->create<mlir::LLVM::StoreOp>(loc, targetSize, arraySizeAddr);
+
+    // Initialize the is2D field to false
+    auto is2DFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, valueAddr);
+    auto boolFalse = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+    builder->create<mlir::LLVM::StoreOp>(loc, boolFalse, is2DFieldPtr);
   }
 }
 
@@ -165,9 +242,10 @@ void Backend::arraySizeValidationForArrayStructs(mlir::Value lhsArrayStruct,
   padArrayIfNeeded(srcArrayStruct, srcType, targetOuterSize, targetInnerSize);
 }
 
-void Backend::arraySizeValidation(std::shared_ptr<symTable::VariableSymbol> variableSymbol,
+void Backend::arraySizeValidation(std::shared_ptr<symTable::Symbol> symbol,
                                   std::shared_ptr<symTable::Type> type, mlir::Value valueAddr) {
-  if (isTypeArray(type)) {
+  auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(symbol);
+  if (variableSymbol && isTypeArray(type)) {
     auto arrayType =
         std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType());
     if (arrayType->getSizes().empty()) {

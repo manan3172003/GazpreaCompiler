@@ -106,7 +106,7 @@ public:
   validateTupleUnpackAssignmentTypes(std::shared_ptr<statements::TupleUnpackAssignAst> ctx,
                                      std::shared_ptr<symTable::Type> exprTypeSymbol);
   static bool typesMatch(const std::shared_ptr<symTable::Type> &destination,
-                         const std::shared_ptr<symTable::Type> &source);
+                         const std::shared_ptr<symTable::Type> &source, bool exactMatch = false);
   static bool isTupleTypeMatch(const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
                                const std::shared_ptr<symTable::TupleTypeSymbol> &source);
   static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
