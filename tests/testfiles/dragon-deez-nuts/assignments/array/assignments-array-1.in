@@ -33,4 +33,4 @@ procedure main() returns integer {
     '\n' -> std_output;
     return 0;
 }
-//CHECK_FILE:1.out
+//CHECK_FILE:assignments-array-1.out

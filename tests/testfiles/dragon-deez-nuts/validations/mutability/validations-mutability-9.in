@@ -29,4 +29,4 @@ procedure main() returns integer {
     return 0;
 }
 
-//CHECK_FILE:9.out
+//CHECK_FILE:validations-mutability-9.out

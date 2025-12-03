@@ -14,4 +14,4 @@ procedure main() returns integer {
     return 0;
 }
 
-//CHECK_FILE:1.out
+//CHECK_FILE:validations-loops-1.out

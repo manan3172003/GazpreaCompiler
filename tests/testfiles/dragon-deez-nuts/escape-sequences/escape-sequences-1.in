@@ -23,4 +23,4 @@ procedure main() returns integer {
 
     return 0;
 }
-//CHECK_FILE:1.out
+//CHECK_FILE:escape-sequences-1.out

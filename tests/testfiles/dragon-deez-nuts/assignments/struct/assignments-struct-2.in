@@ -14,4 +14,4 @@ procedure main() returns integer {
     return 0;
 }
 
-// CHECK_FILE:2.out
+// CHECK_FILE:assignments-struct-2.out

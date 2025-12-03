@@ -8,4 +8,4 @@ procedure main() returns integer {
     return 0;
 }
 
-//CHECK_FILE:2.out
+//CHECK_FILE:expressions-3.out

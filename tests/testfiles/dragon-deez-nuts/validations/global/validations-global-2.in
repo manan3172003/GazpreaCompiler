@@ -4,4 +4,4 @@ const tuple (integer, integer) l = (0, 2);
 const character c = 'a';
 const character d = c;
 
-//CHECK_FILE:2.out
+//CHECK_FILE:validations-global-2.out

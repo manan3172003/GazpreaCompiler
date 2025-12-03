@@ -2,4 +2,4 @@ const integer i = 0;
 const integer j = 0;
 const tuple (integer, integer) l = (0, i);
 
-//CHECK_FILE:1.out
+//CHECK_FILE:validations-global-1.out

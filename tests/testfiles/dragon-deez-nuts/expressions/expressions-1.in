@@ -16,4 +16,4 @@ procedure main() returns integer {
 
 }
 
-//CHECK_FILE:1.out
+//CHECK_FILE:expressions-1.out

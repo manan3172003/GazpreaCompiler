@@ -37,4 +37,4 @@ procedure main() returns integer {
 
     return 0;
 }
-//CHECK_FILE:8.out
+//CHECK_FILE:decs-8.out

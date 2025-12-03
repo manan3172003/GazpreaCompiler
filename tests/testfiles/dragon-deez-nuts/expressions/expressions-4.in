@@ -12,4 +12,4 @@ procedure main() returns integer {
     return 0;
 }
 
-//CHECK_FILE:4.out
+//CHECK_FILE:expressions-4.out
