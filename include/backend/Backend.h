@@ -36,9 +36,21 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 
+#include <symTable/VariableSymbol.h>
 #include <symTable/VectorTypeSymbol.h>
 
 namespace gazprea::backend {
+constexpr char kStreamStateGlobalName[] = "stream_state_019ae35e_4e0e_7d02_98f8_6e5abd8135e9";
+constexpr char kScanfName[] = "scanf_019ae392_2fe0_72fc_ad1e_94bb9c5662c0";
+constexpr char kPrintfName[] = "printf_019ae38d_3df3_74a3_b276_d9a9f7a8008b";
+constexpr char kIpowName[] = "ipow_019addc8_6352_7de5_8629_b0688522175f";
+constexpr char kThrowDivByZeroErrorName[] =
+    "throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a";
+constexpr char kThrowArraySizeErrorName[] =
+    "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c";
+constexpr char kThrowVectorSizeErrorName[] =
+    "throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029";
+constexpr char kPrintArrayName[] = "printArray_019addab_1674_72d4_aa4a_ac782e511e7a";
 enum class VectorOffset { Size = 0, Capacity = 1, Data = 2, Is2D = 3 };
 class Backend final : public ast::walkers::AstWalker {
 public:
@@ -117,6 +129,8 @@ public:
   std::any visitRange(std::shared_ptr<ast::expressions::RangeAst> ctx) override;
   std::any visitDomainExpr(std::shared_ptr<ast::expressions::DomainExprAst> ctx) override;
   std::any visitGenerator(std::shared_ptr<ast::expressions::GeneratorAst> ctx) override;
+  std::any visitStreamStateBuiltinFunc(
+      std::shared_ptr<ast::expressions::StreamStateBuiltinFuncAst> ctx) override;
 
 protected:
   void setupPrintf() const;
@@ -261,5 +275,9 @@ private:
                                  const std::shared_ptr<symTable::Type> &toType);
   void performExplicitCast(mlir::Value srcPtr, std::shared_ptr<symTable::Type> fromType,
                            mlir::Value dstPtr, std::shared_ptr<symTable::Type> toType);
+  void readInteger(mlir::Value destAddr);
+  void readReal(mlir::Value destAddr);
+  void readCharacter(mlir::Value destAddr);
+  void readBoolean(mlir::Value destAddr);
 };
 } // namespace gazprea::backend

@@ -67,8 +67,7 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
   };
 
   const auto declaredSizes = loadSizesFromVector(vectorType);
-  auto throwSizeErrorFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-      "throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029");
+  auto throwSizeErrorFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowVectorSizeErrorName);
 
   auto emitSizeValidation = [&](const std::vector<mlir::Value> &actualSizes) {
     if (!throwSizeErrorFunc || declaredSizes.empty() || actualSizes.empty())

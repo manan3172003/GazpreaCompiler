@@ -84,6 +84,8 @@ public:
   std::any
   visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBuiltinFuncAst> ctx) override;
   std::any visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinFuncAst> ctx) override;
+  std::any
+  visitStreamStateBuiltinFunc(std::shared_ptr<expressions::StreamStateBuiltinFuncAst> ctx) override;
   std::any visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) override;
   std::any visitAppendMemberFunc(std::shared_ptr<statements::AppendMemberFuncAst> ctx) override;
   std::any visitPushMemberFunc(std::shared_ptr<statements::PushMemberFuncAst> ctx) override;

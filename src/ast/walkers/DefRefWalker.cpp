@@ -958,7 +958,6 @@ DefRefWalker::visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinF
   ctx->setSymbol(methodSymbol);
   return {};
 }
-
 std::any DefRefWalker::visitRange(std::shared_ptr<expressions::RangeAst> ctx) {
   visit(ctx->getStart());
   visit(ctx->getEnd());
@@ -998,7 +997,18 @@ std::any DefRefWalker::visitGenerator(std::shared_ptr<expressions::GeneratorAst>
   visit(ctx->getGeneratorExpression());
 
   symTab->popScope();
-
+  return {};
+}
+std::any DefRefWalker::visitStreamStateBuiltinFunc(
+    std::shared_ptr<expressions::StreamStateBuiltinFuncAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
+  const auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(
+      symTab->getCurrentScope()->resolveSymbol("stream_state"));
+  throwIfUndeclaredSymbol(ctx->getLineNumber(), methodSymbol);
+  auto intType =
+      std::dynamic_pointer_cast<symTable::Type>(symTab->getGlobalScope()->resolveType("integer"));
+  methodSymbol->setReturnType(intType);
+  ctx->setSymbol(methodSymbol);
   return {};
 }
 } // namespace gazprea::ast::walkers

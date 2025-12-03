@@ -162,6 +162,7 @@ expr
     | INT_LIT #intLiteral
     | (TRUE | FALSE) #boolLiteral
     | ID #identifier
+    | STREAM_STATE LPAREN STD_INPUT RPAREN #streamStateExpr
     | ID LPAREN args? RPAREN #funcProcExpr // This also handles construction of structs
     | expr DLEN LPAREN RPAREN #lenBuiltinExpr
     | expr DOT ID LPAREN args? RPAREN #builtinFuncExpr

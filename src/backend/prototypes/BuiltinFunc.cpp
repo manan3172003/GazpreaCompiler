@@ -464,4 +464,14 @@ std::any
 Backend::visitFormatBuiltinFunc(std::shared_ptr<ast::expressions::FormatBuiltinFuncAst> ctx) {
   return {};
 }
+std::any Backend::visitStreamStateBuiltinFunc(
+    std::shared_ptr<ast::expressions::StreamStateBuiltinFuncAst> ctx) {
+  auto streamGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>(kStreamStateGlobalName);
+  auto streamStatePtr = builder->create<mlir::LLVM::AddressOfOp>(loc, streamGlobal);
+  auto stateValue = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), streamStatePtr);
+  auto resultAlloca = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
+  builder->create<mlir::LLVM::StoreOp>(loc, stateValue, resultAlloca);
+  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), resultAlloca);
+  return {};
+}
 } // namespace gazprea::backend

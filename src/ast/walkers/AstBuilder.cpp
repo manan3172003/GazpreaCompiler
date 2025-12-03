@@ -766,6 +766,11 @@ std::any AstBuilder::visitFormatExpr(GazpreaParser::FormatExprContext *ctx) {
   formatAst->arg = std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
   return std::static_pointer_cast<expressions::ExpressionAst>(formatAst);
 }
+std::any AstBuilder::visitStreamStateExpr(GazpreaParser::StreamStateExprContext *ctx) {
+  const auto streamStateAst =
+      std::make_shared<expressions::StreamStateBuiltinFuncAst>(ctx->getStart());
+  return std::static_pointer_cast<expressions::ExpressionAst>(streamStateAst);
+}
 std::any AstBuilder::visitStructAccessExpr(GazpreaParser::StructAccessExprContext *ctx) {
   const auto structExpression = std::make_shared<expressions::StructAccessAst>(ctx->getStart());
   std::string accessToken = ctx->STRUCT_ACCESS()->getText();

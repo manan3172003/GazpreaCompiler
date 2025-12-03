@@ -267,6 +267,16 @@ std::any ValidationWalker::visitInput(std::shared_ptr<statements::InputAst> ctx)
     throw StatementError(ctx->getLineNumber(), "Input statement not allowed in functions");
   }
   visit(ctx->getLVal());
+  const auto targetType = ctx->getLVal()->getAssignSymbolType();
+  if (!targetType) {
+    throw TypeError(ctx->getLineNumber(), "Input target type is not supported");
+  }
+  const auto &typeName = targetType->getName();
+  if (typeName != "integer" && typeName != "real" && typeName != "character" &&
+      typeName != "boolean") {
+    throw TypeError(ctx->getLineNumber(),
+                    "Input only supports integer, real, character, or boolean types");
+  }
   return {};
 }
 std::any ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ctx) {
@@ -1193,7 +1203,16 @@ std::any ValidationWalker::visitGenerator(std::shared_ptr<expressions::Generator
     throw TypeError(ctx->getLineNumber(),
                     "Generator supports only 1D or 2D, got " + std::to_string(dimensions) + "D");
   }
-
+  return {};
+}
+std::any ValidationWalker::visitStreamStateBuiltinFunc(
+    std::shared_ptr<expressions::StreamStateBuiltinFuncAst> ctx) {
+  auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
+  auto intType =
+      std::dynamic_pointer_cast<symTable::Type>(symTab->getGlobalScope()->resolveType("integer"));
+  methodSymbol->setReturnType(intType);
+  ctx->setInferredSymbolType(intType);
+  ctx->setInferredDataType(std::make_shared<types::IntegerTypeAst>(ctx->token));
   return {};
 }
 } // namespace gazprea::ast::walkers

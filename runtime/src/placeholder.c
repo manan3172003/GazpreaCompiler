@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include "run_time_errors.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -11,11 +12,19 @@ int32_t ipow_019addc8_6352_7de5_8629_b0688522175f(int32_t base, int32_t exp) {
 }
 
 int printf_019ae38d_3df3_74a3_b276_d9a9f7a8008b(const char * format, ...) {
-  return 0;
+  va_list args;
+  va_start(args, format);
+  int result = vprintf(format, args);
+  va_end(args);
+  return result;
 }
 
 int scanf_019ae392_2fe0_72fc_ad1e_94bb9c5662c0(const char * format, ...) {
-  return 0;
+  va_list args;
+  va_start(args, format);
+  int result = vscanf(format, args);
+  va_end(args);
+  return result;
 }
 
 void throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a() {

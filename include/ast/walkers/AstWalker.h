@@ -144,6 +144,10 @@ public:
   virtual std::any visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinFuncAst> ctx) {
     return {};
   }
+  virtual std::any
+  visitStreamStateBuiltinFunc(std::shared_ptr<expressions::StreamStateBuiltinFuncAst> ctx) {
+    return {};
+  }
   virtual std::any visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) {
     return {};
   }

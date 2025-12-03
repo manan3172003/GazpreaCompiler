@@ -75,6 +75,8 @@ public:
   std::any
   visitReverseBuiltinFunc(std::shared_ptr<expressions::ReverseBuiltinFuncAst> ctx) override;
   std::any visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinFuncAst> ctx) override;
+  std::any
+  visitStreamStateBuiltinFunc(std::shared_ptr<expressions::StreamStateBuiltinFuncAst> ctx) override;
   std::any visitArrayAccess(std::shared_ptr<expressions::ArrayAccessAst> ctx) override;
   std::any visitSingularIndex(std::shared_ptr<expressions::SingularIndexExprAst> ctx) override;
   std::any visitRangedIndexExpr(std::shared_ptr<expressions::RangedIndexExprAst> ctx) override;

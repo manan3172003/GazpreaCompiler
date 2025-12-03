@@ -35,6 +35,8 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%d\0", "intFormat");
   createGlobalString("%g\0", "floatFormat");
+  createGlobalString("%f\0", "floatInputFormat");
+  createGlobalString(" %1[TF]\0", "boolInputFormat");
   createGlobalStreamState();
 }
 
@@ -100,46 +102,40 @@ void Backend::setupPrintf() const {
                                                       /*isVarArg=*/true);
 
   // Insert the printf function into the body of the parent module.
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printf_019ae38d_3df3_74a3_b276_d9a9f7a8008b",
-                                          llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, kPrintfName, llvmFnType);
 }
 
 void Backend::setupScanf() const {
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(intTy(), ptrTy(),
                                                       /*isVarArg=*/true);
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "scanf_019ae392_2fe0_72fc_ad1e_94bb9c5662c0",
-                                          llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, kScanfName, llvmFnType);
 }
 
 void Backend::setupIntPow() const {
   // Signature: i32 ipow(i32 base, i32 exp)
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(intTy(), {intTy(), intTy()},
                                                       /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "ipow_019addc8_6352_7de5_8629_b0688522175f",
-                                          llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, kIpowName, llvmFnType);
 }
 
 void Backend::setupThrowDivisionByZeroError() const {
   // Signature: void throwDivisionByZeroError()
   auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(
-      loc, "throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a", llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, kThrowDivByZeroErrorName, llvmFnType);
 }
 
 void Backend::setupThrowArraySizeError() const {
   // Signature: void throwArraySizeError()
   auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(
-      loc, "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c", llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, kThrowArraySizeErrorName, llvmFnType);
 }
 void Backend::setupThrowVectorSizeError() const {
   // Signature: void throwVectorSizeError()
   auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {}, /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(
-      loc, "throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029", llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, kThrowVectorSizeErrorName, llvmFnType);
 }
 void Backend::setupThrowArrayIndexError() const {
   // Signature: void throwArrayIndexError()
@@ -153,8 +149,7 @@ void Backend::setupPrintArray() const {
   auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
   auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy(), intTy()},
                                                       /*isVarArg=*/false);
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printArray_019addab_1674_72d4_aa4a_ac782e511e7a",
-                                          llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, kPrintArrayName, llvmFnType);
 }
 
 void Backend::printFloat(mlir::Value floatValue) {
@@ -169,7 +164,7 @@ void Backend::printFloat(mlir::Value floatValue) {
   mlir::Value doubleValue = builder->create<mlir::LLVM::FPExtOp>(loc, doubleTy, floatValue);
 
   mlir::ValueRange args = {formatStringPtr, doubleValue};
-  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kPrintfName);
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
 }
 
@@ -180,7 +175,7 @@ void Backend::printInt(mlir::Value integer) {
   }
   const mlir::Value formatStringPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatString);
   mlir::ValueRange args = {formatStringPtr, integer};
-  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kPrintfName);
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
 }
 
@@ -191,7 +186,7 @@ void Backend::printIntChar(mlir::Value integer) {
   }
   const mlir::Value formatStringPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatString);
   mlir::ValueRange args = {formatStringPtr, integer};
-  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kPrintfName);
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
 }
 
@@ -217,7 +212,7 @@ void Backend::printChar(char c) {
   const mlir::Value charToPrint =
       builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI8Type(), c);
   mlir::ValueRange args = {formatStringPtr, charToPrint};
-  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kPrintfName);
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
 }
 
@@ -244,8 +239,7 @@ void Backend::printVector(mlir::Value vectorStructAddr,
     elementTypeCode = 3;
   }
 
-  auto printArrayFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-      "printArray_019addab_1674_72d4_aa4a_ac782e511e7a");
+  auto printArrayFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kPrintArrayName);
   auto elementTypeConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), elementTypeCode);
   mlir::ValueRange args = {vectorStructAddr, elementTypeConst};
   builder->create<mlir::LLVM::CallOp>(loc, printArrayFunc, args);
@@ -263,8 +257,7 @@ void Backend::createGlobalString(const char *str, const char *stringName) const 
 
 void Backend::createGlobalStreamState() const {
   builder->create<mlir::LLVM::GlobalOp>(loc, intTy(), false, mlir::LLVM::Linkage::Internal,
-                                        "stream_state_019ae35e_4e0e_7d02_98f8_6e5abd8135e9",
-                                        builder->getI32IntegerAttr(0), 0);
+                                        kStreamStateGlobalName, builder->getI32IntegerAttr(0), 0);
 }
 
 mlir::Value Backend::constOne() const {
@@ -593,8 +586,8 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
       auto isZeroCond = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq,
                                                             rightValue, constZero());
       builder->create<mlir::scf::IfOp>(loc, isZeroCond, [&](mlir::OpBuilder &b, mlir::Location l) {
-        auto throwDivByZeroFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-            "throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a");
+        auto throwDivByZeroFunc =
+            module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowDivByZeroErrorName);
         b.create<mlir::LLVM::CallOp>(l, throwDivByZeroFunc, mlir::ValueRange{});
         b.create<mlir::scf::YieldOp>(l);
       });
@@ -629,8 +622,7 @@ mlir::Value Backend::binaryOperandToValue(ast::expressions::BinaryOpType op,
       result = builder->create<mlir::LLVM::SRemOp>(loc, leftValue, rightValue);
       break;
     case ast::expressions::BinaryOpType::POWER: {
-      auto ipowFunc =
-          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("ipow_019addc8_6352_7de5_8629_b0688522175f");
+      auto ipowFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kIpowName);
       result =
           builder
               ->create<mlir::LLVM::CallOp>(loc, ipowFunc, mlir::ValueRange{leftValue, rightValue})
@@ -690,8 +682,8 @@ mlir::Value Backend::floatBinaryOperandToValue(ast::expressions::BinaryOpType op
     auto isZeroCond = builder->create<mlir::LLVM::FCmpOp>(loc, mlir::LLVM::FCmpPredicate::oeq,
                                                           rightValue, floatZero);
     builder->create<mlir::scf::IfOp>(loc, isZeroCond, [&](mlir::OpBuilder &b, mlir::Location l) {
-      auto throwDivByZeroFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-          "throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a");
+      auto throwDivByZeroFunc =
+          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowDivByZeroErrorName);
       b.create<mlir::LLVM::CallOp>(l, throwDivByZeroFunc, mlir::ValueRange{});
       b.create<mlir::scf::YieldOp>(l);
     });
@@ -928,6 +920,158 @@ bool Backend::isScalarType(std::shared_ptr<symTable::Type> type) const {
   }
   const auto &name = type->getName();
   return name == "integer" || name == "real" || name == "character" || name == "boolean";
+}
+
+void Backend::readInteger(mlir::Value destAddr) {
+  if (!destAddr) {
+    return;
+  }
+  auto scanfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kScanfName);
+  if (!scanfFunc) {
+    return;
+  }
+  auto zeroValue = constZero();
+  builder->create<mlir::LLVM::StoreOp>(loc, zeroValue, destAddr);
+  auto formatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("intFormat");
+  auto formatPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatGlobal);
+  auto call =
+      builder->create<mlir::LLVM::CallOp>(loc, scanfFunc, mlir::ValueRange{formatPtr, destAddr});
+  auto result = call.getResult();
+
+  auto streamGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>(kStreamStateGlobalName);
+  auto streamStatePtr = builder->create<mlir::LLVM::AddressOfOp>(loc, streamGlobal);
+
+  auto minusOne = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), -1);
+  auto twoConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 2);
+  auto zeroConst = constZero();
+  auto oneConst = constOne();
+  auto isEOF =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, result, minusOne);
+  auto isSuccess =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, result, oneConst);
+  auto stateWhenNotEOF = builder->create<mlir::LLVM::SelectOp>(loc, isSuccess, zeroConst, oneConst);
+  auto finalState = builder->create<mlir::LLVM::SelectOp>(loc, isEOF, twoConst, stateWhenNotEOF);
+  builder->create<mlir::LLVM::StoreOp>(loc, finalState, streamStatePtr);
+}
+
+void Backend::readReal(mlir::Value destAddr) {
+  if (!destAddr) {
+    return;
+  }
+  auto scanfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kScanfName);
+  if (!scanfFunc) {
+    return;
+  }
+  auto zeroFloat = builder->create<mlir::LLVM::ConstantOp>(loc, floatTy(),
+                                                           builder->getFloatAttr(floatTy(), 0.0));
+  builder->create<mlir::LLVM::StoreOp>(loc, zeroFloat, destAddr);
+  auto formatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("floatInputFormat");
+  auto formatPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatGlobal);
+  auto call =
+      builder->create<mlir::LLVM::CallOp>(loc, scanfFunc, mlir::ValueRange{formatPtr, destAddr});
+  auto result = call.getResult();
+
+  auto streamGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>(kStreamStateGlobalName);
+  auto streamStatePtr = builder->create<mlir::LLVM::AddressOfOp>(loc, streamGlobal);
+
+  auto minusOne = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), -1);
+  auto twoConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 2);
+  auto zeroConst = constZero();
+  auto oneConst = constOne();
+  auto isEOF =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, result, minusOne);
+  auto isSuccess =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, result, oneConst);
+  auto stateWhenNotEOF = builder->create<mlir::LLVM::SelectOp>(loc, isSuccess, zeroConst, oneConst);
+  auto finalState = builder->create<mlir::LLVM::SelectOp>(loc, isEOF, twoConst, stateWhenNotEOF);
+  builder->create<mlir::LLVM::StoreOp>(loc, finalState, streamStatePtr);
+}
+
+void Backend::readCharacter(mlir::Value destAddr) {
+  if (!destAddr) {
+    return;
+  }
+  auto scanfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kScanfName);
+  if (!scanfFunc) {
+    return;
+  }
+  auto formatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("charFormat");
+  auto formatPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatGlobal);
+  auto call =
+      builder->create<mlir::LLVM::CallOp>(loc, scanfFunc, mlir::ValueRange{formatPtr, destAddr});
+  auto result = call.getResult();
+
+  auto streamGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>(kStreamStateGlobalName);
+  auto streamStatePtr = builder->create<mlir::LLVM::AddressOfOp>(loc, streamGlobal);
+
+  auto minusOne = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), -1);
+  auto twoConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 2);
+  auto zeroConst = constZero();
+  auto isEOF =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, result, minusOne);
+  auto charMinusOne = builder->create<mlir::LLVM::ConstantOp>(loc, charTy(), -1);
+  auto currentValue = builder->create<mlir::LLVM::LoadOp>(loc, charTy(), destAddr);
+  auto finalChar = builder->create<mlir::LLVM::SelectOp>(loc, isEOF, charMinusOne, currentValue);
+  builder->create<mlir::LLVM::StoreOp>(loc, finalChar, destAddr);
+
+  auto finalState = builder->create<mlir::LLVM::SelectOp>(loc, isEOF, twoConst, zeroConst);
+  builder->create<mlir::LLVM::StoreOp>(loc, finalState, streamStatePtr);
+}
+
+void Backend::readBoolean(mlir::Value destAddr) {
+  if (!destAddr) {
+    return;
+  }
+  auto scanfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kScanfName);
+  if (!scanfFunc) {
+    return;
+  }
+  auto defaultBoolFalse = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+  builder->create<mlir::LLVM::StoreOp>(loc, defaultBoolFalse, destAddr);
+  auto formatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("boolInputFormat");
+  auto formatPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatGlobal);
+  auto tempChar = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), charTy(), constOne());
+  auto defaultChar = builder->create<mlir::LLVM::ConstantOp>(loc, charTy(), 'F');
+  builder->create<mlir::LLVM::StoreOp>(loc, defaultChar, tempChar);
+  auto call =
+      builder->create<mlir::LLVM::CallOp>(loc, scanfFunc, mlir::ValueRange{formatPtr, tempChar});
+  auto result = call.getResult();
+
+  auto streamGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>(kStreamStateGlobalName);
+  auto streamStatePtr = builder->create<mlir::LLVM::AddressOfOp>(loc, streamGlobal);
+
+  auto minusOne = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), -1);
+  auto twoConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 2);
+  auto zeroConst = constZero();
+  auto oneConst = constOne();
+  auto isEOF =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, result, minusOne);
+  auto isSuccess =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, result, oneConst);
+
+  auto readValue = builder->create<mlir::LLVM::LoadOp>(loc, charTy(), tempChar);
+  auto tConst = builder->create<mlir::LLVM::ConstantOp>(loc, charTy(), 'T');
+  auto fConst = builder->create<mlir::LLVM::ConstantOp>(loc, charTy(), 'F');
+  auto isTrueChar =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, readValue, tConst);
+  auto isFalseChar =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, readValue, fConst);
+  auto isValid = builder->create<mlir::LLVM::OrOp>(loc, isTrueChar, isFalseChar);
+
+  auto boolTrue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+  auto boolFalse = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+  auto boolFromChar = builder->create<mlir::LLVM::SelectOp>(loc, isTrueChar, boolTrue, boolFalse);
+  auto boolWhenValid = builder->create<mlir::LLVM::SelectOp>(loc, isValid, boolFromChar, boolFalse);
+  auto boolWhenSuccess =
+      builder->create<mlir::LLVM::SelectOp>(loc, isSuccess, boolWhenValid, boolFalse);
+  auto finalBool = builder->create<mlir::LLVM::SelectOp>(loc, isEOF, boolFalse, boolWhenSuccess);
+  builder->create<mlir::LLVM::StoreOp>(loc, finalBool, destAddr);
+
+  auto stateOnSuccess = builder->create<mlir::LLVM::SelectOp>(loc, isValid, zeroConst, oneConst);
+  auto stateWhenNotEOF =
+      builder->create<mlir::LLVM::SelectOp>(loc, isSuccess, stateOnSuccess, oneConst);
+  auto finalState = builder->create<mlir::LLVM::SelectOp>(loc, isEOF, twoConst, stateWhenNotEOF);
+  builder->create<mlir::LLVM::StoreOp>(loc, finalState, streamStatePtr);
 }
 
 void Backend::pushElementToScopeStack(std::shared_ptr<ast::Ast> ctx,

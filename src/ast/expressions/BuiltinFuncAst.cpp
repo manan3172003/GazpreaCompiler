@@ -24,7 +24,8 @@ std::string BuiltinFuncAst::toStringTree(std::string prefix) const {
     ss << sym->toString();
   }
   ss << "\n";
-  ss << arg->toStringTree(prefix + indent);
+  if (arg)
+    ss << arg->toStringTree(prefix + indent);
   return ss.str();
 }
 } // namespace gazprea::ast::expressions

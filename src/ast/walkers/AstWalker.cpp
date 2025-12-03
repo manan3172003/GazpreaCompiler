@@ -126,6 +126,9 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::FormatBuiltin:
     return visitFormatBuiltinFunc(
         std::dynamic_pointer_cast<expressions::FormatBuiltinFuncAst>(ast));
+  case NodeType::StreamStateBuiltin:
+    return visitStreamStateBuiltinFunc(
+        std::dynamic_pointer_cast<expressions::StreamStateBuiltinFuncAst>(ast));
   case NodeType::ArrayAccess:
     return visitArrayAccess(std::dynamic_pointer_cast<expressions::ArrayAccessAst>(ast));
   case NodeType::SingularIndexExpr:

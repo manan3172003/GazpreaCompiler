@@ -89,6 +89,7 @@ public:
   std::any visitArrayLiteral(GazpreaParser::ArrayLiteralContext *ctx) override;
   std::any visitMatrixLiteral(GazpreaParser::MatrixLiteralContext *ctx) override;
   std::any visitFormatExpr(GazpreaParser::FormatExprContext *ctx) override;
+  std::any visitStreamStateExpr(GazpreaParser::StreamStateExprContext *ctx) override;
   std::any visitStructAccessExpr(GazpreaParser::StructAccessExprContext *ctx) override;
   std::any visitMulDivRemExpr(GazpreaParser::MulDivRemExprContext *ctx) override;
   std::any visitLengthExpr(GazpreaParser::LengthExprContext *ctx) override;
