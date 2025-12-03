@@ -840,22 +840,14 @@ std::any AstBuilder::visitSliceStartExpr(GazpreaParser::SliceStartExprContext *c
   const auto rangedIndexExpr = std::make_shared<expressions::RangedIndexExprAst>(ctx->getStart());
   const auto leftExpr =
       std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr()));
-  const auto rightExpr = std::make_shared<expressions::UnaryAst>(ctx->getStart());
-  rightExpr->setUnaryOpType(expressions::UnaryOpType::MINUS);
-  rightExpr->setExpression(std::make_shared<expressions::IntegerLiteralAst>(ctx->getStart(), 1));
   rangedIndexExpr->setLeftIndexExpr(leftExpr);
-  rangedIndexExpr->setRightIndexExpr(rightExpr);
   return std::static_pointer_cast<expressions::IndexExprAst>(rangedIndexExpr);
 }
 std::any AstBuilder::visitSliceAllExpr(GazpreaParser::SliceAllExprContext *ctx) {
   const auto rangedIndexExpr = std::make_shared<expressions::RangedIndexExprAst>(ctx->getStart());
   const auto leftExpr =
       std::make_shared<expressions::IntegerLiteralAst>(ctx->getStart(), 1); // start index
-  const auto rightExpr = std::make_shared<expressions::UnaryAst>(ctx->getStart());
-  rightExpr->setUnaryOpType(expressions::UnaryOpType::MINUS);
-  rightExpr->setExpression(std::make_shared<expressions::IntegerLiteralAst>(ctx->getStart(), 1));
   rangedIndexExpr->setLeftIndexExpr(leftExpr);
-  rangedIndexExpr->setRightIndexExpr(rightExpr);
   return std::static_pointer_cast<expressions::IndexExprAst>(rangedIndexExpr);
 }
 std::any AstBuilder::visitSingleIndexExpr(GazpreaParser::SingleIndexExprContext *ctx) {

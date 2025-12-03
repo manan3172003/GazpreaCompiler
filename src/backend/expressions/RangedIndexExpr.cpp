@@ -4,7 +4,8 @@ namespace gazprea::backend {
 
 std::any Backend::visitRangedIndexExpr(std::shared_ptr<ast::expressions::RangedIndexExprAst> ctx) {
   visit(ctx->getLeftIndexExpr());
-  visit(ctx->getRightIndexExpr());
+  if (ctx->getRightIndexExpr())
+    visit(ctx->getRightIndexExpr());
   return {};
 }
 

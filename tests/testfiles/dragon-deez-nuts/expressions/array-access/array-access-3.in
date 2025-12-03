@@ -1,0 +1,24 @@
+/*
+This test performs multiple valid assigns
+*/
+
+procedure main() returns integer{
+    integer[3] x = [1, 2, 0];
+    integer[2][3] y = [[1, 2, 3], [4, 5, 6]];
+    x[1..2] -> std_output;
+    '\n' -> std_output;
+    x[2..3] -> std_output;
+    '\n' -> std_output;
+    x[..-1] -> std_output;
+    '\n' -> std_output;
+    x[..] -> std_output;
+    '\n' -> std_output;
+    y[-1][1..] -> std_output;
+    '\n' -> std_output;
+    x[1..3][2] -> std_output;
+    '\n' -> std_output;
+
+    return 0;
+}
+
+// CHECK_FILE:array-access-3.out

@@ -908,10 +908,11 @@ ValidationWalker::visitRangedIndexExpr(std::shared_ptr<expressions::RangedIndexE
   if (not isOfSymbolType(leftExpr->getInferredSymbolType(), "integer"))
     throw TypeError(ctx->getLineNumber(), "Non integer index provided");
 
-  visit(rightExpr);
-  if (not isOfSymbolType(rightExpr->getInferredSymbolType(), "integer"))
-    throw TypeError(ctx->getLineNumber(), "Non integer index provided");
-
+  if (ctx->getRightIndexExpr()) {
+    visit(rightExpr);
+    if (not isOfSymbolType(rightExpr->getInferredSymbolType(), "integer"))
+      throw TypeError(ctx->getLineNumber(), "Non integer index provided");
+  }
   // both integers
   ctx->setInferredDataType(leftExpr->getInferredDataType());
   ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
