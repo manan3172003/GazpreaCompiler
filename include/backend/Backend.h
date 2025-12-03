@@ -120,6 +120,7 @@ public:
 
 protected:
   void setupPrintf() const;
+  void setupScanf() const;
   void setupIntPow() const;
   void setupPrintArray() const;
   void setupThrowDivisionByZeroError() const;
@@ -178,6 +179,7 @@ protected:
                                 mlir::Value count);
   void printVector(mlir::Value vectorStructAddr, std::shared_ptr<symTable::Type> vectorType);
   void createGlobalString(const char *str, const char *stringName) const;
+  void createGlobalStreamState() const;
   void castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,
                     std::shared_ptr<symTable::Type> toType);
   void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);

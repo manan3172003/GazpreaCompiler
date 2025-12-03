@@ -25,6 +25,7 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
 
   // Some initial setup to get off the ground
   setupPrintf();
+  setupScanf();
   setupIntPow();
   setupThrowDivisionByZeroError();
   setupThrowArraySizeError();
@@ -34,6 +35,7 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%d\0", "intFormat");
   createGlobalString("%g\0", "floatFormat");
+  createGlobalStreamState();
 }
 
 int Backend::emitModule() {
@@ -98,7 +100,15 @@ void Backend::setupPrintf() const {
                                                       /*isVarArg=*/true);
 
   // Insert the printf function into the body of the parent module.
-  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printf", llvmFnType);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "printf_019ae38d_3df3_74a3_b276_d9a9f7a8008b",
+                                          llvmFnType);
+}
+
+void Backend::setupScanf() const {
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(intTy(), ptrTy(),
+                                                      /*isVarArg=*/true);
+  builder->create<mlir::LLVM::LLVMFuncOp>(loc, "scanf_019ae392_2fe0_72fc_ad1e_94bb9c5662c0",
+                                          llvmFnType);
 }
 
 void Backend::setupIntPow() const {
@@ -249,6 +259,12 @@ void Backend::createGlobalString(const char *str, const char *stringName) const 
   builder->create<mlir::LLVM::GlobalOp>(loc, mlirStringType, /*isConstant=*/true,
                                         mlir::LLVM::Linkage::Internal, stringName,
                                         builder->getStringAttr(mlirString), /*alignment=*/0);
+}
+
+void Backend::createGlobalStreamState() const {
+  builder->create<mlir::LLVM::GlobalOp>(loc, intTy(), false, mlir::LLVM::Linkage::Internal,
+                                        "stream_state_019ae35e_4e0e_7d02_98f8_6e5abd8135e9",
+                                        builder->getI32IntegerAttr(0), 0);
 }
 
 mlir::Value Backend::constOne() const {
