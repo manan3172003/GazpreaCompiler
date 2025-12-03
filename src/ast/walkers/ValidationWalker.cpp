@@ -3,6 +3,7 @@
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/RealTypeAst.h"
+#include "symTable/EmptyArrayTypeSymbol.h"
 #include "symTable/MethodSymbol.h"
 #include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
@@ -92,6 +93,34 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
       }
       inferVectorSize(vectorDeclarationType, ctx->getExpr());
       variableSymbol->setType(vectorDeclarationType);
+    }
+  }
+
+  if (isOfSymbolType(declarationType, "array") || isOfSymbolType(declarationType, "vector")) {
+    const auto rhsType = ctx->getExpr()->getInferredSymbolType();
+    if (std::dynamic_pointer_cast<symTable::EmptyArrayTypeSymbol>(rhsType)) {
+      std::shared_ptr<types::ArrayTypeAst> arrayTypeAst = nullptr;
+      if (ctx->getType()->getNodeType() == NodeType::ArrayType) {
+        arrayTypeAst = std::dynamic_pointer_cast<types::ArrayTypeAst>(ctx->getType());
+      }
+
+      if (arrayTypeAst) {
+        for (bool inferred : arrayTypeAst->isSizeInferred()) {
+          if (inferred) {
+            throw SizeError(ctx->getLineNumber(), "Cannot infer size from empty array");
+          }
+        }
+      }
+
+      if (auto targetArrayType =
+              std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(declarationType)) {
+        ctx->getExpr()->setInferredSymbolType(targetArrayType);
+      } else if (auto targetVectorType =
+                     std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(declarationType)) {
+        auto newArrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+        newArrayType->setType(targetVectorType->getType());
+        ctx->getExpr()->setInferredSymbolType(newArrayType);
+      }
     }
   }
 
@@ -750,7 +779,7 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
 
   if (elements.empty()) {
     ctx->setInferredDataType(arrayType);
-    // ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+    ctx->setInferredSymbolType(std::make_shared<symTable::EmptyArrayTypeSymbol>("empty_array"));
     return {};
   }
 

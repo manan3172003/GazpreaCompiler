@@ -1,6 +1,7 @@
 #include "CompileTimeExceptions.h"
 #include "ast/types/AliasTypeAst.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/EmptyArrayTypeSymbol.h"
 #include "symTable/StructTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
 #include "symTable/VectorTypeSymbol.h"
@@ -163,6 +164,10 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
     const auto destVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(destination);
     const auto sourceVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(source);
     return typesMatch(destVector->getType(), sourceVector->getType());
+  }
+  if ((isOfSymbolType(destination, "array") || isOfSymbolType(destination, "vector")) &&
+      std::dynamic_pointer_cast<symTable::EmptyArrayTypeSymbol>(source)) {
+    return true;
   }
   return false;
 }
