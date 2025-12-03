@@ -126,6 +126,15 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::FormatBuiltin:
     return visitFormatBuiltinFunc(
         std::dynamic_pointer_cast<expressions::FormatBuiltinFuncAst>(ast));
+  case NodeType::ArrayAccess:
+    return visitArrayAccess(std::dynamic_pointer_cast<expressions::ArrayAccessAst>(ast));
+  case NodeType::SingularIndexExpr:
+    return visitSingularIndex(std::dynamic_pointer_cast<expressions::SingularIndexExprAst>(ast));
+  case NodeType::RangedIndexExpr:
+    return visitRangedIndexExpr(std::dynamic_pointer_cast<expressions::RangedIndexExprAst>(ast));
+  case NodeType::ArrayElementAssign:
+    return visitArrayElementAssign(
+        std::static_pointer_cast<statements::ArrayElementAssignAst>(ast));
   default:
     return {};
   }

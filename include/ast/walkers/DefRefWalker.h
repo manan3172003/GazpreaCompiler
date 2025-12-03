@@ -88,5 +88,9 @@ public:
   std::any visitStructDeclaration(std::shared_ptr<statements::StructDeclarationAst> ctx) override;
   std::any visitStructType(std::shared_ptr<types::StructTypeAst> ctx) override;
   std::any visitStruct(std::shared_ptr<expressions::StructLiteralAst> ctx) override;
+  std::any visitArrayAccess(std::shared_ptr<expressions::ArrayAccessAst> ctx) override;
+  std::any visitSingularIndex(std::shared_ptr<expressions::SingularIndexExprAst> ctx) override;
+  std::any visitRangedIndexExpr(std::shared_ptr<expressions::RangedIndexExprAst> ctx) override;
+  std::any visitArrayElementAssign(std::shared_ptr<statements::ArrayElementAssignAst> ctx) override;
 };
 } // namespace gazprea::ast::walkers

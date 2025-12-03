@@ -1,0 +1,12 @@
+/*
+Tries to index a non-array type
+*/
+
+procedure main() returns integer {
+    integer x;
+    x[10] = 5;
+
+    return 0;
+}
+
+// CHECK:TypeError on Line 7: Cannot slice or index non array type

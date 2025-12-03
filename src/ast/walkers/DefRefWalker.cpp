@@ -471,6 +471,13 @@ DefRefWalker::visitTupleUnpackAssign(std::shared_ptr<statements::TupleUnpackAssi
   ctx->setScope(symTab->getCurrentScope());
   return {};
 }
+std::any
+DefRefWalker::visitArrayElementAssign(std::shared_ptr<statements::ArrayElementAssignAst> ctx) {
+  visit(ctx->getArrayInstance());
+  visit(ctx->getElementIndex());
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
 std::any DefRefWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {
   auto symbol = symTab->getCurrentScope()->resolveSymbol(ctx->getTupleName());
   throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
@@ -483,6 +490,24 @@ std::any DefRefWalker::visitStructAccess(std::shared_ptr<expressions::StructAcce
   throwIfUndeclaredSymbol(ctx->getLineNumber(), symbol);
   ctx->setScope(symTab->getCurrentScope());
   ctx->setSymbol(symbol);
+  return {};
+}
+std::any DefRefWalker::visitArrayAccess(std::shared_ptr<expressions::ArrayAccessAst> ctx) {
+  visit(ctx->getArrayInstance());
+  visit(ctx->getElementIndex());
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitSingularIndex(std::shared_ptr<expressions::SingularIndexExprAst> ctx) {
+  visit(ctx->getSingularIndexExpr());
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+std::any DefRefWalker::visitRangedIndexExpr(std::shared_ptr<expressions::RangedIndexExprAst> ctx) {
+  visit(ctx->getLeftIndexExpr());
+  if (ctx->getRightIndexExpr())
+    visit(ctx->getRightIndexExpr());
+  ctx->setScope(symTab->getCurrentScope());
   return {};
 }
 std::any DefRefWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
@@ -505,6 +530,7 @@ std::any DefRefWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> ctx) 
   for (const auto &subType : ctx->getTypes()) {
     visit(subType);
     tupleTypeSymbol->addResolvedType(resolvedType(ctx->getLineNumber(), subType));
+    tupleTypeSymbol->addUnresolvedType(subType);
   }
   tupleTypeSymbol->setDef(ctx);
   ctx->setSymbol(tupleTypeSymbol);

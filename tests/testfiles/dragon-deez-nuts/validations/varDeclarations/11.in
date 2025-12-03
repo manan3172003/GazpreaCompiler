@@ -1,0 +1,11 @@
+/*
+Tries to index/slice an aray with non integer expression
+*/
+
+procedure main() returns integer {
+    integer[10] x = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+    x[10.0] -> std_output;
+    return 0;
+}
+
+// CHECK:TypeError on Line 7

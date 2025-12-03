@@ -2,6 +2,7 @@
 
 #include "ast/Ast.h"
 #include "ast/RootAst.h"
+#include "ast/expressions/ArrayAccessAst.h"
 #include "ast/expressions/ArrayLiteralAst.h"
 #include "ast/expressions/BinaryAst.h"
 #include "ast/expressions/BoolLiteralAst.h"
@@ -11,7 +12,9 @@
 #include "ast/expressions/FuncProcCallAst.h"
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerLiteralAst.h"
+#include "ast/expressions/RangedIndexExprAst.h"
 #include "ast/expressions/RealLiteralAst.h"
+#include "ast/expressions/SingularIndexExprAst.h"
 #include "ast/expressions/StructAccessAst.h"
 #include "ast/expressions/StructFuncCallRouterAst.h"
 #include "ast/expressions/TupleAccessAst.h"
@@ -21,6 +24,7 @@
 #include "ast/prototypes/FunctionParamAst.h"
 #include "ast/prototypes/ProcedureAst.h"
 #include "ast/prototypes/ProcedureParamAst.h"
+#include "ast/statements/ArrayElementAssignAst.h"
 #include "ast/statements/AssignmentAst.h"
 #include "ast/statements/BlockAst.h"
 #include "ast/statements/BreakAst.h"
@@ -157,5 +161,15 @@ public:
   virtual std::any visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) { return {}; }
   virtual std::any visitVectorType(std::shared_ptr<types::VectorTypeAst> ctx) { return {}; }
   virtual std::any visitStructType(std::shared_ptr<types::StructTypeAst> ctx) { return {}; }
+  virtual std::any visitArrayAccess(std::shared_ptr<expressions::ArrayAccessAst> ctx) { return {}; }
+  virtual std::any visitSingularIndex(std::shared_ptr<expressions::SingularIndexExprAst> ctx) {
+    return {};
+  }
+  virtual std::any visitRangedIndexExpr(std::shared_ptr<expressions::RangedIndexExprAst> ctx) {
+    return {};
+  }
+  virtual std::any visitArrayElementAssign(std::shared_ptr<statements::ArrayElementAssignAst> ctx) {
+    return {};
+  }
 };
 } // namespace gazprea::ast::walkers

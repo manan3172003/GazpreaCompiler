@@ -15,7 +15,7 @@ public:
   void setArrayInstance(const std::shared_ptr<ExpressionAst> &instance) {
     arrayInstance = instance;
   }
-  std::shared_ptr<ExpressionAst> getArrayName() const { return arrayInstance; }
+  std::shared_ptr<ExpressionAst> getArrayInstance() const { return arrayInstance; }
 
   void setElementIndex(const std::shared_ptr<IndexExprAst> &index) { elementIndex = index; }
   std::shared_ptr<IndexExprAst> getElementIndex() const { return elementIndex; }

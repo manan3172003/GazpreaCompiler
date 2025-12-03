@@ -333,6 +333,9 @@ ValidationWalker::visitTupleElementAssign(std::shared_ptr<statements::TupleEleme
   if (ctx->getFieldIndex() == 0 ||
       ctx->getFieldIndex() > static_cast<int>(tupleTypeSymbol->getResolvedTypes().size()))
     throw SizeError(ctx->getLineNumber(), "Invalid tuple index");
+
+  ctx->setAssignDataType(tupleTypeSymbol->getUnresolvedType(ctx->getFieldIndex()));
+  ctx->setAssignSymbolType(tupleTypeSymbol->getResolvedType(ctx->getFieldIndex()));
   return {};
 }
 std::any
@@ -431,6 +434,9 @@ std::any ValidationWalker::visitStructElementAssign(
 
   if (not structTypeSymbol->elementNameExist(ctx->getElementName()))
     throw TypeError(ctx->getLineNumber(), "Invalid struct element");
+
+  ctx->setAssignDataType(structTypeSymbol->getUnresolvedType(ctx->getElementName()));
+  ctx->setAssignSymbolType(structTypeSymbol->getResolvedType(ctx->getElementName()));
   return {};
 }
 std::any ValidationWalker::visitStructAccess(std::shared_ptr<expressions::StructAccessAst> ctx) {
@@ -675,6 +681,28 @@ std::any ValidationWalker::visitIdentifier(std::shared_ptr<expressions::Identifi
 std::any ValidationWalker::visitIdentifierLeft(std::shared_ptr<statements::IdentifierLeftAst> ctx) {
   if (not std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol()))
     throw SymbolError(ctx->getLineNumber(), "Identifier symbol is not a variable");
+
+  const auto dataTypeSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+
+  const auto astNode = dataTypeSymbol->getDef();
+
+  if (astNode->getNodeType() == NodeType::Declaration) {
+    const auto dataType = std::dynamic_pointer_cast<statements::DeclarationAst>(astNode)->getType();
+    ctx->setAssignDataType(dataType);
+    // Use the variable symbol's type directly to preserve inferred sizes
+    ctx->setAssignSymbolType(dataTypeSymbol->getType());
+  } else if (astNode->getNodeType() == NodeType::FunctionParam) {
+    const auto dataType =
+        std::dynamic_pointer_cast<prototypes::FunctionParamAst>(astNode)->getParamType();
+    ctx->setAssignDataType(dataType);
+    ctx->setAssignSymbolType(resolvedInferredType(dataType));
+  } else if (astNode->getNodeType() == NodeType::ProcedureParam) {
+    const auto dataType =
+        std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(astNode)->getParamType();
+    ctx->setAssignDataType(dataType);
+    ctx->setAssignSymbolType(resolvedInferredType(dataType));
+  }
+
   return {};
 }
 std::any ValidationWalker::visitInteger(std::shared_ptr<expressions::IntegerLiteralAst> ctx) {
@@ -753,6 +781,79 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
   arrayType->setType(inferredElementType);
   ctx->setInferredDataType(arrayType);
   ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+  return {};
+}
+std::any ValidationWalker::visitArrayAccess(std::shared_ptr<expressions::ArrayAccessAst> ctx) {
+  const auto arrayInstance = ctx->getArrayInstance();
+  const auto elementIndex = ctx->getElementIndex();
+  visit(arrayInstance);
+  visit(elementIndex);
+
+  const auto arraySymbolType =
+      std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayInstance->getInferredSymbolType());
+  if (not arraySymbolType)
+    throw TypeError(ctx->getLineNumber(), "Cannot slice or index non array type");
+  const auto arrayDataType =
+      std::dynamic_pointer_cast<types::ArrayTypeAst>(arrayInstance->getInferredDataType());
+
+  if (elementIndex->getNodeType() == NodeType::SingularIndexExpr) {
+    ctx->setInferredSymbolType(arraySymbolType->getType());
+    ctx->setInferredDataType(arrayDataType->getType());
+  } else if (elementIndex->getNodeType() == NodeType::RangedIndexExpr) {
+    ctx->setInferredSymbolType(arraySymbolType);
+    ctx->setInferredDataType(arrayDataType);
+  }
+  return {};
+}
+std::any
+ValidationWalker::visitSingularIndex(std::shared_ptr<expressions::SingularIndexExprAst> ctx) {
+  const auto indexExpr = ctx->getSingularIndexExpr();
+  visit(indexExpr);
+  if (not isOfSymbolType(indexExpr->getInferredSymbolType(), "integer"))
+    throw TypeError(ctx->getLineNumber(), "Non integer index provided");
+  ctx->setInferredDataType(indexExpr->getInferredDataType());
+  ctx->setInferredSymbolType(indexExpr->getInferredSymbolType());
+  return {};
+}
+std::any
+ValidationWalker::visitRangedIndexExpr(std::shared_ptr<expressions::RangedIndexExprAst> ctx) {
+  const auto leftExpr = ctx->getLeftIndexExpr();
+  visit(leftExpr);
+  if (not isOfSymbolType(leftExpr->getInferredSymbolType(), "integer"))
+    throw TypeError(ctx->getLineNumber(), "Non integer index provided");
+
+  if (const auto rightExpr = ctx->getRightIndexExpr()) {
+    visit(rightExpr);
+    if (not isOfSymbolType(rightExpr->getInferredSymbolType(), "integer"))
+      throw TypeError(ctx->getLineNumber(), "Non integer index provided");
+  }
+
+  // both integers
+  ctx->setInferredDataType(leftExpr->getInferredDataType());
+  ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
+  return {};
+}
+std::any
+ValidationWalker::visitArrayElementAssign(std::shared_ptr<statements::ArrayElementAssignAst> ctx) {
+  const auto arrayInstance = ctx->getArrayInstance();
+  const auto elementIndex = ctx->getElementIndex();
+  visit(arrayInstance);
+  visit(elementIndex);
+
+  const auto arraySymbolType =
+      std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayInstance->getAssignSymbolType());
+  if (not arraySymbolType)
+    throw TypeError(ctx->getLineNumber(), "Cannot slice or index non array type");
+  const auto arrayDataType =
+      std::dynamic_pointer_cast<types::ArrayTypeAst>(arrayInstance->getAssignDataType());
+
+  if (elementIndex->getNodeType() == NodeType::SingularIndexExpr) {
+    ctx->setAssignSymbolType(arraySymbolType->getType());
+    ctx->setAssignDataType(arrayDataType->getType());
+  } else if (elementIndex->getNodeType() == NodeType::RangedIndexExpr) {
+    ctx->setAssignSymbolType(arraySymbolType);
+    ctx->setAssignDataType(arrayDataType);
+  }
   return {};
 }
 std::any ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx) {
