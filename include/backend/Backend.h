@@ -203,6 +203,13 @@ protected:
   mlir::Value castScalarToArray(std::shared_ptr<ast::Ast> ctx, mlir::Value scalarValue,
                                 std::shared_ptr<symTable::Type> scalarType,
                                 std::shared_ptr<symTable::Type> arrayType);
+  void fillArrayWithScalar(mlir::Value arrayStruct, std::shared_ptr<symTable::Type> arrayType,
+                           mlir::Value scalarValue, std::shared_ptr<symTable::Type> scalarType,
+                           mlir::Value targetOuterSize, mlir::Value targetInnerSize);
+  std::pair<mlir::Value, bool> castStructIfNeeded(mlir::Value lhsArrayStruct,
+                                                  std::shared_ptr<symTable::Type> lhsType,
+                                                  mlir::Value srcArrayStruct,
+                                                  std::shared_ptr<symTable::Type> srcType);
   void createGlobalStreamState() const;
   void fillArrayFromScalar(mlir::Value arrayStruct,
                            std::shared_ptr<symTable::ArrayTypeSymbol> arrayTypeSym,

@@ -88,7 +88,6 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
                    arrayElementAssign->getAssignSymbolType());
     } else if (arrayElementAssign->getElementIndex()->getNodeType() ==
                ast::NodeType::RangedIndexExpr) {
-      // TODO: Dont assume RHS will always be array
       auto sliceStructPtr = arrayElementAssign->getEvaluatedAddr();
       auto sliceMlirType =
           getMLIRType(arrayElementAssign->getArrayInstance()->getAssignSymbolType());
@@ -106,13 +105,12 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       copyValue(type, valueAddr, newAddr);
 
       auto lhsDeclaredType = arrayElementAssign->getArrayInstance()->getAssignSymbolType();
-      arraySizeValidationForArrayStructs(sliceStructPtr, lhsDeclaredType, newAddr, type);
-
+      auto [finalAddr, needToFree] =
+          castStructIfNeeded(sliceStructPtr, lhsDeclaredType, newAddr, type);
       auto lhsArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lhsDeclaredType);
       auto elementType = lhsArrayType->getType();
-
-      copyArrayElementsToSlice(newAddr, type, sliceDataPtr, elementType, sliceSize);
-      freeArray(arrayElementAssign->getArrayInstance()->getAssignSymbolType(), newAddr);
+      copyArrayElementsToSlice(finalAddr, lhsArrayType, sliceDataPtr, elementType, sliceSize);
+      freeArray(arrayElementAssign->getArrayInstance()->getAssignSymbolType(), finalAddr);
     }
   } else {
     if (isTypeArray(variableSymbol->getType())) {
