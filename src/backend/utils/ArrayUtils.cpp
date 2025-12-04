@@ -292,8 +292,8 @@ void Backend::throwIfNotEqualArrayStructs(mlir::Value leftStruct, mlir::Value ri
 
   auto leftStructDimAddr = get2DArrayBoolAddr(*builder, loc, arrayStructType, leftStruct);
   auto rightStructDimAddr = get2DArrayBoolAddr(*builder, loc, arrayStructType, rightStruct);
-  mlir::Value leftIs2D = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), leftStructDimAddr);
-  mlir::Value rightIs2D = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), rightStructDimAddr);
+  mlir::Value leftIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), leftStructDimAddr);
+  mlir::Value rightIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), rightStructDimAddr);
 
   auto dimNotEqual =
       builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne, leftIs2D, rightIs2D);
