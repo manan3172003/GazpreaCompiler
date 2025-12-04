@@ -536,6 +536,18 @@ void Backend::arraySizeValidation(std::shared_ptr<ast::Ast> ctx,
     symbol = assignAst->getLVal()->getSymbol();
   }
   auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(symbol);
+
+  // Skip validation when the value originated from an explicit cast; casts handle
+  // padding/truncation.
+  if (variableSymbol) {
+    if (auto decl =
+            std::dynamic_pointer_cast<ast::statements::DeclarationAst>(variableSymbol->getDef())) {
+      if (decl->getExpr() && decl->getExpr()->getNodeType() == ast::NodeType::Cast) {
+        return;
+      }
+            }
+  }
+
   if (variableSymbol && isTypeArray(type)) {
     auto arrayType =
         std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType());
