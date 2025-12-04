@@ -1,0 +1,12 @@
+/*
+Test basic iterator loop with integer array
+*/
+procedure main() returns integer {
+    integer[3] arr = [1, 2, 3];
+    loop i in arr {
+        i -> std_output;
+    }
+    return 0;
+}
+
+// CHECK:123

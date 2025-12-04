@@ -315,10 +315,11 @@ std::any AstBuilder::visitPostPredicatedLoop(GazpreaParser::PostPredicatedLoopCo
 
 std::any AstBuilder::visitIterativeLoop(GazpreaParser::IterativeLoopContext *ctx) {
   auto loopAst = std::make_shared<statements::IteratorLoopAst>(ctx->getStart());
-
-  loopAst->setIteratorName(ctx->ID()->getText());
-  loopAst->setDomainExpr(
+  auto domainAst = std::make_shared<expressions::DomainExprAst>(ctx->getStart());
+  domainAst->setIteratorName(ctx->ID()->getText());
+  domainAst->setDomainExpression(
       std::any_cast<std::shared_ptr<expressions::ExpressionAst>>(visit(ctx->expr())));
+  loopAst->setDomain(domainAst);
   auto stmt = std::any_cast<std::shared_ptr<statements::StatementAst>>(visit(ctx->stat()));
   if (stmt->getNodeType() == NodeType::Block) {
     loopAst->setBody(std::static_pointer_cast<statements::BlockAst>(stmt));

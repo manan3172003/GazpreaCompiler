@@ -1913,7 +1913,7 @@ void Backend::copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAd
 }
 
 bool Backend::isTypeArray(std::shared_ptr<symTable::Type> type) {
-  return (type->getName().substr(0, 5) == "array") ? true : false;
+  return (type->getName().substr(0, 5) == "array") || isEmptyArray(type);
 }
 
 bool Backend::isEmptyArray(std::shared_ptr<symTable::Type> type) {

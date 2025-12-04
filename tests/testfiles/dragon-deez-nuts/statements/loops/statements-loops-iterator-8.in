@@ -1,0 +1,10 @@
+procedure main() returns integer{
+    vector<integer> x = [1, 2, 3];
+    loop i in x {
+        i -> std_output;
+    }
+    return 0;
+}
+
+//CHECK:123
+

@@ -880,7 +880,33 @@ std::any DefRefWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
   return {};
 }
 std::any DefRefWalker::visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {
-  return AstWalker::visitIteratorLoop(ctx);
+  ctx->setScope(symTab->getCurrentScope());
+
+  auto newScope = std::make_shared<symTable::LocalScope>();
+  newScope->setScopeType(symTable::ScopeType::Loop);
+  symTab->pushScope(newScope);
+
+  visit(ctx->getDomain());
+
+  // Define the iterator variable in the loop scope
+  const auto domainExpr = ctx->getDomain();
+  const std::string iteratorName = domainExpr->getIteratorName();
+  throwDuplicateSymbolError(domainExpr, iteratorName, symTab->getCurrentScope(), false);
+
+  auto varSymbol = std::make_shared<symTable::VariableSymbol>(iteratorName, Qualifier::Const);
+  auto intType =
+      std::dynamic_pointer_cast<symTable::Type>(symTab->getGlobalScope()->resolveType("integer"));
+  varSymbol->setType(intType);
+  varSymbol->setDef(domainExpr);
+
+  domainExpr->setSymbol(varSymbol);
+  symTab->getCurrentScope()->defineSymbol(varSymbol);
+
+  visit(ctx->getBody());
+
+  symTab->popScope();
+
+  return {};
 }
 std::any DefRefWalker::visitLenMemberFunc(std::shared_ptr<statements::LenMemberFuncAst> ctx) {
   visit(ctx->getLeft());
@@ -968,6 +994,7 @@ std::any DefRefWalker::visitRange(std::shared_ptr<expressions::RangeAst> ctx) {
 }
 
 std::any DefRefWalker::visitDomainExpr(std::shared_ptr<expressions::DomainExprAst> ctx) {
+  ctx->setScope(symTab->getCurrentScope());
   visit(ctx->getDomainExpression());
   return {};
 }

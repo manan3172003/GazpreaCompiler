@@ -1553,7 +1553,9 @@ std::any ValidationWalker::visitLoop(std::shared_ptr<statements::LoopAst> ctx) {
   return {};
 }
 std::any ValidationWalker::visitIteratorLoop(std::shared_ptr<statements::IteratorLoopAst> ctx) {
-  return AstWalker::visitIteratorLoop(ctx);
+  visit(ctx->getDomain());
+  visit(ctx->getBody());
+  return {};
 }
 
 std::any ValidationWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) {
@@ -1720,17 +1722,39 @@ std::any ValidationWalker::visitRange(std::shared_ptr<expressions::RangeAst> ctx
 
 std::any ValidationWalker::visitDomainExpr(std::shared_ptr<expressions::DomainExprAst> ctx) {
   visit(ctx->getDomainExpression());
-
   auto domainType = ctx->getDomainExpression()->getInferredSymbolType();
 
-  if (domainType && !isCollection(domainType)) {
-    throw TypeError(ctx->getLineNumber(), "Domain expression must be a vector or interval");
+  if (domainType) {
+    auto arrayTypeSymbol = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(domainType);
+    auto vectorTypeSymbol = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(domainType);
+
+    if (!arrayTypeSymbol && !vectorTypeSymbol) {
+      throw TypeError(ctx->getLineNumber(), "Domain expression must be a 1-D array or vector");
+    }
+    if (arrayTypeSymbol) {
+      auto elementType = arrayTypeSymbol->getType();
+      if (isCollection(elementType)) {
+        throw TypeError(ctx->getLineNumber(), "Domain expression must be a 1-D array or vector");
+      }
+    }
+    if (vectorTypeSymbol) {
+      auto elementType = vectorTypeSymbol->getType();
+      if (isCollection(elementType)) {
+        throw TypeError(ctx->getLineNumber(), "Domain expression must be a 1-D array or vector");
+      }
+    }
   }
+
   auto varSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   if (varSymbol && domainType) {
     auto arrayTypeSymbol = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(domainType);
+    auto vectorTypeSymbol = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(domainType);
+
     if (arrayTypeSymbol) {
       auto elementType = arrayTypeSymbol->getType();
+      varSymbol->setType(elementType);
+    } else if (vectorTypeSymbol) {
+      auto elementType = vectorTypeSymbol->getType();
       varSymbol->setType(elementType);
     }
   }

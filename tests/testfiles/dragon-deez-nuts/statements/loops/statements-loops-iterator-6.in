@@ -1,0 +1,12 @@
+/*
+Test iterator loop with character array
+*/
+procedure main() returns integer {
+    character[3] arr = ['a', 'b', 'c'];
+    loop c in arr {
+        c -> std_output;
+    }
+    return 0;
+}
+
+// CHECK:abc

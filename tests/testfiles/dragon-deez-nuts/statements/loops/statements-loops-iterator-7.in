@@ -1,0 +1,8 @@
+procedure main() returns integer {
+    integer[10] j = [x in 1..3 | x];
+    loop i in j{
+        i -> std_output;
+    }
+    return 0;
+}
+//CHECK:1230000000

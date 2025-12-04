@@ -1,0 +1,14 @@
+/*
+Test iterator loop with continue statement
+*/
+procedure main() returns integer {
+    loop i in 1..5 {
+        if (i == 3) {
+            continue;
+        }
+        i -> std_output;
+    }
+    return 0;
+}
+
+// CHECK:1245

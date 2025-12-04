@@ -1,0 +1,14 @@
+/*
+Test nested iterator loops
+*/
+procedure main() returns integer {
+    loop i in 1..3 {
+        loop j in 1..2 {
+            i -> std_output;
+            j -> std_output;
+        }
+    }
+    return 0;
+}
+
+// CHECK:111221223132
