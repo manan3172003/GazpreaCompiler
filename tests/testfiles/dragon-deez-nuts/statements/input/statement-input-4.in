@@ -1,0 +1,12 @@
+procedure main() returns integer {
+    struct Complex (integer i, character c) s1 = Complex(1, 'a');
+    s1.i <- std_input;
+    s1.c <- std_input;
+
+    s1.i -> std_output;
+    s1.c -> std_output;
+
+    return 0;
+}
+//INPUT:3c
+//CHECK:3c

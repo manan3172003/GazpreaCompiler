@@ -1,0 +1,12 @@
+procedure main() returns integer {
+    var tuple(integer, character) t = (1, 'a');
+    t.1 <- std_input;
+    t.2 <- std_input;
+
+    t.1 -> std_output;
+    t.2 -> std_output;
+
+    return 0;
+}
+//INPUT:3c
+//CHECK:3c

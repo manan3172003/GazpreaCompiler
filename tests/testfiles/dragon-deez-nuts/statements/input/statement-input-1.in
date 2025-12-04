@@ -1,0 +1,22 @@
+procedure main() returns integer {
+    integer x;
+    character y;
+    real z;
+    boolean a;
+
+    x <- std_input;
+    x -> std_output;
+
+    y <- std_input;
+    y -> std_output;
+
+    z <- std_input;
+    z -> std_output;
+
+    a <- std_input;
+    a -> std_output;
+
+    return 0;
+}
+//INPUT:5c3.14T
+//CHECK:5c3.14T

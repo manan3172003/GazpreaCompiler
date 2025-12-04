@@ -4,10 +4,8 @@ namespace gazprea::backend {
 
 std::any Backend::visitInput(std::shared_ptr<ast::statements::InputAst> ctx) {
   visit(ctx->getLVal());
-  auto [targetType, targetAddr] = popElementFromStack(ctx);
-  if (!targetType || !targetAddr) {
-    return {};
-  }
+  auto targetType = ctx->getLVal()->getAssignSymbolType();
+  auto targetAddr = ctx->getLVal()->getEvaluatedAddr();
   auto tempAlloca =
       builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(targetType), constOne());
   const auto typeName = targetType->getName();
