@@ -1,0 +1,14 @@
+/*
+This test performs multiple valid assignments
+*/
+procedure main() returns integer{
+    var integer[5] x = [1, 2, 0];
+    var character[2][5] y = [['h', 'e', 'l', 'l', 'o'], ['w', 'o', 'r', 'l', 'd']];
+    x[1..5] = [4, 5];
+    y[-1][..-1] = ['W', 'O', 'R', 'L'];
+    x -> std_output;
+    y -> std_output;
+    return 0;
+}
+
+// CHECK:[4 5 0 0 0][[h e l l o] [W O R L d]]

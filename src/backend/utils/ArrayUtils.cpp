@@ -98,6 +98,74 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::statements::Declarati
   }
 }
 
+void Backend::arraySizeValidationForArrayStructs(mlir::Value lhsArrayStruct,
+                                                 std::shared_ptr<symTable::Type> lhsType,
+                                                 mlir::Value srcArrayStruct,
+                                                 std::shared_ptr<symTable::Type> srcType) {
+  // Only handle when lhsType is an array type
+  if (!isTypeArray(lhsType)) {
+    return;
+  }
+
+  auto lhsArrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lhsType);
+  if (!lhsArrayTypeSym) {
+    return;
+  }
+
+  // Get the target outer size from the lhsArrayStruct (runtime size)
+  auto lhsArrayStructType = getMLIRType(lhsType);
+  auto targetOuterSizeAddr = getArraySizeAddr(*builder, loc, lhsArrayStructType, lhsArrayStruct);
+  mlir::Value targetOuterSize =
+      builder->create<mlir::LLVM::LoadOp>(loc, intTy(), targetOuterSizeAddr);
+
+  // Get the current outer size of srcArrayStruct
+  auto srcArrayStructType = getMLIRType(srcType);
+  auto srcSizeAddr = getArraySizeAddr(*builder, loc, srcArrayStructType, srcArrayStruct);
+  mlir::Value srcSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcSizeAddr);
+
+  // If targetOuterSize < srcSize -> throw
+  auto isOuterTooSmall = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt,
+                                                             targetOuterSize, srcSize);
+  builder->create<mlir::scf::IfOp>(
+      loc, isOuterTooSmall.getResult(), [&](mlir::OpBuilder &b, mlir::Location l) {
+        auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+            "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+        b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+        b.create<mlir::scf::YieldOp>(l);
+      });
+
+  // Default targetInnerSize = 0 (for 1D)
+  mlir::Value targetInnerSize = constZero();
+
+  // Check if lhsType is a 2D array
+  auto lhsElementType = lhsArrayTypeSym->getType();
+  auto lhsElementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lhsElementType);
+
+  if (lhsElementArrayType) {
+    // This is a 2D array - get the max sub-array size from lhsArrayStruct
+    mlir::Value lhsMaxSubSize = maxSubArraySize(lhsArrayStruct, lhsType);
+    targetInnerSize = lhsMaxSubSize;
+
+    // Compute max sub-array size of the source
+    mlir::Value srcMaxSubSize = maxSubArraySize(srcArrayStruct, srcType);
+
+    // if targetInnerSize < srcMaxSubSize -> throw
+    auto isInnerTooSmall = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt,
+                                                               targetInnerSize, srcMaxSubSize);
+    builder->create<mlir::scf::IfOp>(
+        loc, isInnerTooSmall.getResult(), [&](mlir::OpBuilder &b, mlir::Location l) {
+          auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+              "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+          b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+          b.create<mlir::scf::YieldOp>(l);
+        });
+  }
+
+  // Finally, pad the source array to the target sizes if needed.
+  // padArrayIfNeeded will check current sizes and only pad when necessary.
+  padArrayIfNeeded(srcArrayStruct, srcType, targetOuterSize, targetInnerSize);
+}
+
 void Backend::arraySizeValidation(std::shared_ptr<symTable::VariableSymbol> variableSymbol,
                                   std::shared_ptr<symTable::Type> type, mlir::Value valueAddr) {
   if (isTypeArray(type)) {
@@ -830,6 +898,67 @@ mlir::Value Backend::normalizeIndex(mlir::Value index, mlir::Value arraySize) {
   // If we reach here, normalized is in range — return the 1-based normalized index.
   auto zeroBased = builder->create<mlir::LLVM::SubOp>(loc, normalized, one).getResult();
   return zeroBased;
+}
+
+// Copy `count` elements from srcArrayStruct -> dstDataPtr (element pointer).
+// Assumes source and destination element types are identical (no cast needed).
+// - srcArrayStruct: address of the source array struct (runtime struct).
+// - srcArrayType: symTable::Type for the source (should be ArrayTypeSymbol).
+// - dstDataPtr: a loaded pointer (mlir::Value) to the destination element memory.
+// - elementType: the element symTable::Type (the runtime element type).
+// - count: number of elements to copy.
+void Backend::copyArrayElementsToSlice(mlir::Value srcArrayStruct,
+                                       std::shared_ptr<symTable::Type> srcArrayType,
+                                       mlir::Value dstDataPtr,
+                                       std::shared_ptr<symTable::Type> elementType,
+                                       mlir::Value count) {
+  auto srcArrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(srcArrayType);
+  if (!srcArrayTypeSym)
+    return;
+
+  auto srcArrayMlirType = getMLIRType(srcArrayType);
+  auto srcDataAddr = getArrayDataAddr(*builder, loc, srcArrayMlirType, srcArrayStruct);
+  mlir::Value srcDataPtr =
+      builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataAddr).getResult();
+
+  mlir::Type elementMlirType = getMLIRType(elementType);
+
+  auto zero = constZero();
+  auto one = constOne();
+
+  // Check if element is an array (nested array case)
+  auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
+
+  builder->create<mlir::scf::ForOp>(
+      loc, zero, count, one, mlir::ValueRange{},
+      [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value iv, mlir::ValueRange iterArgs) {
+        // src element pointer
+        auto srcElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMlirType, srcDataPtr,
+                                                      mlir::ValueRange{iv});
+        // dst element pointer
+        auto dstElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMlirType, dstDataPtr,
+                                                      mlir::ValueRange{iv});
+
+        if (elementArrayType) {
+          // For nested arrays, we need to use copyArrayStruct
+          // Save and restore builder context
+          auto savedInsertionPoint = builder->saveInsertionPoint();
+          builder->setInsertionPoint(b.getInsertionBlock(), b.getInsertionPoint());
+          auto savedLoc = loc;
+          loc = l;
+
+          copyArrayStruct(elementType, srcElemPtr, dstElemPtr);
+
+          loc = savedLoc;
+          builder->restoreInsertionPoint(savedInsertionPoint);
+        } else {
+          // For scalar elements, simple load/store
+          auto value = b.create<mlir::LLVM::LoadOp>(l, elementMlirType, srcElemPtr);
+          b.create<mlir::LLVM::StoreOp>(l, value, dstElemPtr);
+        }
+
+        b.create<mlir::scf::YieldOp>(l);
+      });
 }
 
 } // namespace gazprea::backend

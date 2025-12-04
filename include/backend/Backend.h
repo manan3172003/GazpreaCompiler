@@ -137,6 +137,10 @@ protected:
   void printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType);
   void computeArraySizeIfArray(std::shared_ptr<ast::statements::DeclarationAst> ctx,
                                std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct);
+  void arraySizeValidationForArrayStructs(mlir::Value lhsArrayStruct,
+                                          std::shared_ptr<symTable::Type> lhsType,
+                                          mlir::Value srcArrayStruct,
+                                          std::shared_ptr<symTable::Type> srcType);
   void arraySizeValidation(std::shared_ptr<symTable::VariableSymbol> variableSymbol,
                            std::shared_ptr<symTable::Type> type, mlir::Value valueAddr);
   mlir::Value getArraySizeAddr(mlir::OpBuilder &b, mlir::Location l, mlir::Type arrayStructType,
@@ -168,6 +172,10 @@ protected:
   void createArrayFromVector(std::vector<std::shared_ptr<ast::expressions::ExpressionAst>> elements,
                              mlir::Type elementMLIRType, mlir::Value dest);
   mlir::Value normalizeIndex(mlir::Value index, mlir::Value arraySize);
+  void copyArrayElementsToSlice(mlir::Value srcArrayStruct,
+                                std::shared_ptr<symTable::Type> srcArrayType,
+                                mlir::Value dstDataPtr, std::shared_ptr<symTable::Type> elementType,
+                                mlir::Value count);
   void printVector(mlir::Value vectorStructAddr, std::shared_ptr<symTable::Type> vectorType);
   void createGlobalString(const char *str, const char *stringName) const;
   void castIfNeeded(mlir::Value valueAddr, std::shared_ptr<symTable::Type> fromType,

@@ -98,7 +98,7 @@ void ValidationWalker::validateArrayElementAssignmentTypes(
 
   const auto arraySubType = arrayType->getType();
 
-  if (not typesMatch(arraySubType, exprTypeSymbol))
+  if (not typesMatch(ctx->getAssignSymbolType(), exprTypeSymbol))
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
 }
 

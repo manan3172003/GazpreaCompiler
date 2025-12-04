@@ -503,6 +503,7 @@ DefRefWalker::visitArrayElementAssign(std::shared_ptr<statements::ArrayElementAs
   visit(ctx->getArrayInstance());
   visit(ctx->getElementIndex());
   ctx->setScope(symTab->getCurrentScope());
+  ctx->setSymbol(ctx->getArrayInstance()->getSymbol());
   return {};
 }
 std::any DefRefWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAccessAst> ctx) {

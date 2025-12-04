@@ -1,3 +1,4 @@
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/VariableSymbol.h"
@@ -83,6 +84,32 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
                    arrayElementAssign->getAssignSymbolType());
     } else if (arrayElementAssign->getElementIndex()->getNodeType() ==
                ast::NodeType::RangedIndexExpr) {
+      // TODO: Dont assume RHS will always be array
+      auto sliceStructPtr = arrayElementAssign->getEvaluatedAddr();
+      auto sliceMlirType =
+          getMLIRType(arrayElementAssign->getArrayInstance()->getAssignSymbolType());
+      auto sliceSizeAddr = getArraySizeAddr(*builder, loc, sliceMlirType, sliceStructPtr);
+      auto sliceDataAddr = getArrayDataAddr(*builder, loc, sliceMlirType, sliceStructPtr);
+
+      mlir::Value sliceSize =
+          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sliceSizeAddr).getResult();
+      mlir::Value sliceDataPtr =
+          builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), sliceDataAddr).getResult();
+
+      auto rhsArrayMlirType = getMLIRType(type);
+      auto newAddr =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), rhsArrayMlirType, constOne());
+      copyValue(type, valueAddr, newAddr);
+
+      auto lhsDeclaredType = arrayElementAssign->getArrayInstance()->getAssignSymbolType();
+      arraySizeValidationForArrayStructs(sliceStructPtr, lhsDeclaredType, newAddr, type);
+      castIfNeeded(newAddr, type, arrayElementAssign->getArrayInstance()->getAssignSymbolType());
+
+      auto lhsArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lhsDeclaredType);
+      auto elementType = lhsArrayType->getType();
+
+      copyArrayElementsToSlice(newAddr, type, sliceDataPtr, elementType, sliceSize);
+      freeArray(arrayElementAssign->getArrayInstance()->getAssignSymbolType(), newAddr);
     }
   } else {
     if (isTypeArray(variableSymbol->getType())) {

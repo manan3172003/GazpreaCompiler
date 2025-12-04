@@ -1,0 +1,10 @@
+/*
+This test performs invalid assignment
+*/
+procedure main() returns integer{
+    var character[2][5] y = [['h', 'e', 'l', 'l', 'o'], ['w', 'o', 'r', 'l', 'd']];
+    y[-1][..-1] = ['W', 'O', 'R', 'L', 'D'];
+    y -> std_output;
+    return 0;
+}
+// CHECK:SizeError: Array size cannot be smaller than the actual array size
