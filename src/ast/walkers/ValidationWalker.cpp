@@ -29,9 +29,16 @@ std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
 }
 std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
   visit(ctx->getLVal());
+  ensureArrayLiteralType(ctx->getExpr(), ctx->getLVal()->getAssignSymbolType());
   inAssignment = true;
   visit(ctx->getExpr());
   inAssignment = false;
+  if (!ctx->getExpr()->getInferredSymbolType()) {
+    ensureArrayLiteralType(ctx->getExpr(), ctx->getLVal()->getAssignSymbolType());
+    inAssignment = true;
+    visit(ctx->getExpr());
+    inAssignment = false;
+  }
 
   const auto exprTypeSymbol = ctx->getExpr()->getInferredSymbolType();
   if (ctx->getLVal()->getNodeType() == NodeType::IdentifierLeft) {
@@ -58,8 +65,12 @@ std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::Assignmen
   return {};
 }
 std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::DeclarationAst> ctx) {
-  if (ctx->getType())
+  std::shared_ptr<symTable::Type> declarationType = nullptr;
+  if (ctx->getType()) {
     visit(ctx->getType());
+    declarationType = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
+    ensureArrayLiteralType(ctx->getExpr(), declarationType);
+  }
   const auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
 
   // We're going to have an expression since we'll set defaults in AstBuilder
@@ -72,11 +83,18 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
     ctx->setType(ctx->getExpr()->getInferredDataType());
     ctx->getType()->setSymbol(
         std::dynamic_pointer_cast<symTable::Symbol>(ctx->getExpr()->getInferredSymbolType()));
+    declarationType = ctx->getExpr()->getInferredSymbolType();
+  } else if (!declarationType && ctx->getType()) {
+    declarationType = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
   }
   // type check
-  const auto declarationType =
-      std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
   ensureArrayLiteralType(ctx->getExpr(), declarationType);
+  if (!ctx->getExpr()->getInferredSymbolType()) {
+    ensureArrayLiteralType(ctx->getExpr(), declarationType);
+    inAssignment = true;
+    visit(ctx->getExpr());
+    inAssignment = false;
+  }
   const auto expressionType = ctx->getExpr()->getInferredSymbolType();
   if (not typesMatch(declarationType, expressionType))
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
@@ -787,7 +805,9 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
 
   if (elements.empty()) {
     ctx->setInferredDataType(arrayType);
-    ctx->setInferredSymbolType(std::make_shared<symTable::EmptyArrayTypeSymbol>("empty_array"));
+    if (!ctx->getInferredSymbolType()) {
+      ctx->setInferredSymbolType(std::make_shared<symTable::EmptyArrayTypeSymbol>("empty_array"));
+    }
     return {};
   }
 

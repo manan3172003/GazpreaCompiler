@@ -1,0 +1,6 @@
+procedure main() returns integer {
+    integer v = [][5];
+    v -> std_output;
+    return 0;
+}
+//CHECK:IndexError on Line 2

@@ -1,5 +1,13 @@
 #include "CompileTimeExceptions.h"
+#include "ast/expressions/ArrayAccessAst.h"
+#include "ast/expressions/ArrayLiteralAst.h"
 #include "ast/types/AliasTypeAst.h"
+#include "ast/types/ArrayTypeAst.h"
+#include "ast/types/BooleanTypeAst.h"
+#include "ast/types/CharacterTypeAst.h"
+#include "ast/types/IntegerTypeAst.h"
+#include "ast/types/RealTypeAst.h"
+#include "ast/types/VectorTypeAst.h"
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/EmptyArrayTypeSymbol.h"
 #include "symTable/StructTypeSymbol.h"
@@ -552,16 +560,95 @@ bool ValidationWalker::isLiteralExpression(
   return false;
 }
 
+std::shared_ptr<types::DataTypeAst>
+createDataTypeFromSymbol(const std::shared_ptr<symTable::Type> &symbolType, antlr4::Token *token) {
+  if (!symbolType || !token)
+    return nullptr;
+  const auto name = symbolType->getName();
+  if (name == "integer")
+    return std::make_shared<types::IntegerTypeAst>(token);
+  if (name == "real")
+    return std::make_shared<types::RealTypeAst>(token);
+  if (name == "character")
+    return std::make_shared<types::CharacterTypeAst>(token);
+  if (name == "boolean")
+    return std::make_shared<types::BooleanTypeAst>(token);
+  if (name.substr(0, 5) == "array") {
+    const auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(symbolType);
+    if (!arrayType)
+      return nullptr;
+    auto dataType = std::make_shared<types::ArrayTypeAst>(token);
+    dataType->setType(createDataTypeFromSymbol(arrayType->getType(), token));
+    return dataType;
+  }
+  if (name.substr(0, 6) == "vector") {
+    const auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(symbolType);
+    if (!vectorType)
+      return nullptr;
+    auto dataType = std::make_shared<types::VectorTypeAst>(token);
+    dataType->setElementType(createDataTypeFromSymbol(vectorType->getType(), token));
+    return dataType;
+  }
+  return nullptr;
+}
+
+void ensureLiteralDataType(const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
+                           const std::shared_ptr<symTable::Type> &targetType) {
+  if (!literal || !targetType)
+    return;
+  auto literalDataType =
+      std::dynamic_pointer_cast<types::ArrayTypeAst>(literal->getInferredDataType());
+  if (!literalDataType) {
+    literalDataType = std::make_shared<types::ArrayTypeAst>(literal->token);
+    literal->setInferredDataType(literalDataType);
+  }
+  if (literalDataType->getType())
+    return;
+
+  if (const auto targetArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(targetType)) {
+    literalDataType->setType(createDataTypeFromSymbol(targetArray->getType(), literal->token));
+  } else if (const auto targetVector =
+                 std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(targetType)) {
+    literalDataType->setType(createDataTypeFromSymbol(targetVector->getType(), literal->token));
+  }
+}
+
 void ValidationWalker::ensureArrayLiteralType(
     const std::shared_ptr<expressions::ExpressionAst> &expr,
     const std::shared_ptr<symTable::Type> &targetType) {
-  if (!expr || expr->getNodeType() != NodeType::ArrayLiteral)
+  if (!expr || !targetType)
     return;
-  if (expr->getInferredSymbolType() || !targetType)
+
+  if (expr->getNodeType() == NodeType::ArrayAccess) {
+    const auto arrayAccess = std::dynamic_pointer_cast<expressions::ArrayAccessAst>(expr);
+    if (!arrayAccess)
+      return;
+    const auto indexExpr = arrayAccess->getElementIndex();
+    std::shared_ptr<symTable::Type> arrayInstanceTarget = nullptr;
+    if (indexExpr && indexExpr->getNodeType() == NodeType::SingularIndexExpr) {
+      auto inferredArrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+      inferredArrayType->setType(targetType);
+      arrayInstanceTarget = inferredArrayType;
+    } else if (indexExpr && indexExpr->getNodeType() == NodeType::RangedIndexExpr) {
+      arrayInstanceTarget = targetType;
+    }
+    ensureArrayLiteralType(arrayAccess->getArrayInstance(), arrayInstanceTarget);
+    return;
+  }
+
+  if (expr->getNodeType() != NodeType::ArrayLiteral)
+    return;
+
+  const auto literal = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(expr);
+  auto currentType = expr->getInferredSymbolType();
+  const bool alreadyResolved =
+      currentType && !std::dynamic_pointer_cast<symTable::EmptyArrayTypeSymbol>(currentType);
+  if (alreadyResolved)
     return;
 
   if (isOfSymbolType(targetType, "array")) {
     expr->setInferredSymbolType(targetType);
+    ensureLiteralDataType(literal, targetType);
     return;
   }
 
@@ -572,6 +659,7 @@ void ValidationWalker::ensureArrayLiteralType(
     const auto literalArrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
     literalArrayType->setType(vectorType->getType());
     expr->setInferredSymbolType(literalArrayType);
+    ensureLiteralDataType(literal, literalArrayType);
   }
 }
 
