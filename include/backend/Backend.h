@@ -188,7 +188,8 @@ protected:
                            mlir::Value destArrayStruct);
   void freeArray(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct);
   void createArrayFromVector(std::vector<std::shared_ptr<ast::expressions::ExpressionAst>> elements,
-                             mlir::Type elementMLIRType, mlir::Value dest);
+                             mlir::Type elementMLIRType, mlir::Value dest,
+                             std::shared_ptr<symTable::Type> targetElementType);
   mlir::Value normalizeIndex(mlir::Value index, mlir::Value arraySize);
   void copyArrayElementsToSlice(mlir::Value srcArrayStruct,
                                 std::shared_ptr<symTable::Type> srcArrayType,

@@ -25,7 +25,7 @@ std::any Backend::visitArray(std::shared_ptr<ast::expressions::ArrayLiteralAst> 
 
   mlir::Value dataPtr = mallocArray(elementMLIRType, elementCount);
 
-  createArrayFromVector(elements, elementMLIRType, dataPtr);
+  createArrayFromVector(elements, elementMLIRType, dataPtr, elementType);
 
   auto sizeFieldPtr = getArraySizeAddr(*builder, loc, arrayStructType, arrayStruct);
   builder->create<mlir::LLVM::StoreOp>(loc, arraySize, sizeFieldPtr);

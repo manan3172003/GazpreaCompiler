@@ -1175,7 +1175,8 @@ void Backend::freeVector(std::shared_ptr<symTable::Type> type, mlir::Value vecto
 
 void Backend::createArrayFromVector(
     std::vector<std::shared_ptr<ast::expressions::ExpressionAst>> elements,
-    mlir::Type elementMLIRType, mlir::Value dest) {
+    mlir::Type elementMLIRType, mlir::Value dest,
+    std::shared_ptr<symTable::Type> targetElementType) {
   for (size_t i = 0; i < elements.size(); i++) {
     visit(elements[i]);
     auto [elemType, elementValueAddr] = popElementFromStack(elements[i]);
@@ -1184,8 +1185,10 @@ void Backend::createArrayFromVector(
     auto elementPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), elementMLIRType, dest,
                                                          mlir::ValueRange{index});
 
-    if (isTypeArray(elemType)) {
-      copyArrayStruct(elemType, elementValueAddr, elementPtr);
+    castIfNeeded(elementValueAddr, elemType, targetElementType);
+
+    if (isTypeArray(targetElementType)) {
+      copyArrayStruct(targetElementType, elementValueAddr, elementPtr);
     } else {
       auto elementValue =
           builder->create<mlir::LLVM::LoadOp>(loc, elementMLIRType, elementValueAddr);
