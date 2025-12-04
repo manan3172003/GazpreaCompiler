@@ -37,7 +37,6 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       copyValue(lValSymbol->getType(), elementPtr, destinationPtr);
       castIfNeeded(ctx, destinationPtr, tupleTypeSymbol->getResolvedTypes()[i],
                    lVal->getAssignSymbolType());
-
     }
   } else if (auto tupleElementAssign =
                  std::dynamic_pointer_cast<ast::statements::TupleElementAssignAst>(
