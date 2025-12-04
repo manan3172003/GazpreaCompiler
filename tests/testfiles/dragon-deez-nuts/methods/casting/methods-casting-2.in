@@ -1,0 +1,9 @@
+function foo(integer[10][3] v) returns integer[12][4] {
+    return v;
+}
+
+procedure main() returns integer {
+    foo(99) -> std_output;
+    return 0;
+}
+//CHECK:[[99 99 99 0] [99 99 99 0] [99 99 99 0] [99 99 99 0] [99 99 99 0] [99 99 99 0] [99 99 99 0] [99 99 99 0] [99 99 99 0] [99 99 99 0] [0 0 0 0] [0 0 0 0]]

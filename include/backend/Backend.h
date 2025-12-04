@@ -227,6 +227,7 @@ protected:
 private:
   std::shared_ptr<ast::Ast> ast;
   std::unordered_map<std::string, mlir::Value> blockArg;
+  std::shared_ptr<ast::prototypes::PrototypeAst> currentFunctionProto;
 
   struct LoopContext {
     mlir::Block *exitBlock = nullptr;

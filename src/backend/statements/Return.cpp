@@ -1,5 +1,9 @@
+#include "ast/prototypes/FunctionAst.h"
+#include "ast/prototypes/ProcedureAst.h"
+#include "ast/types/ArrayTypeAst.h"
 #include "ast/walkers/ValidationWalker.h"
 #include "backend/Backend.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/MethodSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 
@@ -48,7 +52,28 @@ std::any Backend::visitReturn(std::shared_ptr<ast::statements::ReturnAst> ctx) {
 
   freeResourcesUntilFunction(ctx->getScope());
 
-  returnValue = castIfNeeded(ctx, returnValue, returnType, methodScope->getReturnType());
+  // For array return types, compute sizes if needed (must be done in function body scope)
+  auto methodReturnType = methodScope->getReturnType();
+  if (auto returnArrayType =
+          std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(methodReturnType)) {
+    if (returnArrayType->getSizes().empty() && currentFunctionProto) {
+      // Access the function's return type AST to get size expressions
+      auto returnTypeAst = currentFunctionProto->getReturnType();
+      if (auto arrayReturnTypeAst =
+              std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(returnTypeAst)) {
+        // Visit and compute the sizes from the array type AST (in function body scope)
+        for (const auto &sizeExpr : arrayReturnTypeAst->getSizes()) {
+          visit(sizeExpr);
+          auto [sizeType, sizeAddr] = popElementFromStack(sizeExpr);
+          if (sizeType->getName() == "integer") {
+            returnArrayType->addSize(sizeAddr);
+          }
+        }
+      }
+    }
+  }
+
+  returnValue = castIfNeeded(ctx, returnValue, returnType, methodReturnType);
   auto loadOp = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(methodScope->getReturnType()),
                                                     returnValue);
   builder->create<mlir::LLVM::ReturnOp>(builder->getUnknownLoc(), loadOp.getResult());

@@ -1,0 +1,12 @@
+procedure main() returns integer {
+    integer[2][2] a1 = 1;
+    character[2][2] a2 = 'c';
+    boolean[2][2] a3 = true;
+    real[2][2] a4 = .25;
+    a1->std_output;
+    a2->std_output;
+    a3->std_output;
+    a4->std_output;
+    return 0;
+}
+//CHECK:[[1 1] [1 1]][[c c] [c c]][[T T] [T T]][[0.25 0.25] [0.25 0.25]]

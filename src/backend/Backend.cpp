@@ -856,6 +856,41 @@ mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value val
     return castScalarToArray(ctx, scalarValue, fromType, toType);
   }
 
+  // Check if we need array-to-array padding (different sizes)
+  if (fromType->getName().substr(0, 5) == "array" && toType->getName().substr(0, 5) == "array") {
+    auto fromArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(fromType);
+    auto toArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
+
+    // Check if the types are different (compare by pointer or by MLIR type structure)
+    bool typesDiffer =
+        (fromType.get() != toType.get()) || (fromType->getName() != toType->getName());
+    if (toArrayType && typesDiffer) {
+      // Allocate new array with target type
+      auto newArrayAddr =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(toType), constOne());
+
+      // Copy source array to new array
+      copyValue(fromType, valueAddr, newArrayAddr);
+
+      // Get target sizes for padding (sizes should already be computed from function/procedure
+      // declaration)
+      if (!toArrayType->getSizes().empty()) {
+        mlir::Value targetOuterSize =
+            builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[0]);
+        mlir::Value targetInnerSize = constZero();
+        if (toArrayType->getSizes().size() > 1) {
+          targetInnerSize =
+              builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[1]);
+        }
+
+        // Pad the new array to target size
+        padArrayIfNeeded(newArrayAddr, toType, targetOuterSize, targetInnerSize);
+      }
+
+      return newArrayAddr;
+    }
+  }
+
   // Normal casting - operates in place
   computeArraySizeIfArray(ctx, toType, valueAddr);
   castScalarToArrayIfNeeded(toType, valueAddr, fromType);

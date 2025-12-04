@@ -132,8 +132,11 @@ mlir::Value Backend::castScalarToArray(std::shared_ptr<ast::Ast> ctx, mlir::Valu
   auto newArrayAddr =
       builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructType, constOne());
 
-  // Compute array sizes
-  computeArraySizeIfArray(ctx, arrayType, newArrayAddr);
+  // Compute array sizes if they're not already available
+  // For function parameters/return types, sizes are already in arrayTypeSym
+  if (arrayTypeSym->getSizes().empty()) {
+    computeArraySizeIfArray(ctx, arrayType, newArrayAddr);
+  }
 
   // Count total dimensions
   size_t totalDimensions = 1;

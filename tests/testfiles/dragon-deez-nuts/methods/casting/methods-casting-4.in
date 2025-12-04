@@ -1,0 +1,10 @@
+procedure foo(real v) returns real {
+    return v;
+}
+
+procedure main() returns integer {
+    var a = foo(1000000);
+    a -> std_output;
+    return 0;
+}
+//CHECK:1e+06

@@ -1,4 +1,6 @@
+#include "ast/types/ArrayTypeAst.h"
 #include "backend/Backend.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/MethodSymbol.h"
 
 namespace gazprea::backend {
@@ -28,8 +30,15 @@ std::any Backend::visitFunction(std::shared_ptr<ast::prototypes::FunctionAst> ct
       const auto paramNode = std::dynamic_pointer_cast<ast::prototypes::FunctionParamAst>(param);
       blockArg[paramNode->getName()] = entry->getArgument(argIndex++);
     }
+
+    // Store current function prototype for access in return statements
+    currentFunctionProto = ctx->getProto();
+
     visit(ctx->getProto());
     visit(ctx->getBody());
+
+    // Clear after function body
+    currentFunctionProto = nullptr;
   }
   builder->restoreInsertionPoint(savedInsertPoint);
   return {};

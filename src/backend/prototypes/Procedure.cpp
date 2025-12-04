@@ -1,4 +1,6 @@
+#include "ast/types/ArrayTypeAst.h"
 #include "backend/Backend.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/MethodSymbol.h"
 
 namespace gazprea::backend {
@@ -28,8 +30,14 @@ std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> 
       blockArg[paramNode->getName()] = entry->getArgument(argIndex++);
     }
 
+    // Store current procedure prototype for access in return statements
+    currentFunctionProto = ctx->getProto();
+
     visit(ctx->getProto());
     visit(ctx->getBody());
+
+    // Clear after procedure body
+    currentFunctionProto = nullptr;
   } else {
     mlir::Type procReturnType;
     if (!methodSym->getReturnType()) {
@@ -58,8 +66,15 @@ std::any Backend::visitProcedure(std::shared_ptr<ast::prototypes::ProcedureAst> 
         const auto paramNode = std::dynamic_pointer_cast<ast::prototypes::ProcedureParamAst>(param);
         blockArg[paramNode->getName()] = entry->getArgument(argIndex++);
       }
+      // Store current procedure prototype for access in return statements
+      currentFunctionProto = ctx->getProto();
+
       visit(ctx->getProto());
       visit(ctx->getBody());
+
+      // Clear after procedure body
+      currentFunctionProto = nullptr;
+
       if (!methodSym->getReturnType()) {
         auto *currentBlock = builder->getInsertionBlock();
         const bool needsReturn =
