@@ -16,10 +16,15 @@ std::any Backend::visitProcedureCall(std::shared_ptr<ast::statements::ProcedureC
 
   for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
     visit(args[i]);
-    const auto topElement = popElementFromStack(args[i]);
-    params[i]->getSymbol()->value = topElement.second;
-    auto value = topElement.second;
-    mlirArgs.push_back(value);
+    auto [valueType, valueAddr] = popElementFromStack(args[i]);
+    auto variableSymbol =
+        std::dynamic_pointer_cast<symTable::VariableSymbol>(params[i]->getSymbol());
+
+    // castIfNeeded now handles scalar-to-array conversion and returns the final address
+    auto finalAddr = castIfNeeded(params[i], valueAddr, valueType, variableSymbol->getType());
+
+    params[i]->getSymbol()->value = finalAddr;
+    mlirArgs.push_back(finalAddr);
   }
 
   auto procOp = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(methodSym->getName());

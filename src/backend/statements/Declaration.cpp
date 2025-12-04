@@ -26,11 +26,12 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
       return {};
     }
   }
-  auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
+  mlir::Value newAddr = builder->create<mlir::LLVM::AllocaOp>(
       loc, ptrTy(), getMLIRType(variableSymbol->getType()), constOne());
   copyValue(type, valueAddr, newAddr);
+  newAddr = castIfNeeded(ctx, newAddr, ctx->getExpr()->getInferredSymbolType(),
+                         variableSymbol->getType());
   ctx->getSymbol()->value = newAddr;
-  castIfNeeded(ctx, newAddr, ctx->getExpr()->getInferredSymbolType(), variableSymbol->getType());
   if (isTypeArray(variableSymbol->getType())) {
     ctx->getScope()->pushElementToFree(std::make_pair(variableSymbol->getType(), newAddr));
   }

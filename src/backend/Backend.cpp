@@ -358,9 +358,9 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
                                           mlir::Value incomingRightAddr) {
 
   // copy values here so casting does not affect the incoming addresses
-  auto leftAddr =
+  mlir::Value leftAddr =
       builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(leftType), constOne());
-  auto rightAddr =
+  mlir::Value rightAddr =
       builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(rightType), constOne());
   copyValue(leftType, incomingLeftAddr, leftAddr);
   copyValue(rightType, incomingRightAddr, rightAddr);
@@ -561,8 +561,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
     return newAddr;
 
   } else { // other primitive types
-    castIfNeeded(ctx, leftAddr, leftType, rightType);
-    castIfNeeded(ctx, rightAddr, rightType, leftType);
+    leftAddr = castIfNeeded(ctx, leftAddr, leftType, rightType);
+    rightAddr = castIfNeeded(ctx, rightAddr, rightType, leftType);
 
     bool isFloatType = (leftType->getName() == "real" || rightType->getName() == "real");
     if (isFloatType) {
@@ -839,12 +839,27 @@ void Backend::performExplicitCast(mlir::Value srcPtr, std::shared_ptr<symTable::
   builder->create<mlir::LLVM::StoreOp>(loc, castedValue, dstPtr);
 }
 
-void Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
-                           std::shared_ptr<symTable::Type> fromType,
-                           std::shared_ptr<symTable::Type> toType) {
+mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                  std::shared_ptr<symTable::Type> fromType,
+                                  std::shared_ptr<symTable::Type> toType) {
+  // Check if we need scalar-to-array conversion
+  bool needsScalarToArrayCast = false;
+  if (toType->getName().substr(0, 5) == "array" &&
+      (fromType->getName() == "integer" || fromType->getName() == "real" ||
+       fromType->getName() == "character" || fromType->getName() == "boolean")) {
+    needsScalarToArrayCast = true;
+  }
+
+  if (needsScalarToArrayCast) {
+    // Load the scalar value and create a new array
+    auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(fromType), valueAddr);
+    return castScalarToArray(ctx, scalarValue, fromType, toType);
+  }
+
+  // Normal casting - operates in place
   computeArraySizeIfArray(ctx, toType, valueAddr);
   castScalarToArrayIfNeeded(toType, valueAddr, fromType);
-  arraySizeValidation(ctx->getSymbol(), toType, valueAddr);
+  arraySizeValidation(ctx, toType, valueAddr);
   if (auto fromTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType)) {
     auto toTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(toType);
     auto sTy = getMLIRType(fromType);
@@ -856,6 +871,7 @@ void Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
           builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
       auto elementPtr =
           builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, valueAddr, gepIndices);
+      // Note: For tuple elements, in-place casting is expected (no scalar-to-array in tuples)
       castIfNeeded(ctx, elementPtr, fromSubType, toSubType);
     }
   } else if (fromType->getName() == "integer" && toType->getName() == "real") {
@@ -864,6 +880,8 @@ void Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
         loc, mlir::Float32Type::get(builder->getContext()), value);
     builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
   }
+
+  return valueAddr;
 }
 
 void Backend::copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr,

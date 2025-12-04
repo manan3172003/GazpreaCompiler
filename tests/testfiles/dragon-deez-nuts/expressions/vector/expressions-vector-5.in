@@ -1,6 +1,6 @@
 procedure main() returns integer {
     vector<integer[1]> x = [[1], [2], [3]];
-    x.push(4);
+    x.push('h');
     x -> std_output;
     return 0;
 }

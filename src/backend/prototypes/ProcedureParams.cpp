@@ -4,6 +4,7 @@
 namespace gazprea::backend {
 
 std::any Backend::visitProcedureParams(std::shared_ptr<ast::prototypes::ProcedureParamAst> ctx) {
+  visit(ctx->getParamType());
   const auto varSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   const auto it = blockArg.find(ctx->getName());
   if (it != blockArg.end()) {

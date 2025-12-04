@@ -37,6 +37,7 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       copyValue(lValSymbol->getType(), elementPtr, destinationPtr);
       castIfNeeded(ctx, destinationPtr, tupleTypeSymbol->getResolvedTypes()[i],
                    lVal->getAssignSymbolType());
+
     }
   } else if (auto tupleElementAssign =
                  std::dynamic_pointer_cast<ast::statements::TupleElementAssignAst>(
@@ -49,6 +50,8 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
     } else if (isTypeVector(variableSymbol->getType())) {
       freeVector(variableSymbol->getType(), variableSymbol->value);
     }
+    valueAddr = castIfNeeded(ctx, valueAddr, ctx->getExpr()->getInferredSymbolType(),
+                             tupleTy->getResolvedTypes()[tupleElementAssign->getFieldIndex() - 1]);
     copyValue(type, valueAddr, elementAddr);
     castIfNeeded(ctx, elementAddr, ctx->getExpr()->getInferredSymbolType(),
                  tupleTy->getResolvedTypes()[tupleElementAssign->getFieldIndex() - 1]);
@@ -64,6 +67,8 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
     } else if (isTypeVector(variableSymbol->getType())) {
       freeVector(variableSymbol->getType(), variableSymbol->value);
     }
+    valueAddr = castIfNeeded(ctx, valueAddr, ctx->getExpr()->getInferredSymbolType(),
+                             structTy->getResolvedType(structElementAssign->getElementName()));
     copyValue(type, valueAddr, elementAddr);
     castIfNeeded(ctx, elementAddr, ctx->getExpr()->getInferredSymbolType(),
                  structTy->getResolvedType(structElementAssign->getElementName()));
@@ -125,8 +130,9 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       return {};
     }
     copyValue(type, valueAddr, variableSymbol->value);
-    castIfNeeded(ctx, variableSymbol->value, ctx->getExpr()->getInferredSymbolType(),
-                 variableSymbol->getType());
+    variableSymbol->value =
+        castIfNeeded(ctx, variableSymbol->value, ctx->getExpr()->getInferredSymbolType(),
+                     variableSymbol->getType());
   }
   return {};
 }

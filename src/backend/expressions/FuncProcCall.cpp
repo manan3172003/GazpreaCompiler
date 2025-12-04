@@ -1,5 +1,6 @@
 #include "backend/Backend.h"
 #include "symTable/MethodSymbol.h"
+#include "symTable/VariableSymbol.h"
 
 namespace gazprea::backend {
 
@@ -21,9 +22,15 @@ std::any Backend::visitFuncProcCall(std::shared_ptr<ast::expressions::FuncProcCa
   std::vector<mlir::Value> mlirArgs;
   for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
     visit(args[i]);
-    const auto [_, valueAddr] = popElementFromStack(args[i]);
-    params[i]->getSymbol()->value = valueAddr;
-    mlirArgs.push_back(valueAddr);
+    auto [valueType, valueAddr] = popElementFromStack(args[i]);
+    auto variableSymbol =
+        std::dynamic_pointer_cast<symTable::VariableSymbol>(params[i]->getSymbol());
+
+    // castIfNeeded now handles scalar-to-array conversion and returns the final address
+    auto finalAddr = castIfNeeded(params[i], valueAddr, valueType, variableSymbol->getType());
+
+    params[i]->getSymbol()->value = finalAddr;
+    mlirArgs.push_back(finalAddr);
   }
   auto funcOp = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(methodSym->getName());
   auto callOp = builder->create<mlir::LLVM::CallOp>(loc, funcOp, mlir::ValueRange(mlirArgs));

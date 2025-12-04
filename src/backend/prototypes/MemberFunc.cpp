@@ -149,7 +149,7 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
 
     auto insertPtr = builder->create<mlir::LLVM::GEPOp>(
         loc, ptrTy(), elementMLIRType, ensuredDataPtr, mlir::ValueRange{currentSize});
-    castIfNeeded(ctx, argAddr, argType, elementType);
+    argAddr = castIfNeeded(ctx, argAddr, argType, elementType);
     copyValue(elementType, argAddr, insertPtr);
 
     // Pad array element if the element type is an array

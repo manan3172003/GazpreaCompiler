@@ -159,8 +159,8 @@ protected:
                                mlir::Value arrayStruct);
   void castScalarToArrayIfNeeded(std::shared_ptr<symTable::Type> targetType, mlir::Value valueAddr,
                                  std::shared_ptr<symTable::Type> sourceType);
-  void arraySizeValidation(std::shared_ptr<symTable::Symbol> symbol,
-                           std::shared_ptr<symTable::Type> type, mlir::Value valueAddr);
+  void arraySizeValidation(std::shared_ptr<ast::Ast> ctx, std::shared_ptr<symTable::Type> type,
+                           mlir::Value valueAddr);
   mlir::Value getArraySizeAddr(mlir::OpBuilder &b, mlir::Location l, mlir::Type arrayStructType,
                                mlir::Value arrayStruct) const;
   mlir::Value getArrayDataAddr(mlir::OpBuilder &b, mlir::Location l, mlir::Type arrayStructType,
@@ -196,10 +196,13 @@ protected:
                                 mlir::Value count);
   void printVector(mlir::Value vectorStructAddr, std::shared_ptr<symTable::Type> vectorType);
   void createGlobalString(const char *str, const char *stringName) const;
+  mlir::Value castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                           std::shared_ptr<symTable::Type> fromType,
+                           std::shared_ptr<symTable::Type> toType);
+  mlir::Value castScalarToArray(std::shared_ptr<ast::Ast> ctx, mlir::Value scalarValue,
+                                std::shared_ptr<symTable::Type> scalarType,
+                                std::shared_ptr<symTable::Type> arrayType);
   void createGlobalStreamState() const;
-  void castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
-                    std::shared_ptr<symTable::Type> fromType,
-                    std::shared_ptr<symTable::Type> toType);
   void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);
   bool isTypeArray(std::shared_ptr<symTable::Type> type);
   bool isTypeVector(std::shared_ptr<symTable::Type> type);
