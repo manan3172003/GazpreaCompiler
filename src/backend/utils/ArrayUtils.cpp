@@ -294,7 +294,7 @@ void Backend::castScalarToArrayIfNeeded(std::shared_ptr<symTable::Type> targetTy
                std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(currentType)) {
       totalDimensions++;
       currentType = nestedArrayType->getType();
-               }
+    }
 
     if (arrayTypeSym->getSizes().empty() || arrayTypeSym->getSizes().size() < totalDimensions) {
       auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(

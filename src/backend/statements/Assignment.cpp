@@ -107,7 +107,8 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
 
       auto lhsDeclaredType = arrayElementAssign->getArrayInstance()->getAssignSymbolType();
       arraySizeValidationForArrayStructs(sliceStructPtr, lhsDeclaredType, newAddr, type);
-      castIfNeeded(newAddr, type, arrayElementAssign->getArrayInstance()->getAssignSymbolType());
+      castIfNeeded(ctx, newAddr, type,
+                   arrayElementAssign->getArrayInstance()->getAssignSymbolType());
 
       auto lhsArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lhsDeclaredType);
       auto elementType = lhsArrayType->getType();
