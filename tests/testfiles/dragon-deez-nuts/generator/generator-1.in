@@ -10,4 +10,4 @@ procedure main() returns integer {
 
     return 0;
 }
-//CHECK_FILE:1.out
+//CHECK_FILE:generator-1.out
