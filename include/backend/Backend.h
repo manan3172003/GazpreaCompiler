@@ -35,7 +35,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-
 #include "symTable/ArrayTypeSymbol.h"
 #include <symTable/VariableSymbol.h>
 #include <symTable/VectorTypeSymbol.h>
@@ -294,6 +293,13 @@ private:
                                  const std::shared_ptr<symTable::Type> &toType);
   void performExplicitCast(mlir::Value srcPtr, std::shared_ptr<symTable::Type> fromType,
                            mlir::Value dstPtr, std::shared_ptr<symTable::Type> toType);
+  mlir::Value loadCastSize(const std::vector<mlir::Value> &sizes, size_t idx, mlir::Value fallback);
+  mlir::Value getCastTargetSize(const std::shared_ptr<symTable::ArrayTypeSymbol> &toArray,
+                                size_t dimIndex, mlir::Value srcSize);
+  void performArrayCast(mlir::Value srcPtr, std::shared_ptr<symTable::ArrayTypeSymbol> fromArray,
+                        mlir::Value dstPtr, std::shared_ptr<symTable::ArrayTypeSymbol> toArray,
+                        const std::vector<mlir::Value> &fromSizes,
+                        const std::vector<mlir::Value> &toSizes, size_t dimIndex);
   void readInteger(mlir::Value destAddr);
   void readReal(mlir::Value destAddr);
   void readCharacter(mlir::Value destAddr);

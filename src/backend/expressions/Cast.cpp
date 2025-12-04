@@ -7,18 +7,11 @@ std::any Backend::visitCast(std::shared_ptr<ast::expressions::CastAst> ctx) {
   auto [exprType, exprAddr] = popElementFromStack(ctx);
 
   const auto targetType = ctx->getResolvedTargetType();
-
-  if (typesEquivalent(exprType, targetType)) {
-    ctx->getScope()->pushElementToScopeStack(targetType, exprAddr);
-    return {};
-  }
-
   auto targetMlirType = getMLIRType(targetType);
   auto targetAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), targetMlirType, constOne());
 
   performExplicitCast(exprAddr, exprType, targetAddr, targetType);
-
-  ctx->getScope()->pushElementToScopeStack(targetType, targetAddr);
+  pushElementToScopeStack(ctx, targetType, targetAddr);
 
   return {};
 }

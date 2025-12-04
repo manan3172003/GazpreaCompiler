@@ -4,6 +4,7 @@
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/RealTypeAst.h"
 #include "ast/types/VectorTypeAst.h"
+#include "symTable/ArrayTypeSymbol.h"
 #include "symTable/EmptyArrayTypeSymbol.h"
 #include "symTable/MethodSymbol.h"
 #include "symTable/StructTypeSymbol.h"
@@ -684,6 +685,28 @@ std::any ValidationWalker::visitBool(std::shared_ptr<expressions::BoolLiteralAst
   ctx->setInferredSymbolType(resolvedInferredType(boolType));
   return {};
 }
+
+bool arrayCastCompatible(const std::shared_ptr<symTable::ArrayTypeSymbol> &fromArray,
+                         const std::shared_ptr<symTable::ArrayTypeSymbol> &toArray) {
+  if (!fromArray || !toArray) {
+    return false;
+  }
+  const auto fromElem = fromArray->getType();
+  const auto toElem = toArray->getType();
+
+  auto fromElemArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(fromElem);
+  auto toElemArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toElem);
+  if (fromElemArray || toElemArray) {
+    return fromElemArray && toElemArray && arrayCastCompatible(fromElemArray, toElemArray);
+  }
+
+  const auto fromName = fromElem->getName();
+  const auto toName = toElem->getName();
+  if (utils::isPromotable(fromName, toName)) {
+    return true;
+  }
+  return fromName == toName;
+}
 std::any ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) {
   visit(ctx->getExpression());
   visit(ctx->getTargetType());
@@ -710,6 +733,11 @@ std::any ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) 
     const auto promoteFrom = ctx->getExpression()->getInferredSymbolType()->getName();
     if (not utils::isPromotable(promoteFrom, promoteTo)) {
       throw TypeError(ctx->getLineNumber(), "Type not promotable");
+    }
+  } else if (auto fromArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(exprType)) {
+    auto toArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(targetType);
+    if (!toArray || !arrayCastCompatible(fromArray, toArray)) {
+      throw TypeError(ctx->getLineNumber(), "Array element type not promotable");
     }
   } else {
     throw TypeError(ctx->getLineNumber(), "Illegal cast");
