@@ -3,6 +3,7 @@
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
 #include "ast/types/RealTypeAst.h"
+#include "ast/types/VectorTypeAst.h"
 #include "symTable/EmptyArrayTypeSymbol.h"
 #include "symTable/MethodSymbol.h"
 #include "symTable/StructTypeSymbol.h"
@@ -99,15 +100,27 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
   if (isOfSymbolType(declarationType, "array") || isOfSymbolType(declarationType, "vector")) {
     const auto rhsType = ctx->getExpr()->getInferredSymbolType();
     if (std::dynamic_pointer_cast<symTable::EmptyArrayTypeSymbol>(rhsType)) {
-      std::shared_ptr<types::ArrayTypeAst> arrayTypeAst = nullptr;
-      if (ctx->getType()->getNodeType() == NodeType::ArrayType) {
-        arrayTypeAst = std::dynamic_pointer_cast<types::ArrayTypeAst>(ctx->getType());
-      }
-
-      if (arrayTypeAst) {
+      auto throwIfInferredArray = [&](const std::shared_ptr<types::ArrayTypeAst> &arrayTypeAst) {
+        if (!arrayTypeAst)
+          return;
         for (bool inferred : arrayTypeAst->isSizeInferred()) {
           if (inferred) {
             throw SizeError(ctx->getLineNumber(), "Cannot infer size from empty array");
+          }
+        }
+      };
+
+      if (ctx->getType()) {
+        if (ctx->getType()->getNodeType() == NodeType::ArrayType) {
+          auto arrayTypeAst = std::dynamic_pointer_cast<types::ArrayTypeAst>(ctx->getType());
+          throwIfInferredArray(arrayTypeAst);
+        } else if (ctx->getType()->getNodeType() == NodeType::VectorType) {
+          const auto vectorTypeAst =
+              std::dynamic_pointer_cast<types::VectorTypeAst>(ctx->getType());
+          if (vectorTypeAst) {
+            auto elementArrayType =
+                std::dynamic_pointer_cast<types::ArrayTypeAst>(vectorTypeAst->getElementType());
+            throwIfInferredArray(elementArrayType);
           }
         }
       }

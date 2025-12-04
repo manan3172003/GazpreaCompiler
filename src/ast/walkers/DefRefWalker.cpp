@@ -3,12 +3,14 @@
 #include "ast/types/AliasTypeAst.h"
 #include "ast/types/ArrayTypeAst.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/EmptyArrayTypeSymbol.h"
 #include "symTable/StructTypeSymbol.h"
 #include "symTable/TupleTypeSymbol.h"
 #include "symTable/TypealiasSymbol.h"
 #include "symTable/VariableSymbol.h"
 #include "symTable/VectorTypeSymbol.h"
 
+#include <algorithm>
 #include <ast/walkers/DefRefWalker.h>
 #include <symTable/MethodSymbol.h>
 
@@ -232,6 +234,31 @@ DefRefWalker::createDefaultLiteral(const std::shared_ptr<symTable::Type> &type,
   return nullptr;
 }
 
+bool DefRefWalker::hasInferredArraySize(const std::shared_ptr<types::ArrayTypeAst> &arrayType) {
+  if (!arrayType)
+    return false;
+  const auto inferenceFlags = arrayType->isSizeInferred();
+  const bool currentLevelInferred = std::any_of(inferenceFlags.begin(), inferenceFlags.end(),
+                                                [](bool inferred) { return inferred; });
+  if (currentLevelInferred)
+    return true;
+  if (const auto nestedArray = std::dynamic_pointer_cast<types::ArrayTypeAst>(arrayType->getType()))
+    return hasInferredArraySize(nestedArray);
+  return false;
+}
+
+std::shared_ptr<expressions::ExpressionAst>
+DefRefWalker::createDefaultArrayLiteral(const std::shared_ptr<types::ArrayTypeAst> &arrayType,
+                                        antlr4::Token *token) {
+  auto literal = std::make_shared<expressions::ArrayLiteralAst>(token);
+  if (arrayType) {
+    literal->setInferredDataType(arrayType);
+    auto emptyTypeSymbol = std::make_shared<symTable::EmptyArrayTypeSymbol>("empty_array");
+    literal->setInferredSymbolType(emptyTypeSymbol);
+  }
+  return literal;
+}
+
 std::any DefRefWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
   ctx->setScope(symTab->getGlobalScope());
   for (const auto &child : ctx->children) {
@@ -256,19 +283,19 @@ std::any DefRefWalker::visitDeclaration(std::shared_ptr<statements::DeclarationA
   }
 
   if (not ctx->getExpr() && ctx->getType()) {
-    // integer[*] needs to have an expression
     if (auto arrayType = std::dynamic_pointer_cast<types::ArrayTypeAst>(ctx->getType())) {
-      for (auto size : arrayType->getSizes()) {
-        if (size)
-          throw SyntaxError(ctx->getLineNumber(), "Inferred Array cannot be empty");
-      }
+      if (hasInferredArraySize(arrayType))
+        throw SyntaxError(ctx->getLineNumber(), "Inferred Array cannot be empty");
+      auto defaultExpr = createDefaultArrayLiteral(arrayType, ctx->token);
+      ctx->setExpr(defaultExpr);
+    } else {
+      // Set everything to base (false, '\0', 0, 0.0)
+      // normal primitives (boolean, character, integer, real)
+      // tuples
+      const auto type = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
+      auto defaultExpr = createDefaultLiteral(type, ctx->token);
+      ctx->setExpr(defaultExpr);
     }
-    // Set everything to base (false, '\0', 0, 0.0)
-    // normal primitives (boolean, character, integer, real)
-    // tuples
-    const auto type = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
-    auto defaultExpr = createDefaultLiteral(type, ctx->token);
-    ctx->setExpr(defaultExpr);
     visit(ctx->getExpr());
   }
   visit(ctx->getExpr());
