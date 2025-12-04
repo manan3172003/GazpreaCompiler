@@ -63,11 +63,8 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
         auto [sizeType, sizeAddr] = popElementFromStack(sizeExpr);
         if (auto c = std::dynamic_pointer_cast<ast::expressions::CharLiteralAst>(sizeExpr)) {
           if (c->getValue() == '*') {
-            // Infer size from the array struct being assigned
-            // Only do this if source value is actually an array (not a scalar)
             if (sourceValueType && isTypeArray(sourceValueType)) {
               if (dimIndex == 0) {
-                // First dimension - get the outer array size
                 auto currentArraySizeAddr =
                     getArraySizeAddr(*builder, loc, getMLIRType(sourceValueType), arrayStruct);
                 auto newSizeAddr =
@@ -78,7 +75,6 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
                 sizeAddr = newSizeAddr;
                 arrayType->addSize(sizeAddr);
               } else if (dimIndex == 1) {
-                // Second dimension - get max sub-array size
                 mlir::Value maxSubSize = maxSubArraySize(arrayStruct, sourceValueType);
                 auto maxSubSizeAddr =
                     builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
@@ -87,9 +83,6 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
                 arrayType->addSize(sizeAddr);
               }
             }
-            // If source is not an array (it's a scalar), don't try to infer size
-            // Don't add to sizes - this will leave sizes empty and castScalarToArrayIfNeeded will
-            // throw error
           } else {
             throw SizeError(ctx->getLineNumber(), "Size needs to be an integer");
           }
@@ -120,65 +113,29 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
     }
   }
 }
-mlir::Value Backend::castScalarToArray(std::shared_ptr<ast::Ast> ctx, mlir::Value scalarValue,
-                                       std::shared_ptr<symTable::Type> scalarType,
-                                       std::shared_ptr<symTable::Type> arrayType) {
-  auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayType);
+
+void Backend::fillArrayFromScalar(mlir::Value arrayStruct,
+                                  std::shared_ptr<symTable::ArrayTypeSymbol> arrayTypeSym,
+                                  mlir::Value scalarValue) {
   auto elementType = arrayTypeSym->getType();
-
-
-  // Allocate new array struct
-  auto arrayStructType = getMLIRType(arrayType);
-  auto newArrayAddr =
-      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructType, constOne());
-
-  // Compute array sizes if they're not already available
-  // For function parameters/return types, sizes are already in arrayTypeSym
-  if (arrayTypeSym->getSizes().empty()) {
-    computeArraySizeIfArray(ctx, arrayType, newArrayAddr);
-  }
-
-  // Count total dimensions
-  size_t totalDimensions = 1;
-  auto currentType = elementType;
-  while (auto nestedArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(currentType)) {
-    totalDimensions++;
-    currentType = nestedArrayType->getType();
-  }
-
-  // Check if sizes are available
   auto sizes = arrayTypeSym->getSizes();
-  if (sizes.empty() || sizes.size() < totalDimensions) {
-    auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-        "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
-    builder->create<mlir::LLVM::CallOp>(loc, throwFunc, mlir::ValueRange{});
-    return newArrayAddr;
-  }
+  auto arrayStructType = getMLIRType(arrayTypeSym);
 
-  // Check if multi-dimensional array
-  auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
-
-  if (elementArrayType) {
+  if (auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
     // 2D array case
     auto innerElementType = elementArrayType->getType();
     auto innerElementMLIRType = getMLIRType(innerElementType);
-
     mlir::Value outerSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sizes[0]);
     mlir::Value innerSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sizes[1]);
-
     auto subArrayStructType = getMLIRType(elementArrayType);
     mlir::Value outerDataPtr = mallocArray(subArrayStructType, outerSize);
 
-    // Fill outer array with sub-arrays
     builder->create<mlir::scf::ForOp>(
         loc, constZero(), outerSize, constOne(), mlir::ValueRange{},
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
           auto subArrayPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), subArrayStructType,
                                                          outerDataPtr, mlir::ValueRange{i});
-
           mlir::Value innerDataPtr = mallocArray(innerElementMLIRType, innerSize);
-
-          // Fill inner array with scalar value
           b.create<mlir::scf::ForOp>(l, constZero(), innerSize, constOne(), mlir::ValueRange{},
                                      [&](mlir::OpBuilder &b2, mlir::Location l2, mlir::Value j,
                                          mlir::ValueRange iterArgs2) {
@@ -188,39 +145,27 @@ mlir::Value Backend::castScalarToArray(std::shared_ptr<ast::Ast> ctx, mlir::Valu
                                        b2.create<mlir::LLVM::StoreOp>(l2, scalarValue, elementPtr);
                                        b2.create<mlir::scf::YieldOp>(l2, mlir::ValueRange{});
                                      });
-
           auto subArrayDataAddr = getArrayDataAddr(b, l, subArrayStructType, subArrayPtr);
           b.create<mlir::LLVM::StoreOp>(l, innerDataPtr, subArrayDataAddr);
-
           auto subArraySizeAddr = getArraySizeAddr(b, l, subArrayStructType, subArrayPtr);
           b.create<mlir::LLVM::StoreOp>(l, innerSize, subArraySizeAddr);
-
           auto subIs2DFieldPtr = get2DArrayBoolAddr(b, l, subArrayStructType, subArrayPtr);
           auto boolFalse = b.create<mlir::LLVM::ConstantOp>(l, boolTy(), 0);
           b.create<mlir::LLVM::StoreOp>(l, boolFalse, subIs2DFieldPtr);
-
           b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
         });
-
-    // Store in newArrayAddr
-    auto arrayDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, newArrayAddr);
+    auto arrayDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, arrayStruct);
     builder->create<mlir::LLVM::StoreOp>(loc, outerDataPtr, arrayDataAddr);
-
-    auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, newArrayAddr);
+    auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, arrayStruct);
     builder->create<mlir::LLVM::StoreOp>(loc, outerSize, arraySizeAddr);
-
-    auto is2DFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, newArrayAddr);
+    auto is2DFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, arrayStruct);
     auto boolTrue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
     builder->create<mlir::LLVM::StoreOp>(loc, boolTrue, is2DFieldPtr);
-
   } else {
     // 1D array case
     mlir::Value targetSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sizes[0]);
-
     auto elementMLIRType = getMLIRType(elementType);
     mlir::Value arrayDataPtr = mallocArray(elementMLIRType, targetSize);
-
-    // Fill all elements with the scalar value
     builder->create<mlir::scf::ForOp>(
         loc, constZero(), targetSize, constOne(), mlir::ValueRange{},
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
@@ -229,21 +174,44 @@ mlir::Value Backend::castScalarToArray(std::shared_ptr<ast::Ast> ctx, mlir::Valu
           b.create<mlir::LLVM::StoreOp>(l, scalarValue, elementPtr);
           b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
         });
-
-    auto arrayDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, newArrayAddr);
+    auto arrayDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, arrayStruct);
     builder->create<mlir::LLVM::StoreOp>(loc, arrayDataPtr, arrayDataAddr);
-
-    auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, newArrayAddr);
+    auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, arrayStruct);
     builder->create<mlir::LLVM::StoreOp>(loc, targetSize, arraySizeAddr);
-
-    auto is2DFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, newArrayAddr);
+    auto is2DFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, arrayStruct);
     auto boolFalse = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
     builder->create<mlir::LLVM::StoreOp>(loc, boolFalse, is2DFieldPtr);
   }
+}
 
-  // Perform array size validation
+mlir::Value Backend::castScalarToArray(std::shared_ptr<ast::Ast> ctx, mlir::Value scalarValue,
+                                       std::shared_ptr<symTable::Type> scalarType,
+                                       std::shared_ptr<symTable::Type> arrayType) {
+  auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayType);
+  auto arrayStructType = getMLIRType(arrayType);
+  auto newArrayAddr =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructType, constOne());
+
+  if (arrayTypeSym->getSizes().empty()) {
+    computeArraySizeIfArray(ctx, arrayType, newArrayAddr);
+  }
+
+  size_t totalDimensions = 1;
+  auto currentType = arrayTypeSym->getType();
+  while (auto nestedArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(currentType)) {
+    totalDimensions++;
+    currentType = nestedArrayType->getType();
+  }
+
+  if (arrayTypeSym->getSizes().empty() || arrayTypeSym->getSizes().size() < totalDimensions) {
+    auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+        "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+    builder->create<mlir::LLVM::CallOp>(loc, throwFunc, mlir::ValueRange{});
+    return newArrayAddr;
+  }
+
+  fillArrayFromScalar(newArrayAddr, arrayTypeSym, scalarValue);
   arraySizeValidation(ctx, arrayType, newArrayAddr);
-
   return newArrayAddr;
 }
 
@@ -315,6 +283,31 @@ void Backend::arraySizeValidationForArrayStructs(mlir::Value lhsArrayStruct,
   padArrayIfNeeded(srcArrayStruct, srcType, targetOuterSize, targetInnerSize);
 }
 
+void Backend::castScalarToArrayIfNeeded(std::shared_ptr<symTable::Type> targetType,
+                                        mlir::Value valueAddr,
+                                        std::shared_ptr<symTable::Type> sourceType) {
+  if (isTypeArray(targetType) && isScalarType(sourceType)) {
+    auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(targetType);
+    size_t totalDimensions = 1;
+    auto currentType = arrayTypeSym->getType();
+    while (auto nestedArrayType =
+               std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(currentType)) {
+      totalDimensions++;
+      currentType = nestedArrayType->getType();
+               }
+
+    if (arrayTypeSym->getSizes().empty() || arrayTypeSym->getSizes().size() < totalDimensions) {
+      auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+          "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+      builder->create<mlir::LLVM::CallOp>(loc, throwFunc, mlir::ValueRange{});
+      return;
+    }
+
+    auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(sourceType), valueAddr);
+    fillArrayFromScalar(valueAddr, arrayTypeSym, scalarValue);
+  }
+}
+
 void Backend::arraySizeValidation(std::shared_ptr<ast::Ast> ctx,
                                   std::shared_ptr<symTable::Type> type, mlir::Value valueAddr) {
   auto symbol = ctx->getSymbol();
@@ -334,12 +327,10 @@ void Backend::arraySizeValidation(std::shared_ptr<ast::Ast> ctx,
     mlir::Value oneDimensionSize =
         builder->create<mlir::LLVM::LoadOp>(loc, intTy(), oneDimensionSizeAddr);
 
-    // Get the current size of the valueAddr array struct
     auto arrayStructType = getMLIRType(type);
     auto currentSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, valueAddr);
     mlir::Value currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentSizeAddr);
 
-    // Check if oneDimensionSize < currentSize - if so, throw error
     auto isSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt,
                                                               oneDimensionSize, currentSize);
 
@@ -350,16 +341,13 @@ void Backend::arraySizeValidation(std::shared_ptr<ast::Ast> ctx,
           b.create<mlir::scf::YieldOp>(l);
         });
 
-    // Check two-dimensional size if applicable
     mlir::Value twoDimentionSize = constZero();
     if (arrayType->getSizes().size() == 2) {
       twoDimentionSize =
           builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arrayType->getSizes()[1]);
 
-      // Get max sub-array size from current array
       mlir::Value maxSubSize = maxSubArraySize(valueAddr, type);
 
-      // Check if twoDimensionSize < maxSubSize - if so, throw error
       auto isTwoDimSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(
           loc, mlir::LLVM::ICmpPredicate::slt, twoDimentionSize, maxSubSize);
 
@@ -515,7 +503,6 @@ mlir::Value Backend::getDefaultValue(std::shared_ptr<symTable::Type> type) {
     return builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), false);
   }
 
-  // Should never reach here
   return mlir::Value();
 }
 
@@ -531,14 +518,11 @@ void Backend::padArrayWithValue(mlir::Value arrayStruct, std::shared_ptr<symTabl
   auto arrayDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, arrayStruct);
   mlir::Value oldDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), arrayDataAddr);
 
-  // Allocate new array with target size
   mlir::Value newDataPtr = mallocArray(elementMLIRType, targetSize);
 
-  // Copy existing elements to new array
   auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
 
   if (elementArrayType) {
-    // For nested arrays, use copyArrayStruct
     builder->create<mlir::scf::ForOp>(
         loc, constZero(), currentSize, constOne(), mlir::ValueRange{},
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
@@ -552,7 +536,6 @@ void Backend::padArrayWithValue(mlir::Value arrayStruct, std::shared_ptr<symTabl
           b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
         });
   } else {
-    // For scalar elements, simple load/store
     builder->create<mlir::scf::ForOp>(
         loc, constZero(), currentSize, constOne(), mlir::ValueRange{},
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
@@ -568,7 +551,6 @@ void Backend::padArrayWithValue(mlir::Value arrayStruct, std::shared_ptr<symTabl
         });
   }
 
-  // Fill padding elements with default value
   builder->create<mlir::scf::ForOp>(
       loc, currentSize, targetSize, constOne(), mlir::ValueRange{},
       [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
@@ -580,10 +562,8 @@ void Backend::padArrayWithValue(mlir::Value arrayStruct, std::shared_ptr<symTabl
         b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
       });
 
-  // Free old array
   freeArray(arrayType, arrayStruct);
 
-  // Update array struct with new data pointer and size
   builder->create<mlir::LLVM::StoreOp>(loc, newDataPtr, arrayDataAddr);
 
   auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, arrayStruct);
@@ -689,16 +669,13 @@ void Backend::padArrayIfNeeded(mlir::Value arrayStruct, std::shared_ptr<symTable
         b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
       });
 
-  // Expand outer array if needed
   auto needsMoreSubArrays = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt,
                                                                 arraySize, targetOuterSize);
 
   builder->create<mlir::scf::IfOp>(
       loc, needsMoreSubArrays, [&](mlir::OpBuilder &b, mlir::Location l) {
-        // Allocate new larger array
         mlir::Value newDataPtr = mallocArray(subArrayStructType, targetOuterSize);
 
-        // Copy existing sub-arrays
         b.create<mlir::scf::ForOp>(
             l, constZero(), arraySize, constOne(), mlir::ValueRange{},
             [&](mlir::OpBuilder &b2, mlir::Location l2, mlir::Value i, mlir::ValueRange iterArgs) {
@@ -712,7 +689,6 @@ void Backend::padArrayIfNeeded(mlir::Value arrayStruct, std::shared_ptr<symTable
               b2.create<mlir::scf::YieldOp>(l2, mlir::ValueRange{});
             });
 
-        // Create new empty sub-arrays for the added elements
         b.create<mlir::scf::ForOp>(
             l, arraySize, targetOuterSize, constOne(), mlir::ValueRange{},
             [&](mlir::OpBuilder &b2, mlir::Location l2, mlir::Value i, mlir::ValueRange iterArgs) {
@@ -724,11 +700,9 @@ void Backend::padArrayIfNeeded(mlir::Value arrayStruct, std::shared_ptr<symTable
               b2.create<mlir::scf::YieldOp>(l2, mlir::ValueRange{});
             });
 
-        // Free old outer array (but not the sub-arrays, they've been copied)
         auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
         b.create<mlir::LLVM::CallOp>(l, freeFunc, mlir::ValueRange{dataPtr});
 
-        // Update array struct
         b.create<mlir::LLVM::StoreOp>(l, newDataPtr, arrayDataAddr);
         b.create<mlir::LLVM::StoreOp>(l, targetOuterSize, arraySizeAddr);
 
@@ -788,13 +762,11 @@ mlir::Value Backend::copyArray(std::shared_ptr<symTable::Type> elementType, mlir
                                mlir::Value size) {
   auto elementMLIRType = getMLIRType(elementType);
 
-  // Allocate new memory for destination
   mlir::Value destDataPtr = mallocArray(elementMLIRType, size);
 
   auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
 
   if (elementArrayType) {
-    // Handle nested arrays - need to recursively copy sub-arrays
     auto subArrayStructType = getMLIRType(elementType);
 
     builder->create<mlir::scf::ForOp>(
@@ -811,7 +783,6 @@ mlir::Value Backend::copyArray(std::shared_ptr<symTable::Type> elementType, mlir
           b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
         });
   } else {
-    // Handle scalar elements - simple load/store
     builder->create<mlir::scf::ForOp>(
         loc, constZero(), size, constOne(), mlir::ValueRange{},
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
@@ -841,26 +812,20 @@ void Backend::copyArrayStruct(std::shared_ptr<symTable::Type> type, mlir::Value 
   auto elementType = arrayTypeSym->getType();
   auto arrayStructType = getMLIRType(type);
 
-  // Load source size
   auto srcSizeFieldPtr = getArraySizeAddr(*builder, loc, arrayStructType, fromArrayStruct);
   mlir::Value srcSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcSizeFieldPtr);
 
-  // Load source data pointer
   auto srcDataFieldPtr = getArrayDataAddr(*builder, loc, arrayStructType, fromArrayStruct);
   mlir::Value srcDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataFieldPtr);
 
-  // Use copyArray to allocate and copy data
   mlir::Value destDataPtr = copyArray(elementType, srcDataPtr, srcSize);
 
-  // Store the new data pointer in the destination array struct
   auto destDataFieldPtr = getArrayDataAddr(*builder, loc, arrayStructType, destArrayStruct);
   builder->create<mlir::LLVM::StoreOp>(loc, destDataPtr, destDataFieldPtr);
 
-  // Copy size field to destination
   auto destSizeFieldPtr = getArraySizeAddr(*builder, loc, arrayStructType, destArrayStruct);
   builder->create<mlir::LLVM::StoreOp>(loc, srcSize, destSizeFieldPtr);
 
-  // Copy is2D field to destination
   auto srcIs2DFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, fromArrayStruct);
   mlir::Value srcIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), srcIs2DFieldPtr);
   auto destIs2DFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, destArrayStruct);

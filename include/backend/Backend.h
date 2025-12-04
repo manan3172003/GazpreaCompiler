@@ -36,6 +36,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 
+#include "symTable/ArrayTypeSymbol.h"
 #include <symTable/VariableSymbol.h>
 #include <symTable/VectorTypeSymbol.h>
 
@@ -203,6 +204,9 @@ protected:
                                 std::shared_ptr<symTable::Type> scalarType,
                                 std::shared_ptr<symTable::Type> arrayType);
   void createGlobalStreamState() const;
+  void fillArrayFromScalar(mlir::Value arrayStruct,
+                           std::shared_ptr<symTable::ArrayTypeSymbol> arrayTypeSym,
+                           mlir::Value scalarValue);
   void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);
   bool isTypeArray(std::shared_ptr<symTable::Type> type);
   bool isTypeVector(std::shared_ptr<symTable::Type> type);
