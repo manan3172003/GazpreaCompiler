@@ -1,0 +1,9 @@
+procedure main() returns integer {
+    real[3] v = [i in 1..3 | i + 0.3 * i];
+
+    boolean[3] u = as<boolean[*]>(v);
+    u -> std_output;
+
+    return 0;
+}
+//CHECK:TypeError on Line 4
