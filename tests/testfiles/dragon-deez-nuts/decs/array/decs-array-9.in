@@ -1,0 +1,6 @@
+procedure main() returns integer {
+    integer[3][2] x;
+    x -> std_output;
+    return 0;
+}
+//CHECK:[[0 0] [0 0] [0 0]]

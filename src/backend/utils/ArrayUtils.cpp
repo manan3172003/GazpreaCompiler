@@ -545,7 +545,7 @@ void Backend::arraySizeValidation(std::shared_ptr<ast::Ast> ctx,
       if (decl->getExpr() && decl->getExpr()->getNodeType() == ast::NodeType::Cast) {
         return;
       }
-            }
+    }
   }
 
   if (variableSymbol && isTypeArray(type)) {
@@ -1185,7 +1185,7 @@ void Backend::createArrayFromVector(
     auto elementPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), elementMLIRType, dest,
                                                          mlir::ValueRange{index});
 
-    castIfNeeded(elementValueAddr, elemType, targetElementType);
+    elementValueAddr = castIfNeeded(elements[i], elementValueAddr, elemType, targetElementType);
 
     if (isTypeArray(targetElementType)) {
       copyArrayStruct(targetElementType, elementValueAddr, elementPtr);

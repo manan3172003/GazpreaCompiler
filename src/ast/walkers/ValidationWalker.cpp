@@ -739,6 +739,19 @@ std::any ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) 
     if (!toArray || !arrayCastCompatible(fromArray, toArray)) {
       throw TypeError(ctx->getLineNumber(), "Array element type not promotable");
     }
+  } else if (isScalar(exprType) &&
+             std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(targetType)) {
+    auto toArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(targetType);
+    auto toElem = toArray->getType();
+
+    std::shared_ptr<symTable::Type> innerType = toElem;
+    while (auto innerArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(innerType)) {
+      innerType = innerArray->getType();
+    }
+
+    if (!utils::isPromotable(exprType->getName(), innerType->getName())) {
+      throw TypeError(ctx->getLineNumber(), "Scalar type not promotable to array element type");
+    }
   } else {
     throw TypeError(ctx->getLineNumber(), "Illegal cast");
   }

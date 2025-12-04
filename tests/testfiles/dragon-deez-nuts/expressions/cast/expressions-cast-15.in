@@ -1,0 +1,10 @@
+procedure main() returns integer {
+    real[*] v = as<real[3]>(1);
+    boolean[5] u = as<boolean[5]>('c');
+
+    v -> std_output;
+    u -> std_output;
+
+    return 0;
+}
+//CHECK:[1 1 1][T T T T T]

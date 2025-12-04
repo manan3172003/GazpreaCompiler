@@ -1021,6 +1021,57 @@ void Backend::performExplicitCast(mlir::Value srcPtr, std::shared_ptr<symTable::
     return;
   }
 
+  if (isScalarType(fromType) && isTypeArray(toType)) {
+    auto toArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
+    if (!toArray)
+      return;
+
+    auto dstStructType = getMLIRType(toType);
+    auto dstElemType = toArray->getType();
+    auto dstElemMlirType = getMLIRType(dstElemType);
+
+    auto sizes = toArray->getSizes();
+    if (sizes.empty()) {
+      if (auto arrayTypeAst =
+              std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(toArray->getDef())) {
+        for (const auto &sizeExpr : arrayTypeAst->getSizes()) {
+          visit(sizeExpr);
+          auto [_, sizePtr] = popElementFromStack(sizeExpr);
+          auto sizeVal = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sizePtr);
+          sizes.push_back(sizeVal);
+        }
+      }
+    }
+    mlir::Value size = sizes.empty() ? constOne() : sizes[0];
+
+    auto dataPtr = mallocArray(dstElemMlirType, size);
+
+    auto sizeFieldPtr = getArraySizeAddr(*builder, loc, dstStructType, dstPtr);
+    builder->create<mlir::LLVM::StoreOp>(loc, size, sizeFieldPtr);
+
+    auto dataFieldPtr = getArrayDataAddr(*builder, loc, dstStructType, dstPtr);
+    builder->create<mlir::LLVM::StoreOp>(loc, dataPtr, dataFieldPtr);
+
+    bool is2d = isTypeArray(dstElemType);
+    auto is2dVal = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), is2d);
+    auto is2dFieldPtr = get2DArrayBoolAddr(*builder, loc, dstStructType, dstPtr);
+    builder->create<mlir::LLVM::StoreOp>(loc, is2dVal, is2dFieldPtr);
+
+    auto lowerBound = constZero();
+    auto upperBound = size;
+    auto step = constOne();
+
+    builder->create<mlir::scf::ForOp>(
+        loc, lowerBound, upperBound, step, mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange args) {
+          auto elemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), dstElemMlirType, dataPtr,
+                                                     mlir::ValueRange{i});
+          performExplicitCast(srcPtr, fromType, elemPtr, dstElemType);
+          b.create<mlir::scf::YieldOp>(l);
+        });
+    return;
+  }
+
   // Scalar type casting
   auto fromMlirType = getMLIRType(fromType);
   auto loadedValue = builder->create<mlir::LLVM::LoadOp>(loc, fromMlirType, srcPtr);
@@ -1133,7 +1184,7 @@ mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value val
     auto fromArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(fromType);
     auto toArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
     if (!fromArray || !toArray) {
-      return;
+      return mlir::Value{};
     }
     auto dstStructType = getMLIRType(toType);
     auto tmpDst =
