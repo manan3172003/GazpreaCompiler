@@ -360,7 +360,6 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
                                           std::shared_ptr<symTable::Type> rightType,
                                           mlir::Value incomingLeftAddr,
                                           mlir::Value incomingRightAddr) {
-
   // copy values here so casting does not affect the incoming addresses
   mlir::Value leftAddr =
       builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(leftType), constOne());
@@ -563,7 +562,46 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
           });
     }
     return newAddr;
+  }
+  if (isTypeArray(leftType) || isTypeArray(rightType)) {
+    auto binaryOpAst = std::dynamic_pointer_cast<ast::expressions::BinaryAst>(ctx);
+    mlir::Value newAddr;
+    bool freeLeft = false;
+    bool freeRight = false;
+    auto combinedType = leftType;
+    if (!isTypeArray(leftType)) {
+      auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftType), leftAddr);
+      leftAddr =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(rightType), constOne());
+      fillArrayWithScalarValueWithArrayStruct(leftAddr, scalarValue, rightAddr, rightType);
+      freeLeft = true;
+      combinedType = rightType;
+    }
+    if (!isTypeArray(rightType)) {
+      auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(rightType), leftAddr);
+      rightAddr =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(leftType), constOne());
+      fillArrayWithScalarValueWithArrayStruct(rightAddr, scalarValue, leftAddr, leftType);
+      freeRight = true;
+    }
+    // TODO: cast either arrayStructs if needed
+    // Check if the size of the arrays are not the same
+    throwIfNotEqualArrayStructs(leftAddr, rightAddr, combinedType);
+    auto arrayType =
+        std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(binaryOpAst->getInferredSymbolType());
+    if (auto subArrayType =
+            std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayType->getType()))
+      arrayType = subArrayType;
+    if (op == ast::expressions::BinaryOpType::DMUL) {
 
+    } else {
+      newAddr = builder->create<mlir::LLVM::AllocaOp>(
+          loc, ptrTy(), getMLIRType(binaryOpAst->getInferredSymbolType()), constOne());
+      fillArrayWithScalarValueWithArrayStruct(newAddr, getDefaultValue(arrayType->getType()),
+                                              rightAddr, arrayType);
+    }
+
+    return newAddr;
   } else { // other primitive types
     leftAddr = castIfNeeded(ctx, leftAddr, leftType, rightType);
     rightAddr = castIfNeeded(ctx, rightAddr, rightType, leftType);

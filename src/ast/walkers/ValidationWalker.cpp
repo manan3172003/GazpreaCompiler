@@ -199,12 +199,24 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
              isOfSymbolType(rightExpr->getInferredSymbolType(), "real")) {
     ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
     ctx->setInferredDataType(leftExpr->getInferredDataType());
+  }
+  // handle arrays and vectors
+  // examples that are valid: (1 + [2]), ([2] + [2])
+  else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "array") &&
+           typesMatch(leftExpr->getInferredSymbolType(), rightExpr->getInferredSymbolType())) {
+    ctx->setInferredDataType(ctx->getLeft()->getInferredDataType());
+    ctx->setInferredSymbolType(ctx->getLeft()->getInferredSymbolType());
+  } else if (isOfSymbolType(rightExpr->getInferredSymbolType(), "array") &&
+             typesMatch(rightExpr->getInferredSymbolType(), leftExpr->getInferredSymbolType())) {
+    ctx->setInferredDataType(ctx->getRight()->getInferredDataType());
+    ctx->setInferredSymbolType(ctx->getRight()->getInferredSymbolType());
   } else {
-    if (leftExpr->getInferredSymbolType()->getName() !=
-        rightExpr->getInferredSymbolType()->getName()) {
+    if (not typesMatch(ctx->getLeft()->getInferredSymbolType(),
+                       ctx->getRight()->getInferredSymbolType())) {
       throw TypeError(ctx->getLineNumber(), "Binary operation: Type mismatch");
     }
   }
+
   // Both left and right expressions from here on will be equal because of the
   // above else statement throwing error
 

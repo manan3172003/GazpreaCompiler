@@ -227,14 +227,15 @@ ValidationWalker::getEnclosingFuncProcScope(std::shared_ptr<symTable::Scope> cur
   return currentScope;
 }
 
-int ValidationWalker::opTable[6][15] = {
-    //  ^  *  /  %  +  -  <  > <= >= == !=  & or xor
+int ValidationWalker::opTable[7][15] = {
+    //  ^  *  /  %  +  -  <  > <= >= == !=  & or xor ** || by
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Integer
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Real
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Character
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1}, // Boolean
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Tuple
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Struct
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // array
 };
 
 bool ValidationWalker::isValidOp(const std::string &typeName, expressions::BinaryOpType opType) {
@@ -267,6 +268,8 @@ int ValidationWalker::nodeTypeToIndex(const std::string &typeName) {
     return 4;
   if (typeName == "struct")
     return 5;
+  if (typeName.substr(0, 5) == "array" || typeName.substr(0, 6) == "vector")
+    return 6;
   return -1;
 }
 

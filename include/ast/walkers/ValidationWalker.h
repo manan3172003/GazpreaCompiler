@@ -10,7 +10,7 @@ class ValidationWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
   bool inBinaryOp = false;
   bool inAssignment = false;
-  static int opTable[6][15];
+  static int opTable[7][15];
   void visitExpression(const std::shared_ptr<Ast> &exprAst) {
     inBinaryOp = true;
     visit(exprAst);

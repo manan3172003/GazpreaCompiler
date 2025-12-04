@@ -32,7 +32,7 @@ void throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a() {
 }
 
 void throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c() {
-  SizeError("Array size cannot be smaller than the actual array size");
+  SizeError("Array size mismatch");
 }
 void throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029() {
   SizeError("Vector size mismatch");

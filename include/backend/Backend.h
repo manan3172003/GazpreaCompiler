@@ -221,6 +221,11 @@ protected:
   void fillArrayFromScalar(mlir::Value arrayStruct,
                            std::shared_ptr<symTable::ArrayTypeSymbol> arrayTypeSym,
                            mlir::Value scalarValue);
+  void fillArrayWithScalarValueWithArrayStruct(mlir::Value arrayValueAddr, mlir::Value scalarValue,
+                                               mlir::Value referenceArrayStruct,
+                                               std::shared_ptr<symTable::Type> arrayType);
+  void throwIfNotEqualArrayStructs(mlir::Value leftStuct, mlir::Value rightStruct,
+                                   std::shared_ptr<symTable::Type> arrayType);
   void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);
   bool isTypeArray(std::shared_ptr<symTable::Type> type);
   bool isTypeVector(std::shared_ptr<symTable::Type> type);
