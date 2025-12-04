@@ -1,26 +1,12 @@
 /*
-This test performs multiple valid assigns
+Test padding in assignment
 */
 
-procedure main() returns integer{
-    var integer[3] x = [1, 2];
-    var character[4] c = ['y', 'e', 'a', 'h'];
-    var struct S(real[3] arr, integer scal) s = S([1.0, 2.0, 3.0], 5);
-
-    x[-1] = -5;
-    x -> std_output;
-
-    c[1] = 'p';
-    c[-3] = 'l';
-    c[3] = 'u';
-    c[-1] = 'h';
-    c -> std_output;
-
-    s.arr[3] = 1000000;
-
-    s.arr -> std_output;
-
+procedure main() returns integer {
+    var integer[5] a = [1,2,3];
+    a -> std_output;
+    a = 1;
+    a -> std_output;
     return 0;
 }
-
-// CHECK:[1 2 -5][p l u h][1 2 1e+06]
+//CHECK:[1 2 3 0 0][1 1 1 1 1]

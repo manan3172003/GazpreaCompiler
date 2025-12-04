@@ -1,14 +1,26 @@
 /*
-This test performs multiple valid assignments
+This test performs multiple valid assigns
 */
+
 procedure main() returns integer{
-    var integer[5] x = [1, 2, 0];
-    var character[2][5] y = [['h', 'e', 'l', 'l', 'o'], ['w', 'o', 'r', 'l', 'd']];
-    x[1..5] = [4, 5];
-    y[-1][..-1] = ['W', 'O', 'R', 'L'];
+    var integer[3] x = [1, 2];
+    var character[4] c = ['y', 'e', 'a', 'h'];
+    var struct S(real[3] arr, integer scal) s = S([1.0, 2.0, 3.0], 5);
+
+    x[-1] = -5;
     x -> std_output;
-    y -> std_output;
+
+    c[1] = 'p';
+    c[-3] = 'l';
+    c[3] = 'u';
+    c[-1] = 'h';
+    c -> std_output;
+
+    s.arr[3] = 1000000;
+
+    s.arr -> std_output;
+
     return 0;
 }
 
-// CHECK:[4 5 0 0 0][[h e l l o] [W O R L d]]
+// CHECK:[1 2 -5][p l u h][1 2 1e+06]

@@ -861,10 +861,9 @@ mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value val
     auto fromArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(fromType);
     auto toArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
 
-    // Check if the types are different (compare by pointer or by MLIR type structure)
-    bool typesDiffer =
-        (fromType.get() != toType.get()) || (fromType->getName() != toType->getName());
-    if (toArrayType && typesDiffer) {
+    // Only create a new array if the target type has explicit sizes (like for function returns)
+    // AND they're different type objects (prevents affecting normal declarations)
+    if (toArrayType && !toArrayType->getSizes().empty() && fromType.get() != toType.get()) {
       // Allocate new array with target type
       auto newArrayAddr =
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(toType), constOne());
@@ -872,20 +871,47 @@ mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value val
       // Copy source array to new array
       copyValue(fromType, valueAddr, newArrayAddr);
 
-      // Get target sizes for padding (sizes should already be computed from function/procedure
-      // declaration)
-      if (!toArrayType->getSizes().empty()) {
-        mlir::Value targetOuterSize =
-            builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[0]);
-        mlir::Value targetInnerSize = constZero();
-        if (toArrayType->getSizes().size() > 1) {
-          targetInnerSize =
-              builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[1]);
-        }
-
-        // Pad the new array to target size
-        padArrayIfNeeded(newArrayAddr, toType, targetOuterSize, targetInnerSize);
+      // Get target sizes for validation and padding
+      mlir::Value targetOuterSize =
+          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[0]);
+      mlir::Value targetInnerSize = constZero();
+      if (toArrayType->getSizes().size() > 1) {
+        targetInnerSize =
+            builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[1]);
       }
+
+      // Get current size from the copied array
+      auto currentStructType = getMLIRType(fromType);
+      auto currentSizeAddr = getArraySizeAddr(*builder, loc, currentStructType, newArrayAddr);
+      mlir::Value currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentSizeAddr);
+
+      // Validation: check if current size is larger than target size
+      auto isSizeTooBig = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sgt,
+                                                              currentSize, targetOuterSize);
+      builder->create<mlir::scf::IfOp>(
+          loc, isSizeTooBig, [&](mlir::OpBuilder &b, mlir::Location l) {
+            auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+                "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+            b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+            b.create<mlir::scf::YieldOp>(l);
+          });
+
+      // 2D validation
+      if (toArrayType->getSizes().size() > 1) {
+        mlir::Value maxSubSize = maxSubArraySize(newArrayAddr, fromType);
+        auto isInnerSizeTooBig = builder->create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::sgt, maxSubSize, targetInnerSize);
+        builder->create<mlir::scf::IfOp>(
+            loc, isInnerSizeTooBig, [&](mlir::OpBuilder &b, mlir::Location l) {
+              auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+                  "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+              b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+              b.create<mlir::scf::YieldOp>(l);
+            });
+      }
+
+      // Pad the new array to target size
+      padArrayIfNeeded(newArrayAddr, toType, targetOuterSize, targetInnerSize);
 
       return newArrayAddr;
     }

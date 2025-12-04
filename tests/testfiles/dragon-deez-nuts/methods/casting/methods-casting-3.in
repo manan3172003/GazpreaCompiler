@@ -3,7 +3,7 @@ function foo(real v) returns real {
 }
 
 procedure main() returns integer {
-    foo(99) -> std_output;
+    foo(1000000) -> std_output;
     return 0;
 }
 //CHECK:1e+06
