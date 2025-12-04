@@ -103,11 +103,6 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
       auto throwIfInferredArray = [&](const std::shared_ptr<types::ArrayTypeAst> &arrayTypeAst) {
         if (!arrayTypeAst)
           return;
-        for (bool inferred : arrayTypeAst->isSizeInferred()) {
-          if (inferred) {
-            throw SizeError(ctx->getLineNumber(), "Cannot infer size from empty array");
-          }
-        }
       };
 
       if (ctx->getType()) {
