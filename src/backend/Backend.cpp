@@ -33,10 +33,12 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   setupThrowArrayIndexError();
   setupPrintArray();
   createGlobalString("%c\0", "charFormat");
+  createGlobalString("%c", "charInputFormat");
   createGlobalString("%d\0", "intFormat");
+  createGlobalString("%d", "intInputFormat");
   createGlobalString("%g\0", "floatFormat");
-  createGlobalString("%f\0", "floatInputFormat");
-  createGlobalString(" %1[TF]\0", "boolInputFormat");
+  createGlobalString("%f", "floatInputFormat");
+  createGlobalString(" %1[TF]", "boolInputFormat");
   createGlobalStreamState();
 }
 
@@ -932,7 +934,7 @@ void Backend::readInteger(mlir::Value destAddr) {
   }
   auto zeroValue = constZero();
   builder->create<mlir::LLVM::StoreOp>(loc, zeroValue, destAddr);
-  auto formatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("intFormat");
+  auto formatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("intInputFormat");
   auto formatPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatGlobal);
   auto call =
       builder->create<mlir::LLVM::CallOp>(loc, scanfFunc, mlir::ValueRange{formatPtr, destAddr});
@@ -995,7 +997,7 @@ void Backend::readCharacter(mlir::Value destAddr) {
   if (!scanfFunc) {
     return;
   }
-  auto formatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("charFormat");
+  auto formatGlobal = module.lookupSymbol<mlir::LLVM::GlobalOp>("charInputFormat");
   auto formatPtr = builder->create<mlir::LLVM::AddressOfOp>(loc, formatGlobal);
   auto call =
       builder->create<mlir::LLVM::CallOp>(loc, scanfFunc, mlir::ValueRange{formatPtr, destAddr});
