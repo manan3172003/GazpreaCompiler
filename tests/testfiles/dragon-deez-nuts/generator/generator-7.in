@@ -1,0 +1,8 @@
+procedure main() returns integer {
+    /* Test: Generator using outer variable */
+    integer limit = 5;
+    integer[*] v = [i in 1..limit | i * i];
+    v -> std_output;
+    return 0;
+}
+//CHECK:[1 4 9 16 25]

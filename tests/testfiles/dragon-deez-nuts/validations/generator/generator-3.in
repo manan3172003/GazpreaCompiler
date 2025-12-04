@@ -1,0 +1,6 @@
+procedure main() returns integer {
+    /* Test: Duplicate iterator variable names in 2D generator */
+    integer[*][*] matrix = [i in 1..3, i in 1..3 | i];
+    return 0;
+}
+//CHECK:SymbolError on Line 3

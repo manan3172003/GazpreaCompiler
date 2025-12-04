@@ -1,0 +1,7 @@
+procedure main() returns integer {
+    /* Test: Nested generator (generator in domain) */
+    integer[*] result = [x in [i in 1..4 | i * 2] | x + 1];
+    result -> std_output;
+    return 0;
+}
+//CHECK:[3 5 7 9]

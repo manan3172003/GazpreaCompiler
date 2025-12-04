@@ -661,6 +661,8 @@ std::any ValidationWalker::visitChar(std::shared_ptr<expressions::CharLiteralAst
 std::any ValidationWalker::visitIdentifier(std::shared_ptr<expressions::IdentifierAst> ctx) {
   const auto dataTypeSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
 
+  if (not dataTypeSymbol)
+    throw SymbolError(ctx->getLineNumber(), "Identifier symbol is not a variable");
   auto astNode = dataTypeSymbol->getDef();
 
   if (astNode->getNodeType() == NodeType::Declaration) {
@@ -678,6 +680,27 @@ std::any ValidationWalker::visitIdentifier(std::shared_ptr<expressions::Identifi
         std::dynamic_pointer_cast<prototypes::ProcedureParamAst>(astNode)->getParamType();
     ctx->setInferredDataType(dataType);
     ctx->setInferredSymbolType(resolvedInferredType(dataType));
+  } else if (astNode->getNodeType() == NodeType::DomainExpr) {
+    // Iterator variable from generator - get type from the variable symbol
+    auto varType = dataTypeSymbol->getType();
+    if (varType) {
+      // Create corresponding data type AST
+      auto typeName = varType->getName();
+      std::shared_ptr<types::DataTypeAst> dataType;
+      if (typeName == "integer") {
+        dataType = std::make_shared<types::IntegerTypeAst>(ctx->token);
+      } else if (typeName == "real") {
+        dataType = std::make_shared<types::RealTypeAst>(ctx->token);
+      } else if (typeName == "character") {
+        dataType = std::make_shared<types::CharacterTypeAst>(ctx->token);
+      } else if (typeName == "boolean") {
+        dataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+      }
+      if (dataType) {
+        ctx->setInferredDataType(dataType);
+        ctx->setInferredSymbolType(varType);
+      }
+    }
   }
 
   return {};
@@ -1031,6 +1054,87 @@ ValidationWalker::visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuil
   ctx->setInferredSymbolType(methodSymbol->getReturnType());
   // TODO: Update it for strings
   ctx->setInferredDataType(std::make_shared<types::IntegerTypeAst>(ctx->token));
+  return {};
+}
+
+std::any ValidationWalker::visitRange(std::shared_ptr<expressions::RangeAst> ctx) {
+  visit(ctx->getStart());
+  visit(ctx->getEnd());
+
+  auto startType = ctx->getStart()->getInferredSymbolType();
+  auto endType = ctx->getEnd()->getInferredSymbolType();
+
+  if (!isOfSymbolType(startType, "integer")) {
+    throw TypeError(ctx->getLineNumber(), "Range start must be of type integer");
+  }
+  if (!isOfSymbolType(endType, "integer")) {
+    throw TypeError(ctx->getLineNumber(), "Range end must be of type integer");
+  }
+
+  auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);
+  auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+  arrayType->setType(intType);
+
+  ctx->setInferredDataType(arrayType);
+  ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+  return {};
+}
+
+std::any ValidationWalker::visitDomainExpr(std::shared_ptr<expressions::DomainExprAst> ctx) {
+  visit(ctx->getDomainExpression());
+
+  auto domainType = ctx->getDomainExpression()->getInferredSymbolType();
+
+  if (domainType && !isCollection(domainType)) {
+    throw TypeError(ctx->getLineNumber(), "Domain expression must be a vector or interval");
+  }
+  auto varSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  if (varSymbol && domainType) {
+    auto arrayTypeSymbol = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(domainType);
+    if (arrayTypeSymbol) {
+      auto elementType = arrayTypeSymbol->getType();
+      varSymbol->setType(elementType);
+    }
+  }
+
+  ctx->setInferredDataType(ctx->getDomainExpression()->getInferredDataType());
+  ctx->setInferredSymbolType(ctx->getDomainExpression()->getInferredSymbolType());
+  return {};
+}
+
+std::any ValidationWalker::visitGenerator(std::shared_ptr<expressions::GeneratorAst> ctx) {
+  for (const auto &domainExpr : ctx->getDomainExprs()) {
+    visit(domainExpr);
+  }
+
+  visit(ctx->getGeneratorExpression());
+
+  auto generatorExprType = ctx->getGeneratorExpression()->getInferredSymbolType();
+  auto generatorExprDataType = ctx->getGeneratorExpression()->getInferredDataType();
+
+  if (!generatorExprType) {
+    throw TypeError(ctx->getLineNumber(), "Generator expression type cannot be inferred");
+  }
+
+  size_t dimensions = ctx->getDimensionCount();
+
+  if (dimensions == 1) {
+    auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+    arrayType->setType(generatorExprDataType);
+    ctx->setInferredDataType(arrayType);
+    ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+  } else if (dimensions == 2) {
+    auto innerArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+    innerArrayType->setType(generatorExprDataType);
+    auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+    arrayType->setType(innerArrayType);
+    ctx->setInferredDataType(arrayType);
+    ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+  } else {
+    throw TypeError(ctx->getLineNumber(),
+                    "Generator supports only 1D or 2D, got " + std::to_string(dimensions) + "D");
+  }
+
   return {};
 }
 } // namespace gazprea::ast::walkers

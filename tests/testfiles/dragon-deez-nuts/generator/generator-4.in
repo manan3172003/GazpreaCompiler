@@ -1,0 +1,7 @@
+procedure main() returns integer {
+    /* Test: Generator with arithmetic expression */
+    integer[*] squares = [n in 1..6 | n * n];
+    squares -> std_output;
+    return 0;
+}
+//CHECK:[1 4 9 16 25 36]

@@ -43,6 +43,7 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::statements::Declarati
     auto arrayType =
         std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType());
     auto arrayDataType = std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(ctx->getType());
+
     size_t dimIndex = 0;
     for (auto sizeExpr : arrayDataType->getSizes()) {
       visit(sizeExpr);

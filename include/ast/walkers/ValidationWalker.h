@@ -79,6 +79,9 @@ public:
   std::any visitSingularIndex(std::shared_ptr<expressions::SingularIndexExprAst> ctx) override;
   std::any visitRangedIndexExpr(std::shared_ptr<expressions::RangedIndexExprAst> ctx) override;
   std::any visitArrayElementAssign(std::shared_ptr<statements::ArrayElementAssignAst> ctx) override;
+  std::any visitRange(std::shared_ptr<expressions::RangeAst> ctx) override;
+  std::any visitDomainExpr(std::shared_ptr<expressions::DomainExprAst> ctx) override;
+  std::any visitGenerator(std::shared_ptr<expressions::GeneratorAst> ctx) override;
 
   // Helpers
   std::shared_ptr<symTable::Type>

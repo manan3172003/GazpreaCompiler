@@ -1,0 +1,6 @@
+procedure main() returns integer {
+    /* Test: Using character range in generator */
+    integer[*] v = [i in 'a'..'z' | i];
+    return 0;
+}
+//CHECK:TypeError on Line 3

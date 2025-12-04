@@ -1,0 +1,10 @@
+procedure main() returns integer {
+   integer i = 7;
+
+   /* The domain expression should use the previously defined i \*/
+   integer[*] v = [i in [i in 1..i | i] | i * i];
+    v -> std_output;
+   /* v should contain the first 7 squares. */
+    return 0;
+}
+//CHECK:[1 4 9 16 25 36 49]

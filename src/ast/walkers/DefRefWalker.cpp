@@ -929,4 +929,47 @@ DefRefWalker::visitFormatBuiltinFunc(std::shared_ptr<expressions::FormatBuiltinF
   ctx->setSymbol(methodSymbol);
   return {};
 }
+
+std::any DefRefWalker::visitRange(std::shared_ptr<expressions::RangeAst> ctx) {
+  visit(ctx->getStart());
+  visit(ctx->getEnd());
+  ctx->setScope(symTab->getCurrentScope());
+  return {};
+}
+
+std::any DefRefWalker::visitDomainExpr(std::shared_ptr<expressions::DomainExprAst> ctx) {
+  visit(ctx->getDomainExpression());
+  return {};
+}
+
+std::any DefRefWalker::visitGenerator(std::shared_ptr<expressions::GeneratorAst> ctx) {
+  for (const auto &domainExpr : ctx->getDomainExprs()) {
+    visit(domainExpr);
+  }
+
+  auto generatorScope = std::make_shared<symTable::LocalScope>();
+  symTab->pushScope(generatorScope);
+  ctx->setScope(generatorScope);
+
+  for (const auto &domainExpr : ctx->getDomainExprs()) {
+    const std::string iteratorName = domainExpr->getIteratorName();
+    throwDuplicateSymbolError(domainExpr, iteratorName, symTab->getCurrentScope(), false);
+
+    auto varSymbol = std::make_shared<symTable::VariableSymbol>(iteratorName, Qualifier::Const);
+
+    auto intType =
+        std::dynamic_pointer_cast<symTable::Type>(symTab->getGlobalScope()->resolveType("integer"));
+    varSymbol->setType(intType);
+    varSymbol->setDef(domainExpr);
+
+    domainExpr->setSymbol(varSymbol);
+    symTab->getCurrentScope()->defineSymbol(varSymbol);
+  }
+
+  visit(ctx->getGeneratorExpression());
+
+  symTab->popScope();
+
+  return {};
+}
 } // namespace gazprea::ast::walkers

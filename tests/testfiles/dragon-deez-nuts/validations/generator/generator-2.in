@@ -1,0 +1,6 @@
+procedure main() returns integer {
+    /* Test: Too many dimensions in generator (3D not supported) */
+    integer[*][*][*] cube = [i in 1..2, j in 1..2, k in 1..2 | i + j + k];
+    return 0;
+}
+//CHECK:SyntaxError on Line 3

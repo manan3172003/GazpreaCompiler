@@ -1,0 +1,13 @@
+procedure main() returns integer {
+
+    integer[10] j = [x in 1..3 | x];
+
+    integer[2][3] M = [i in 1..2, j in 1..3 | i * j];
+    j -> std_output;
+    '\n' -> std_output;
+    M -> std_output;
+    '\n' -> std_output;
+
+    return 0;
+}
+//CHECK_FILE:1.out

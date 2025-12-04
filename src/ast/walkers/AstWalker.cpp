@@ -135,6 +135,13 @@ std::any AstWalker::visit(std::shared_ptr<Ast> ast) {
   case NodeType::ArrayElementAssign:
     return visitArrayElementAssign(
         std::static_pointer_cast<statements::ArrayElementAssignAst>(ast));
+    return visitVectorType(std::static_pointer_cast<types::VectorTypeAst>(ast));
+  case NodeType::Range:
+    return visitRange(std::dynamic_pointer_cast<expressions::RangeAst>(ast));
+  case NodeType::DomainExpr:
+    return visitDomainExpr(std::dynamic_pointer_cast<expressions::DomainExprAst>(ast));
+  case NodeType::Generator:
+    return visitGenerator(std::dynamic_pointer_cast<expressions::GeneratorAst>(ast));
   default:
     return {};
   }

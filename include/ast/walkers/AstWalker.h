@@ -9,9 +9,12 @@
 #include "ast/expressions/BuiltinFuncAst.h"
 #include "ast/expressions/CastAst.h"
 #include "ast/expressions/CharLiteralAst.h"
+#include "ast/expressions/DomainExprAst.h"
 #include "ast/expressions/FuncProcCallAst.h"
+#include "ast/expressions/GeneratorAst.h"
 #include "ast/expressions/IdentifierAst.h"
 #include "ast/expressions/IntegerLiteralAst.h"
+#include "ast/expressions/RangeAst.h"
 #include "ast/expressions/RangedIndexExprAst.h"
 #include "ast/expressions/RealLiteralAst.h"
 #include "ast/expressions/SingularIndexExprAst.h"
@@ -153,6 +156,10 @@ public:
   virtual std::any visitConcatMemberFunc(std::shared_ptr<statements::ConcatMemberFuncAst> ctx) {
     return {};
   }
+  virtual std::any visitRange(std::shared_ptr<expressions::RangeAst> ctx) { return {}; }
+  virtual std::any visitDomainExpr(std::shared_ptr<expressions::DomainExprAst> ctx) { return {}; }
+  virtual std::any visitGenerator(std::shared_ptr<expressions::GeneratorAst> ctx) { return {}; }
+
   virtual std::any visitAliasType(std::shared_ptr<types::AliasTypeAst> ctx) { return {}; }
   virtual std::any visitIntegerType(std::shared_ptr<types::IntegerTypeAst> ctx) { return {}; }
   virtual std::any visitRealType(std::shared_ptr<types::RealTypeAst> ctx) { return {}; }

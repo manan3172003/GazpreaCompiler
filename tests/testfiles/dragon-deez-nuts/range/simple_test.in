@@ -1,0 +1,7 @@
+procedure main() returns integer {
+
+   integer i = -4;
+   i..5 -> std_output;
+   return 0;
+}
+//CHECK:[-4 -3 -2 -1 0 1 2 3 4 5]

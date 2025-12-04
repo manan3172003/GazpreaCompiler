@@ -257,6 +257,12 @@ mlir::Value Backend::constOne() const {
 mlir::Value Backend::constZero() const {
   return builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
 }
+mlir::Value Backend::constFalse() const {
+  return builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+}
+mlir::Value Backend::constTrue() const {
+  return builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+}
 mlir::Type Backend::structTy(const mlir::ArrayRef<mlir::Type> &memberTypes) {
   return mlir::LLVM::LLVMStructType::getLiteral(&context, memberTypes);
 }

@@ -114,6 +114,9 @@ public:
   visitArrayElementAssign(std::shared_ptr<ast::statements::ArrayElementAssignAst> ctx) override;
   std::any visitSingularIndex(std::shared_ptr<ast::expressions::SingularIndexExprAst> ctx) override;
   std::any visitRangedIndexExpr(std::shared_ptr<ast::expressions::RangedIndexExprAst> ctx) override;
+  std::any visitRange(std::shared_ptr<ast::expressions::RangeAst> ctx) override;
+  std::any visitDomainExpr(std::shared_ptr<ast::expressions::DomainExprAst> ctx) override;
+  std::any visitGenerator(std::shared_ptr<ast::expressions::GeneratorAst> ctx) override;
 
 protected:
   void setupPrintf() const;
@@ -212,6 +215,8 @@ private:
 
   mlir::Value constOne() const;
   mlir::Value constZero() const;
+  mlir::Value constFalse() const;
+  mlir::Value constTrue() const;
 
   mlir::Type structTy(const mlir::ArrayRef<mlir::Type> &memberTypes);
   mlir::Type arrayTy();
