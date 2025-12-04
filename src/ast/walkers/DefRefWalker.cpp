@@ -977,8 +977,8 @@ std::any DefRefWalker::visitGenerator(std::shared_ptr<expressions::GeneratorAst>
   }
 
   auto generatorScope = std::make_shared<symTable::LocalScope>();
+  ctx->setScope(symTab->getCurrentScope());
   symTab->pushScope(generatorScope);
-  ctx->setScope(generatorScope);
 
   for (const auto &domainExpr : ctx->getDomainExprs()) {
     const std::string iteratorName = domainExpr->getIteratorName();
