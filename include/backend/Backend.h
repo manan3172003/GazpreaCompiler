@@ -141,6 +141,13 @@ public:
                                  std::shared_ptr<symTable::Type> type);
   mlir::Value strideArrayByScalar(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct,
                                   mlir::Value scalarValue);
+  mlir::Value strideVectorByScalar(std::shared_ptr<symTable::Type> type, mlir::Value vectorStruct,
+                                   mlir::Value scalarValue);
+  mlir::Value areArraysEqual(mlir::Value leftArrayStruct, mlir::Value rightArrayStruct,
+                             std::shared_ptr<symTable::Type> arrayType);
+  mlir::Value areVectorsEqual(mlir::OpBuilder &b, mlir::Location l, mlir::Value leftVectorStruct,
+                              mlir::Value rightVectorStruct,
+                              std::shared_ptr<symTable::Type> vectorType);
 
 protected:
   void setupPrintf() const;

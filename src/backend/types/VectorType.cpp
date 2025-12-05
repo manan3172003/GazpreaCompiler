@@ -908,4 +908,227 @@ void Backend::throwIfVectorSizeNotEqual(mlir::Value left, mlir::Value right,
       [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
 }
 
+mlir::Value Backend::strideVectorByScalar(std::shared_ptr<symTable::Type> type,
+                                          mlir::Value vectorStruct, mlir::Value scalarValue) {
+  auto newSizeAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
+  builder->create<mlir::LLVM::StoreOp>(loc, constZero(), newSizeAddr);
+
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type);
+  if (!vectorTypeSym) {
+    return {};
+  }
+
+  auto vectorStructType = getMLIRType(type);
+
+  auto makeIndexConst = [&](int idx) {
+    return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), idx);
+  };
+
+  auto makeFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr, VectorOffset offset) {
+    return builder->create<mlir::LLVM::GEPOp>(
+        loc, ptrTy(), structTy, baseAddr,
+        mlir::ValueRange{makeIndexConst(0), makeIndexConst(static_cast<int>(offset))});
+  };
+
+  // Load size, data, and is2D from the source vector
+  auto vectorSizeAddr = makeFieldPtr(vectorStructType, vectorStruct, VectorOffset::Size);
+  mlir::Value vectorSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), vectorSizeAddr);
+
+  auto vectorDataAddr = makeFieldPtr(vectorStructType, vectorStruct, VectorOffset::Data);
+  mlir::Value dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), vectorDataAddr);
+
+  auto is2dAddr = makeFieldPtr(vectorStructType, vectorStruct, VectorOffset::Is2D);
+  mlir::Value is2d = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), is2dAddr);
+
+  // Get element type information
+  auto elementType = vectorTypeSym->getType();
+  auto elementMLIRType = getMLIRType(elementType);
+  auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
+
+  // Count how many elements we'll have after striding
+  builder->create<mlir::scf::ForOp>(
+      loc, constZero(), vectorSize, scalarValue, mlir::ValueRange{},
+      [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+        auto newSize = b.create<mlir::LLVM::LoadOp>(l, intTy(), newSizeAddr);
+        auto incrementedSize = b.create<mlir::LLVM::AddOp>(l, newSize, constOne());
+        b.create<mlir::LLVM::StoreOp>(l, incrementedSize, newSizeAddr);
+        b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+      });
+  auto newSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), newSizeAddr);
+
+  // Create new vector struct
+  auto newVectorStruct =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), vectorStructType, constOne());
+
+  // Allocate memory for the new data
+  mlir::Value newDataPtr = mallocArray(elementMLIRType, newSize);
+
+  // Check if element type is an array (multi-dimensional case)
+  if (elementArrayType) {
+    // For nested arrays (2D vectors), use copyArrayStruct
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), newSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto offset = b.create<mlir::LLVM::MulOp>(l, i, scalarValue);
+          auto srcElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, dataPtr,
+                                                           mlir::ValueRange{offset});
+          auto destElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                            mlir::ValueRange{i});
+          copyArrayStruct(elementType, srcElementPtr, destElementPtr);
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  } else {
+    // For scalar elements, use load/store
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), newSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto offset = b.create<mlir::LLVM::MulOp>(l, i, scalarValue);
+          auto srcElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, dataPtr,
+                                                           mlir::ValueRange{offset});
+          auto destElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                            mlir::ValueRange{i});
+          auto elementValue = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcElementPtr);
+          b.create<mlir::LLVM::StoreOp>(l, elementValue, destElementPtr);
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  }
+
+  // Store the fields in the new vector struct
+  auto newVectorSizeAddr = makeFieldPtr(vectorStructType, newVectorStruct, VectorOffset::Size);
+  builder->create<mlir::LLVM::StoreOp>(loc, newSize, newVectorSizeAddr);
+
+  auto newVectorCapacityAddr =
+      makeFieldPtr(vectorStructType, newVectorStruct, VectorOffset::Capacity);
+  builder->create<mlir::LLVM::StoreOp>(loc, newSize, newVectorCapacityAddr);
+
+  auto newVectorDataAddr = makeFieldPtr(vectorStructType, newVectorStruct, VectorOffset::Data);
+  builder->create<mlir::LLVM::StoreOp>(loc, newDataPtr, newVectorDataAddr);
+
+  auto newIs2dAddr = makeFieldPtr(vectorStructType, newVectorStruct, VectorOffset::Is2D);
+  builder->create<mlir::LLVM::StoreOp>(loc, is2d, newIs2dAddr);
+
+  return newVectorStruct;
+}
+
+mlir::Value Backend::areVectorsEqual(mlir::OpBuilder &builder, mlir::Location loc,
+                                     mlir::Value leftVectorStruct, mlir::Value rightVectorStruct,
+                                     std::shared_ptr<symTable::Type> vectorType) {
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(vectorType);
+  if (!vectorTypeSym) {
+    return {};
+  }
+
+  auto elementType = vectorTypeSym->getType();
+  auto elementMLIRType = getMLIRType(elementType);
+  auto vectorStructType = getMLIRType(vectorType);
+
+  // Create local constants using the passed builder and location
+  auto localConstOne = builder.create<mlir::LLVM::ConstantOp>(loc, intTy(), 1);
+  auto localConstZero = builder.create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
+
+  auto makeIndexConst = [&](int idx) {
+    return builder.create<mlir::LLVM::ConstantOp>(loc, builder.getI32Type(), idx);
+  };
+
+  auto makeFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr, VectorOffset offset) {
+    return builder.create<mlir::LLVM::GEPOp>(
+        loc, ptrTy(), structTy, baseAddr,
+        mlir::ValueRange{makeIndexConst(0), makeIndexConst(static_cast<int>(offset))});
+  };
+
+  // Get vector sizes
+  auto leftSizeAddr = makeFieldPtr(vectorStructType, leftVectorStruct, VectorOffset::Size);
+  mlir::Value leftSize = builder.create<mlir::LLVM::LoadOp>(loc, intTy(), leftSizeAddr);
+  auto rightSizeAddr = makeFieldPtr(vectorStructType, rightVectorStruct, VectorOffset::Size);
+  mlir::Value rightSize = builder.create<mlir::LLVM::LoadOp>(loc, intTy(), rightSizeAddr);
+
+  // Compare sizes
+  auto sizesEqual =
+      builder.create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, leftSize, rightSize);
+
+  // Create result variable to hold the final boolean result
+  auto resultAddr = builder.create<mlir::LLVM::AllocaOp>(loc, ptrTy(), boolTy(), localConstOne);
+  builder.create<mlir::LLVM::StoreOp>(loc, sizesEqual, resultAddr);
+
+  // Only check elements if sizes are equal
+  builder.create<mlir::scf::IfOp>(
+      loc, sizesEqual,
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        // Create local constants for this scope
+        auto loopConstZero = b.create<mlir::LLVM::ConstantOp>(l, intTy(), 0);
+        auto loopConstOne = b.create<mlir::LLVM::ConstantOp>(l, intTy(), 1);
+
+        // Create local helper functions for this scope
+        auto makeLocalIndexConst = [&](int idx) {
+          return b.create<mlir::LLVM::ConstantOp>(l, b.getI32Type(), idx);
+        };
+
+        auto makeLocalFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr,
+                                     VectorOffset offset) {
+          return b.create<mlir::LLVM::GEPOp>(
+              l, ptrTy(), structTy, baseAddr,
+              mlir::ValueRange{makeLocalIndexConst(0),
+                               makeLocalIndexConst(static_cast<int>(offset))});
+        };
+
+        // Get data pointers
+        auto leftDataAddr =
+            makeLocalFieldPtr(vectorStructType, leftVectorStruct, VectorOffset::Data);
+        mlir::Value leftDataPtr = b.create<mlir::LLVM::LoadOp>(l, ptrTy(), leftDataAddr);
+        auto rightDataAddr =
+            makeLocalFieldPtr(vectorStructType, rightVectorStruct, VectorOffset::Data);
+        mlir::Value rightDataPtr = b.create<mlir::LLVM::LoadOp>(l, ptrTy(), rightDataAddr);
+
+        // Check if element type is an array (multi-dimensional case)
+        auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
+
+        // Loop through elements and compare
+        b.create<mlir::scf::ForOp>(
+            l, loopConstZero, leftSize, loopConstOne, mlir::ValueRange{},
+            [&](mlir::OpBuilder &forBuilder, mlir::Location forLoc, mlir::Value i,
+                mlir::ValueRange iterArgs) {
+              auto leftElementPtr = forBuilder.create<mlir::LLVM::GEPOp>(
+                  forLoc, ptrTy(), elementMLIRType, leftDataPtr, mlir::ValueRange{i});
+              auto rightElementPtr = forBuilder.create<mlir::LLVM::GEPOp>(
+                  forLoc, ptrTy(), elementMLIRType, rightDataPtr, mlir::ValueRange{i});
+
+              mlir::Value elementsEqual;
+              if (elementArrayType) {
+                // Recursively compare sub-arrays
+                elementsEqual = areArraysEqual(leftElementPtr, rightElementPtr, elementType);
+                elementsEqual =
+                    forBuilder.create<mlir::LLVM::LoadOp>(forLoc, boolTy(), elementsEqual);
+              } else {
+                // Compare scalar elements
+                auto leftValue =
+                    forBuilder.create<mlir::LLVM::LoadOp>(forLoc, elementMLIRType, leftElementPtr);
+                auto rightValue =
+                    forBuilder.create<mlir::LLVM::LoadOp>(forLoc, elementMLIRType, rightElementPtr);
+
+                if (elementType->getName() == "real") {
+                  elementsEqual = forBuilder.create<mlir::LLVM::FCmpOp>(
+                      forLoc, mlir::LLVM::FCmpPredicate::oeq, leftValue, rightValue);
+                } else {
+                  elementsEqual = forBuilder.create<mlir::LLVM::ICmpOp>(
+                      forLoc, mlir::LLVM::ICmpPredicate::eq, leftValue, rightValue);
+                }
+              }
+
+              // If elements are not equal, set result to false
+              auto currentResult =
+                  forBuilder.create<mlir::LLVM::LoadOp>(forLoc, boolTy(), resultAddr);
+              auto stillEqual =
+                  forBuilder.create<mlir::LLVM::AndOp>(forLoc, currentResult, elementsEqual);
+              forBuilder.create<mlir::LLVM::StoreOp>(forLoc, stillEqual, resultAddr);
+
+              forBuilder.create<mlir::scf::YieldOp>(forLoc, mlir::ValueRange{});
+            });
+
+        b.create<mlir::scf::YieldOp>(l);
+      },
+      [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
+
+  return resultAddr;
+}
+
 } // namespace gazprea::backend

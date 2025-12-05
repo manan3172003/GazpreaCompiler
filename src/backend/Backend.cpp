@@ -581,6 +581,21 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
   }
   if (isTypeVector(leftType) || isTypeVector(rightType)) {
     auto combinedType = leftType;
+    if (op == ast::expressions::BinaryOpType::BY) {
+      auto skipByIndex = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), rightAddr);
+      auto isSkipByLessThanOne = builder->create<mlir::LLVM::ICmpOp>(
+          loc, mlir::LLVM::ICmpPredicate::slt, skipByIndex, constOne());
+      builder->create<mlir::scf::IfOp>(
+          loc, isSkipByLessThanOne,
+          [&](mlir::OpBuilder &b, mlir::Location l) {
+            auto throwStrideErrorFunc =
+                module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowStrideErrorName);
+            b.create<mlir::LLVM::CallOp>(l, throwStrideErrorFunc, mlir::ValueRange{});
+            b.create<mlir::scf::YieldOp>(l);
+          },
+          [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
+      return strideVectorByScalar(opType, leftAddr, skipByIndex);
+    }
     if (not isTypeVector(leftType)) {
       // should be a scalar
       // promote scalar to the same size as vector by making it a vector of same size
@@ -602,7 +617,9 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       fillVectorWithScalarValueWithVectorStruct(rightAddr, scalarValue, leftAddr, leftType);
       rightType = leftType;
     }
-    if (op != ast::expressions::BinaryOpType::DPIPE) {
+    if (op != ast::expressions::BinaryOpType::DPIPE &&
+        op != ast::expressions::BinaryOpType::EQUAL &&
+        op != ast::expressions::BinaryOpType::NOT_EQUAL) {
       throwIfVectorSizeNotEqual(leftAddr, rightAddr, combinedType);
     }
 
@@ -771,6 +788,19 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
             });
         return cumalativeValueAddr;
       }
+    } else if (op == ast::expressions::BinaryOpType::EQUAL ||
+               op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+      // Compare vectors for equality
+      auto resultAddr = areVectorsEqual(*builder, loc, leftAddr, rightAddr, combinedType);
+
+      // If operation is NOT_EQUAL, negate the result
+      if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+        auto equalResult = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), resultAddr);
+        auto notEqualResult = builder->create<mlir::LLVM::XOrOp>(loc, equalResult, constTrue());
+        builder->create<mlir::LLVM::StoreOp>(loc, notEqualResult, resultAddr);
+      }
+
+      return resultAddr;
     } else {
       // Handle regular binary operations for vectors
       auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(opType);
@@ -907,9 +937,12 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       combinedType = leftType;
       freeRight = true;
     }
+
     // TODO: cast either arrayStructs if needed
-    // Check if the size of the arrays are not the same
-    if (op != ast::expressions::BinaryOpType::DPIPE) {
+    // Check if the size of the arrays are not the same (for operations that require equal sizes)
+    if (op != ast::expressions::BinaryOpType::DPIPE &&
+        op != ast::expressions::BinaryOpType::EQUAL &&
+        op != ast::expressions::BinaryOpType::NOT_EQUAL) {
       throwIfNotEqualArrayStructs(leftAddr, rightAddr, combinedType);
     }
     if (op == ast::expressions::BinaryOpType::DPIPE) {
@@ -1046,6 +1079,19 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
             });
         return cumalativeValueAddr;
       }
+    } else if (op == ast::expressions::BinaryOpType::EQUAL ||
+               op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+      // Compare arrays for equality
+      auto resultAddr = areArraysEqual(leftAddr, rightAddr, combinedType);
+
+      // If operation is NOT_EQUAL, negate the result
+      if (op == ast::expressions::BinaryOpType::NOT_EQUAL) {
+        auto equalResult = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), resultAddr);
+        auto notEqualResult = builder->create<mlir::LLVM::XOrOp>(loc, equalResult, constTrue());
+        builder->create<mlir::LLVM::StoreOp>(loc, notEqualResult, resultAddr);
+      }
+
+      return resultAddr;
     }
 
     auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(opType);

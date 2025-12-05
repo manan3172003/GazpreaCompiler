@@ -1716,4 +1716,91 @@ mlir::Value Backend::strideArrayByScalar(std::shared_ptr<symTable::Type> type,
 
   return newArrayStruct;
 }
+
+mlir::Value Backend::areArraysEqual(mlir::Value leftArrayStruct, mlir::Value rightArrayStruct,
+                                    std::shared_ptr<symTable::Type> arrayType) {
+  auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayType);
+  auto elementType = arrayTypeSym->getType();
+  auto elementMLIRType = getMLIRType(elementType);
+  auto arrayStructType = getMLIRType(arrayType);
+
+  // Create local constants using the passed builder and location
+  auto localConstOne = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1);
+  auto localConstZero = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
+
+  // Get array sizes
+  auto leftSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, leftArrayStruct);
+  mlir::Value leftSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), leftSizeAddr);
+  auto rightSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, rightArrayStruct);
+  mlir::Value rightSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), rightSizeAddr);
+
+  // Compare sizes
+  auto sizesEqual =
+      builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq, leftSize, rightSize);
+
+  // Create result variable to hold the final boolean result
+  auto resultAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), boolTy(), localConstOne);
+  builder->create<mlir::LLVM::StoreOp>(loc, sizesEqual, resultAddr);
+
+  // Only check elements if sizes are equal
+  builder->create<mlir::scf::IfOp>(
+      loc, sizesEqual,
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        // Get data pointers
+        auto leftDataAddr = getArrayDataAddr(b, l, arrayStructType, leftArrayStruct);
+        mlir::Value leftDataPtr = b.create<mlir::LLVM::LoadOp>(l, ptrTy(), leftDataAddr);
+        auto rightDataAddr = getArrayDataAddr(b, l, arrayStructType, rightArrayStruct);
+        mlir::Value rightDataPtr = b.create<mlir::LLVM::LoadOp>(l, ptrTy(), rightDataAddr);
+
+        // Check if element type is an array (multi-dimensional case)
+        auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
+
+        // Loop through elements and compare
+        b.create<mlir::scf::ForOp>(
+            l, constZero(), leftSize, constOne(), mlir::ValueRange{},
+            [&](mlir::OpBuilder &forBuilder, mlir::Location forLoc, mlir::Value i,
+                mlir::ValueRange iterArgs) {
+              auto leftElementPtr = forBuilder.create<mlir::LLVM::GEPOp>(
+                  forLoc, ptrTy(), elementMLIRType, leftDataPtr, mlir::ValueRange{i});
+              auto rightElementPtr = forBuilder.create<mlir::LLVM::GEPOp>(
+                  forLoc, ptrTy(), elementMLIRType, rightDataPtr, mlir::ValueRange{i});
+
+              mlir::Value elementsEqual;
+              if (elementArrayType) {
+                // Recursively compare sub-arrays
+                elementsEqual = areArraysEqual(leftElementPtr, rightElementPtr, elementType);
+                elementsEqual =
+                    forBuilder.create<mlir::LLVM::LoadOp>(forLoc, boolTy(), elementsEqual);
+              } else {
+                // Compare scalar elements
+                auto leftValue =
+                    forBuilder.create<mlir::LLVM::LoadOp>(forLoc, elementMLIRType, leftElementPtr);
+                auto rightValue =
+                    forBuilder.create<mlir::LLVM::LoadOp>(forLoc, elementMLIRType, rightElementPtr);
+
+                if (elementType->getName() == "real") {
+                  elementsEqual = forBuilder.create<mlir::LLVM::FCmpOp>(
+                      forLoc, mlir::LLVM::FCmpPredicate::oeq, leftValue, rightValue);
+                } else {
+                  elementsEqual = forBuilder.create<mlir::LLVM::ICmpOp>(
+                      forLoc, mlir::LLVM::ICmpPredicate::eq, leftValue, rightValue);
+                }
+              }
+
+              // If elements are not equal, set result to false
+              auto currentResult =
+                  forBuilder.create<mlir::LLVM::LoadOp>(forLoc, boolTy(), resultAddr);
+              auto stillEqual =
+                  forBuilder.create<mlir::LLVM::AndOp>(forLoc, currentResult, elementsEqual);
+              forBuilder.create<mlir::LLVM::StoreOp>(forLoc, stillEqual, resultAddr);
+
+              forBuilder.create<mlir::scf::YieldOp>(forLoc, mlir::ValueRange{});
+            });
+
+        b.create<mlir::scf::YieldOp>(l);
+      },
+      [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
+
+  return resultAddr;
+}
 } // namespace gazprea::backend
