@@ -1,5 +1,0 @@
-procedure main() returns integer{
-    struct s(integer[5] x, boolean[5] y) t;
-    t.x -> std_output;
-    return 0;
-}

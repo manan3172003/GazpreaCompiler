@@ -1122,7 +1122,8 @@ ValidationWalker::visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuil
   const auto argType = ctx->arg->getInferredSymbolType();
   // TODO: support strings
   if (!argType ||
-      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
+      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector" &&
+       argType->getName() != "empty_array")) {
     throw CallError(ctx->getLineNumber(), "length builtin must be called on arrays or vectors");
   }
   ctx->setInferredSymbolType(methodSymbol->getReturnType());
@@ -1136,7 +1137,8 @@ ValidationWalker::visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuilti
   const auto argType = ctx->arg->getInferredSymbolType();
   // TODO: Support strings
   if (!argType ||
-      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector")) {
+      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector" &&
+       argType->getName() != "empty_array")) {
     throw CallError(ctx->getLineNumber(), "shape builtin must be called on arrays or vectors");
   }
   ctx->setInferredSymbolType(methodSymbol->getReturnType());

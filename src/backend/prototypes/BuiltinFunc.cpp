@@ -68,6 +68,13 @@ Backend::visitLengthBuiltinFunc(std::shared_ptr<ast::expressions::LengthBuiltinF
   const bool isVector = typeName.rfind("vector", 0) == 0;
   const bool isArray = typeName.rfind("array", 0) == 0;
   if (!isVector && !isArray) {
+    if (typeName == "empty_array") {
+      auto resultAlloca = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
+      auto zero = constZero();
+      builder->create<mlir::LLVM::StoreOp>(loc, zero, resultAlloca);
+      ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), resultAlloca);
+      return {};
+    }
     return {};
   }
 
@@ -218,6 +225,33 @@ Backend::visitShapeBuiltinFunc(std::shared_ptr<ast::expressions::ShapeBuiltinFun
   const bool isVector = typeName.rfind("vector", 0) == 0;
   const bool isArray = typeName.rfind("array", 0) == 0;
   if (!isVector && !isArray) {
+    if (typeName == "empty_array") {
+      auto resultAlloca =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayTy(), constOne());
+
+      // Data: [0]
+      auto dataPtr = mallocArray(intTy(), constOne());
+      auto zeroIdx = builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0);
+      auto elemPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), intTy(), dataPtr,
+                                                        mlir::ValueRange{zeroIdx});
+      builder->create<mlir::LLVM::StoreOp>(loc, constZero(), elemPtr);
+
+      // Size: 1
+      auto sizePtr = getArraySizeAddr(*builder, loc, arrayTy(), resultAlloca);
+      builder->create<mlir::LLVM::StoreOp>(loc, constOne(), sizePtr);
+
+      // Data ptr
+      auto dataFieldPtr = getArrayDataAddr(*builder, loc, arrayTy(), resultAlloca);
+      builder->create<mlir::LLVM::StoreOp>(loc, dataPtr, dataFieldPtr);
+
+      // Is2D: false
+      auto is2dPtr = get2DArrayBoolAddr(*builder, loc, arrayTy(), resultAlloca);
+      auto boolFalse = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+      builder->create<mlir::LLVM::StoreOp>(loc, boolFalse, is2dPtr);
+
+      ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), resultAlloca);
+      return {};
+    }
     return {};
   }
 
