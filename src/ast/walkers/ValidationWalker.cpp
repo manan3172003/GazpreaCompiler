@@ -1615,6 +1615,15 @@ ValidationWalker::visitAppendMemberFunc(std::shared_ptr<statements::AppendMember
   if (!vectorTypeSym) {
     throw TypeError(ctx->getLineNumber(), "append can only be used on vector types");
   }
+
+  // Check if the vector is const
+  if (auto varSymbol =
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLeft()->getSymbol())) {
+    if (varSymbol->getQualifier() == Qualifier::Const) {
+      throw TypeError(ctx->getLineNumber(), "cannot append to const vector");
+    }
+  }
+
   for (const auto &arg : ctx->getArgs()) {
     visit(arg);
   }
@@ -1629,6 +1638,15 @@ std::any ValidationWalker::visitPushMemberFunc(std::shared_ptr<statements::PushM
   if (!vectorTypeSym) {
     throw TypeError(ctx->getLineNumber(), "push can only be used on vector types");
   }
+
+  // Check if the vector is const
+  if (auto varSymbol =
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLeft()->getSymbol())) {
+    if (varSymbol->getQualifier() == Qualifier::Const) {
+      throw TypeError(ctx->getLineNumber(), "cannot push to const vector");
+    }
+  }
+
   auto elementType = vectorTypeSym->getType();
   for (const auto &arg : ctx->getArgs()) {
     visit(arg);
