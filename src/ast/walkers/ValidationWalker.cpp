@@ -158,6 +158,17 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
     }
     if (ctx->getQualifier() == Qualifier::Var)
       throw TypeError(ctx->getLineNumber(), "Cannot declare a variable as var in Global Scope");
+
+    // Check if type is primitive
+    if (declarationType) {
+      const std::string typeName = declarationType->getName();
+      if (typeName != "integer" && typeName != "boolean" && typeName != "real" &&
+          typeName != "character") {
+        throw TypeError(
+            ctx->getLineNumber(),
+            "Global declarations can only have scalar types (integer, boolean, real, character)");
+      }
+    }
   }
   return {};
 }
