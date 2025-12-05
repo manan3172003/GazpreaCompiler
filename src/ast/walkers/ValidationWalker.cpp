@@ -442,7 +442,8 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
     }
   } else {
     if (op != expressions::BinaryOpType::DPIPE) {
-      if (not typesMatch(leftType, rightType)) {
+      if (rightType->getName() != leftType->getName() &&
+          (!isCollection(leftType) || isCollection(rightType))) {
         throw TypeError(ctx->getLineNumber(), "Binary operation: Type mismatch");
       }
     }

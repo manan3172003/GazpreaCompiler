@@ -1372,7 +1372,6 @@ bool Backend::typesEquivalent(const std::shared_ptr<symTable::Type> &lhs,
     }
     return typesEquivalent(lhsArray->getType(), rhsArray->getType());
   }
-
   return true;
 }
 
