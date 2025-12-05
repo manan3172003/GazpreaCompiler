@@ -35,7 +35,7 @@ std::any Backend::visitProcedureCall(std::shared_ptr<ast::statements::ProcedureC
   }
 
   auto procOp = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(methodSym->getName());
-  builder->create<mlir::LLVM::CallOp>(loc, procOp, mlir::ValueRange(mlirArgs));
+  auto callOp = builder->create<mlir::LLVM::CallOp>(loc, procOp, mlir::ValueRange(mlirArgs));
 
   for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
     if (auto variableSymbol =
@@ -43,6 +43,17 @@ std::any Backend::visitProcedureCall(std::shared_ptr<ast::statements::ProcedureC
         variableSymbol->getQualifier() == ast::Qualifier::Const) {
       freeAllocatedMemory(variableSymbol->getType(), params[i]->getSymbol()->value);
     }
+  }
+
+  // Capture the return value and push to scope stack
+  if (callOp.getNumResults() > 0) {
+    const auto returnValue = callOp.getResult();
+    auto returnAlloca =
+        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), returnValue.getType(), constOne());
+    builder->create<mlir::LLVM::StoreOp>(loc, returnValue, returnAlloca.getResult());
+
+    ctx->getSymbol()->value = returnAlloca.getResult();
+    freeAllocatedMemory(methodSym->getReturnType(), returnAlloca.getResult());
   }
 
   return {};

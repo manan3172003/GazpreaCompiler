@@ -1,0 +1,9 @@
+procedure doSomething() returns integer[3] {
+    return [1, 2];
+}
+
+procedure main() returns integer {
+    call doSomething();
+
+    return 0;
+}
