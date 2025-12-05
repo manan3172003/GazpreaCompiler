@@ -409,8 +409,8 @@ bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::Express
         std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(left->getInferredSymbolType());
     auto rightVectorType =
         std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(right->getInferredSymbolType());
-    return isArrayNumericType(leftVectorType->getType()) &&
-           isArrayNumericType(rightVectorType->getType());
+    return isVectorNumericType(left->getInferredSymbolType()) &&
+           isVectorNumericType(right->getInferredSymbolType());
   }
 
   // Check if one is a vector and the other is not
@@ -418,11 +418,11 @@ bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::Express
       std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(right->getInferredSymbolType())) {
     if (auto leftVectorTy =
             std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(left->getInferredSymbolType())) {
-      return isNumericType(leftVectorTy->getType()) &&
+      return isVectorNumericType(left->getInferredSymbolType()) &&
              isNumericType(right->getInferredSymbolType());
     } else if (auto rightVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(
                    right->getInferredSymbolType())) {
-      return isNumericType(rightVectorType->getType()) &&
+      return isVectorNumericType(right->getInferredSymbolType()) &&
              isNumericType(left->getInferredSymbolType());
     }
     return false;
@@ -444,10 +444,11 @@ bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::Express
       std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(right->getInferredSymbolType())) {
     if (auto leftArrayTy =
             std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(left->getInferredSymbolType())) {
-      return isNumericType(leftArrayTy->getType()) && isNumericType(right->getInferredSymbolType());
+      return isArrayNumericType(leftArrayTy->getType()) &&
+             isNumericType(right->getInferredSymbolType());
     } else if (auto rightArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(
                    right->getInferredSymbolType())) {
-      return isNumericType(rightArrayType->getType()) &&
+      return isArrayNumericType(rightArrayType->getType()) &&
              isNumericType(left->getInferredSymbolType());
     }
     return false;
@@ -467,6 +468,18 @@ bool ValidationWalker::isArrayNumericType(const std::shared_ptr<symTable::Type> 
     return true;
   return false;
 }
+
+bool ValidationWalker::isVectorNumericType(const std::shared_ptr<symTable::Type> &type) {
+  if (auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type)) {
+    auto elementType = vectorType->getType();
+    if (std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType))
+      return isArrayNumericType(elementType);
+    else
+      return isNumericType(elementType);
+  }
+  return false;
+}
+
 void ValidationWalker::validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
                                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
                                     const symTable::ScopeType scopeType, const int lineNumber) {

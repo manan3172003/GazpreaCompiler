@@ -127,6 +127,7 @@ public:
   static bool areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
                              const std::shared_ptr<expressions::ExpressionAst> &right);
   static bool isArrayNumericType(const std::shared_ptr<symTable::Type> &type);
+  static bool isVectorNumericType(const std::shared_ptr<symTable::Type> &type);
   void validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
                     symTable::ScopeType scopeType, int lineNumber);

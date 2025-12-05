@@ -1,0 +1,8 @@
+procedure main() returns integer {
+    [1] || [2] || [4] -> std_output;
+    ['a'] || ['f'] || ['v'] -> std_output;
+    [9.3] || [2.3] || [4.2] -> std_output;
+    [true] || [false] || [true] -> std_output;
+    return 0;
+}
+//CHECK:[1 2 4][a f v][9.3 2.3 4.2][T F T]

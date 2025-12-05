@@ -929,7 +929,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       combinedType = rightType;
     }
     if (!isTypeArray(rightType) && !isEmptyArray(rightType)) {
-      auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(rightType), leftAddr);
+      auto scalarValue =
+          builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(rightType), rightAddr);
       rightAddr =
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(leftType), constOne());
       fillArrayWithScalarValueWithArrayStruct(rightAddr, scalarValue, leftAddr, leftType);

@@ -1,0 +1,37 @@
+procedure main() returns integer {
+    vector<integer> a1 = [1];
+    vector<integer> a2 = [3];
+    vector<real> a3 = [3.1];
+    vector<real> a4 = [6.4];
+
+    a1 + a2 -> std_output;
+    a1 - a2 -> std_output;
+    a1 * a2 -> std_output;
+    a2 / a1 -> std_output;
+    a2 % a1 -> std_output;
+    a2 < a1 -> std_output;
+    a2 > a1 -> std_output;
+    a2 >= a1 -> std_output;
+    a2 <= a1 -> std_output;
+    a2 ^ a2 -> std_output;
+    a2 == a1 -> std_output;
+    a2 != a1 -> std_output;
+    a2 == 3 -> std_output;
+
+    a3 + a4 -> std_output;
+    a3 - a4 -> std_output;
+    a3 * a4 -> std_output;
+    a4 / a3 -> std_output;
+    a4 % a3 -> std_output;
+    a4 < a3 -> std_output;
+    a4 > a3 -> std_output;
+    a4 >= a3 -> std_output;
+    a4 <= a3 -> std_output;
+    a4 ^ a4 -> std_output;
+    a4 == a3 -> std_output;
+    a4 != a3 -> std_output;
+    a4 == 6.4 -> std_output;
+
+    return 0;
+}
+//CHECK:[4][-2][3][3][0][F][T][T][F][27]FTT[9.5][-3.3][19.84][2.06452][0.2][F][T][T][F][144395]FTT

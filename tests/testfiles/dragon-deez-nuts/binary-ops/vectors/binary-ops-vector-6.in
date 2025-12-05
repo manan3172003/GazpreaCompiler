@@ -1,0 +1,24 @@
+procedure main() returns integer {
+    vector<integer> a1 = [1];
+    vector<integer> a2 = [2];
+    vector<integer> a3 = [4];
+
+    vector<character> b1 = ['a'];
+    vector<character> b2 = ['f'];
+    vector<character> b3 = ['g'];
+
+    vector<real> c1 = [9.3];
+    vector<real> c2 = [2.3];
+    vector<real> c3 = [4.2];
+
+    vector<boolean> d1 = [true];
+    vector<boolean> d2 = [false];
+    vector<boolean> d3 = [true];
+
+    a1 || a2 || a3 -> std_output;
+    b1 || b2 || b3 -> std_output;
+    c1 || c2 || c3 -> std_output;
+    d1 || d2 || d3 -> std_output;
+    return 0;
+}
+//CHECK:[1 2 4][a f g][9.3 2.3 4.2][T F T]
