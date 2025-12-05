@@ -231,6 +231,13 @@ DefRefWalker::createDefaultLiteral(const std::shared_ptr<symTable::Type> &type,
     }
     return structLiteral;
   }
+  if (type->getName().substr(0, 5) == "array" || type->getName() == "empty_array") {
+    const auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type);
+    if (arrayType) {
+      auto literal = std::make_shared<expressions::ArrayLiteralAst>(token);
+      return literal;
+    }
+  }
   return nullptr;
 }
 
@@ -286,16 +293,13 @@ std::any DefRefWalker::visitDeclaration(std::shared_ptr<statements::DeclarationA
     if (auto arrayType = std::dynamic_pointer_cast<types::ArrayTypeAst>(ctx->getType())) {
       if (hasInferredArraySize(arrayType))
         throw SyntaxError(ctx->getLineNumber(), "Inferred Array cannot be empty");
-      auto defaultExpr = createDefaultArrayLiteral(arrayType, ctx->token);
-      ctx->setExpr(defaultExpr);
-    } else {
-      // Set everything to base (false, '\0', 0, 0.0)
-      // normal primitives (boolean, character, integer, real)
-      // tuples
-      const auto type = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
-      auto defaultExpr = createDefaultLiteral(type, ctx->token);
-      ctx->setExpr(defaultExpr);
     }
+    // Set everything to base (false, '\0', 0, 0.0)
+    // normal primitives (boolean, character, integer, real)
+    // tuples
+    const auto type = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
+    auto defaultExpr = createDefaultLiteral(type, ctx->token);
+    ctx->setExpr(defaultExpr);
     visit(ctx->getExpr());
   }
   visit(ctx->getExpr());
@@ -602,8 +606,6 @@ std::any DefRefWalker::visitBooleanType(std::shared_ptr<types::BooleanTypeAst> c
 std::any DefRefWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) {
   ctx->setScope(symTab->getCurrentScope());
   visit(ctx->getType());
-  for (auto size : ctx->getSizes())
-    visit(size);
   auto arrayTypeSymbol = std::make_shared<symTable::ArrayTypeSymbol>("array");
   arrayTypeSymbol->setType(resolvedType(ctx->getLineNumber(), ctx->getType()));
   arrayTypeSymbol->setDef(ctx);

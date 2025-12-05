@@ -9,6 +9,11 @@ class ArrayTypeSymbol : public Type, public Symbol {
   std::vector<mlir::Value> sizes;
 
 public:
+  int inferredSize = 0; // number of elements in the vector, remains same for declared and inferred.
+  std::vector<int> inferredElementSize;
+  std::vector<mlir::Value> declaredElementSize;
+  std::vector<bool> elementSizeInferenceFlags;
+  bool isElement2D = false;
   explicit ArrayTypeSymbol(const std::string &name) : Symbol(name) {};
   std::string getName() override;
   std::string toString() override;

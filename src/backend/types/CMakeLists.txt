@@ -3,6 +3,7 @@ set(
         "${CMAKE_CURRENT_SOURCE_DIR}/TupleType.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/StructType.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/VectorType.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ArrayType.cpp"
 )
 
 target_sources(gazc PRIVATE ${gazprea_types_src})

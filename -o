@@ -1,0 +1,287 @@
+; ModuleID = 'LLVMDialectModule'
+source_filename = "LLVMDialectModule"
+
+@charFormat = internal constant [3 x i8] c"%c\00"
+@charInputFormat = internal constant [3 x i8] c"%c\00"
+@intFormat = internal constant [3 x i8] c"%d\00"
+@intInputFormat = internal constant [3 x i8] c"%d\00"
+@floatFormat = internal constant [3 x i8] c"%g\00"
+@floatInputFormat = internal constant [3 x i8] c"%f\00"
+@boolInputFormat = internal constant [8 x i8] c" %1[TF]\00"
+@stream_state_019ae35e_4e0e_7d02_98f8_6e5abd8135e9 = internal global i32 0
+
+declare void @free(ptr)
+
+declare ptr @malloc(i64)
+
+define { i32, ptr, i1 } @shape(ptr %0, i32 %1) {
+  %3 = icmp eq i32 %1, 1
+  br i1 %3, label %4, label %19
+
+4:                                                ; preds = %2
+  %5 = getelementptr { i32, i32, ptr, i1 }, ptr %0, i32 0, i32 0
+  %6 = load i32, ptr %5, align 4
+  %7 = alloca i32, align 4
+  %8 = getelementptr i32, ptr %7, i32 1
+  %9 = ptrtoint ptr %7 to i64
+  %10 = ptrtoint ptr %8 to i64
+  %11 = sub i64 %10, %9
+  %12 = mul i64 1, %11
+  %13 = call ptr @malloc(i64 %12)
+  store i32 %6, ptr %13, align 4
+  %14 = alloca { i32, ptr, i1 }, align 8
+  %15 = getelementptr { i32, ptr, i1 }, ptr %14, i32 0, i32 0
+  store i32 1, ptr %15, align 4
+  %16 = getelementptr { i32, ptr, i1 }, ptr %14, i32 0, i32 1
+  store ptr %13, ptr %16, align 8
+  %17 = getelementptr { i32, ptr, i1 }, ptr %14, i32 0, i32 2
+  store i1 false, ptr %17, align 1
+  %18 = load { i32, ptr, i1 }, ptr %14, align 8
+  br label %64
+
+19:                                               ; preds = %2
+  %20 = getelementptr { i32, ptr, i1 }, ptr %0, i32 0, i32 0
+  %21 = load i32, ptr %20, align 4
+  %22 = getelementptr { i32, ptr, i1 }, ptr %0, i32 0, i32 1
+  %23 = load ptr, ptr %22, align 8
+  %24 = getelementptr { i32, ptr, i1 }, ptr %0, i32 0, i32 2
+  %25 = load i1, ptr %24, align 1
+  br i1 %25, label %26, label %48
+
+26:                                               ; preds = %19
+  %27 = icmp eq i32 %21, 0
+  br i1 %27, label %28, label %29
+
+28:                                               ; preds = %26
+  br label %32
+
+29:                                               ; preds = %26
+  %30 = getelementptr { i32, ptr, i1 }, ptr %23, i32 0, i32 0
+  %31 = load i32, ptr %30, align 4
+  br label %32
+
+32:                                               ; preds = %28, %29
+  %33 = phi i32 [ %31, %29 ], [ 0, %28 ]
+  br label %34
+
+34:                                               ; preds = %32
+  %35 = alloca i32, align 4
+  %36 = getelementptr i32, ptr %35, i32 1
+  %37 = ptrtoint ptr %35 to i64
+  %38 = ptrtoint ptr %36 to i64
+  %39 = sub i64 %38, %37
+  %40 = mul i64 2, %39
+  %41 = call ptr @malloc(i64 %40)
+  store i32 %21, ptr %41, align 4
+  %42 = getelementptr i32, ptr %41, i32 1
+  store i32 %33, ptr %42, align 4
+  %43 = alloca { i32, ptr, i1 }, align 8
+  %44 = getelementptr { i32, ptr, i1 }, ptr %43, i32 0, i32 0
+  store i32 2, ptr %44, align 4
+  %45 = getelementptr { i32, ptr, i1 }, ptr %43, i32 0, i32 1
+  store ptr %41, ptr %45, align 8
+  %46 = getelementptr { i32, ptr, i1 }, ptr %43, i32 0, i32 2
+  store i1 false, ptr %46, align 1
+  %47 = load { i32, ptr, i1 }, ptr %43, align 8
+  br label %61
+
+48:                                               ; preds = %19
+  %49 = alloca i32, align 4
+  %50 = getelementptr i32, ptr %49, i32 1
+  %51 = ptrtoint ptr %49 to i64
+  %52 = ptrtoint ptr %50 to i64
+  %53 = sub i64 %52, %51
+  %54 = mul i64 1, %53
+  %55 = call ptr @malloc(i64 %54)
+  store i32 %21, ptr %55, align 4
+  %56 = alloca { i32, ptr, i1 }, align 8
+  %57 = getelementptr { i32, ptr, i1 }, ptr %56, i32 0, i32 0
+  store i32 1, ptr %57, align 4
+  %58 = getelementptr { i32, ptr, i1 }, ptr %56, i32 0, i32 1
+  store ptr %55, ptr %58, align 8
+  %59 = getelementptr { i32, ptr, i1 }, ptr %56, i32 0, i32 2
+  store i1 false, ptr %59, align 1
+  %60 = load { i32, ptr, i1 }, ptr %56, align 8
+  br label %61
+
+61:                                               ; preds = %34, %48
+  %62 = phi { i32, ptr, i1 } [ %60, %48 ], [ %47, %34 ]
+  br label %63
+
+63:                                               ; preds = %61
+  br label %64
+
+64:                                               ; preds = %4, %63
+  %65 = phi { i32, ptr, i1 } [ %62, %63 ], [ %18, %4 ]
+  br label %66
+
+66:                                               ; preds = %64
+  ret { i32, ptr, i1 } %65
+}
+
+define i32 @length(ptr %0, i32 %1) {
+  %3 = icmp eq i32 %1, 1
+  br i1 %3, label %4, label %7
+
+4:                                                ; preds = %2
+  %5 = getelementptr { i32, i32, ptr, i1 }, ptr %0, i32 0, i32 0
+  %6 = load i32, ptr %5, align 4
+  br label %10
+
+7:                                                ; preds = %2
+  %8 = getelementptr { i32, ptr, i1 }, ptr %0, i32 0, i32 0
+  %9 = load i32, ptr %8, align 4
+  br label %10
+
+10:                                               ; preds = %4, %7
+  %11 = phi i32 [ %9, %7 ], [ %6, %4 ]
+  br label %12
+
+12:                                               ; preds = %10
+  ret i32 %11
+}
+
+declare i32 @printf_019ae38d_3df3_74a3_b276_d9a9f7a8008b(ptr, ...)
+
+declare i32 @scanf_019ae392_2fe0_72fc_ad1e_94bb9c5662c0(ptr, ...)
+
+declare i32 @ipow_019addc8_6352_7de5_8629_b0688522175f(i32, i32)
+
+declare void @throwDivisionByZeroError_019addc8_a29b_740a_9b09_8a712296bc1a()
+
+declare void @throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c()
+
+declare void @throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029()
+
+declare void @throwArrayIndexError_019ae3a1_54f9_7452_b095_6faaebe8aa2e()
+
+declare void @printArray_019addab_1674_72d4_aa4a_ac782e511e7a(ptr, i32)
+
+define i32 @main() {
+  %1 = alloca { { i32, ptr, i1 }, { i32, ptr, i1 } }, align 8
+  %2 = alloca { i32, ptr, i1 }, align 8
+  %3 = getelementptr { i32, ptr, i1 }, ptr %2, i32 0, i32 0
+  store i32 0, ptr %3, align 4
+  %4 = getelementptr { i32, ptr, i1 }, ptr %2, i32 0, i32 1
+  store ptr null, ptr %4, align 8
+  %5 = getelementptr { i32, ptr, i1 }, ptr %2, i32 0, i32 2
+  store i1 false, ptr %5, align 1
+  %6 = getelementptr { { i32, ptr, i1 }, { i32, ptr, i1 } }, ptr %1, i32 0, i32 0
+  %7 = load { i32, ptr, i1 }, ptr %2, align 8
+  store { i32, ptr, i1 } %7, ptr %6, align 8
+  %8 = alloca { i32, ptr, i1 }, align 8
+  %9 = getelementptr { i32, ptr, i1 }, ptr %8, i32 0, i32 0
+  store i32 0, ptr %9, align 4
+  %10 = getelementptr { i32, ptr, i1 }, ptr %8, i32 0, i32 1
+  store ptr null, ptr %10, align 8
+  %11 = getelementptr { i32, ptr, i1 }, ptr %8, i32 0, i32 2
+  store i1 false, ptr %11, align 1
+  %12 = getelementptr { { i32, ptr, i1 }, { i32, ptr, i1 } }, ptr %1, i32 0, i32 1
+  %13 = load { i32, ptr, i1 }, ptr %8, align 8
+  store { i32, ptr, i1 } %13, ptr %12, align 8
+  %14 = alloca { { i32, ptr, i1 }, { i32, ptr, i1 } }, align 8
+  %15 = getelementptr { { i32, ptr, i1 }, { i32, ptr, i1 } }, ptr %1, i32 0, i32 0
+  %16 = getelementptr { { i32, ptr, i1 }, { i32, ptr, i1 } }, ptr %14, i32 0, i32 0
+  %17 = alloca { i32, ptr, i1 }, align 8
+  %18 = getelementptr { i32, ptr, i1 }, ptr %15, i32 0, i32 0
+  %19 = load i32, ptr %18, align 4
+  %20 = getelementptr { i32, ptr, i1 }, ptr %15, i32 0, i32 1
+  %21 = load ptr, ptr %20, align 8
+  %22 = alloca i32, align 4
+  %23 = getelementptr i32, ptr %22, i32 1
+  %24 = ptrtoint ptr %22 to i64
+  %25 = ptrtoint ptr %23 to i64
+  %26 = sub i64 %25, %24
+  %27 = sext i32 %19 to i64
+  %28 = mul i64 %27, %26
+  %29 = call ptr @malloc(i64 %28)
+  br label %30
+
+30:                                               ; preds = %33, %0
+  %31 = phi i32 [ %37, %33 ], [ 0, %0 ]
+  %32 = icmp slt i32 %31, %19
+  br i1 %32, label %33, label %38
+
+33:                                               ; preds = %30
+  %34 = getelementptr i32, ptr %21, i32 %31
+  %35 = getelementptr i32, ptr %29, i32 %31
+  %36 = load i32, ptr %34, align 4
+  store i32 %36, ptr %35, align 4
+  %37 = add i32 %31, 1
+  br label %30
+
+38:                                               ; preds = %30
+  %39 = getelementptr { i32, ptr, i1 }, ptr %17, i32 0, i32 1
+  store ptr %29, ptr %39, align 8
+  %40 = getelementptr { i32, ptr, i1 }, ptr %17, i32 0, i32 0
+  store i32 %19, ptr %40, align 4
+  %41 = getelementptr { i32, ptr, i1 }, ptr %15, i32 0, i32 2
+  %42 = load i1, ptr %41, align 1
+  %43 = getelementptr { i32, ptr, i1 }, ptr %17, i32 0, i32 2
+  store i1 %42, ptr %43, align 1
+  %44 = load { i32, ptr, i1 }, ptr %17, align 8
+  store { i32, ptr, i1 } %44, ptr %16, align 8
+  %45 = getelementptr { { i32, ptr, i1 }, { i32, ptr, i1 } }, ptr %1, i32 0, i32 1
+  %46 = getelementptr { { i32, ptr, i1 }, { i32, ptr, i1 } }, ptr %14, i32 0, i32 1
+  %47 = alloca { i32, ptr, i1 }, align 8
+  %48 = getelementptr { i32, ptr, i1 }, ptr %45, i32 0, i32 0
+  %49 = load i32, ptr %48, align 4
+  %50 = getelementptr { i32, ptr, i1 }, ptr %45, i32 0, i32 1
+  %51 = load ptr, ptr %50, align 8
+  %52 = alloca i1, align 1
+  %53 = getelementptr i1, ptr %52, i32 1
+  %54 = ptrtoint ptr %52 to i64
+  %55 = ptrtoint ptr %53 to i64
+  %56 = sub i64 %55, %54
+  %57 = sext i32 %49 to i64
+  %58 = mul i64 %57, %56
+  %59 = call ptr @malloc(i64 %58)
+  br label %60
+
+60:                                               ; preds = %63, %38
+  %61 = phi i32 [ %67, %63 ], [ 0, %38 ]
+  %62 = icmp slt i32 %61, %49
+  br i1 %62, label %63, label %68
+
+63:                                               ; preds = %60
+  %64 = getelementptr i1, ptr %51, i32 %61
+  %65 = getelementptr i1, ptr %59, i32 %61
+  %66 = load i1, ptr %64, align 1
+  store i1 %66, ptr %65, align 1
+  %67 = add i32 %61, 1
+  br label %60
+
+68:                                               ; preds = %60
+  %69 = getelementptr { i32, ptr, i1 }, ptr %47, i32 0, i32 1
+  store ptr %59, ptr %69, align 8
+  %70 = getelementptr { i32, ptr, i1 }, ptr %47, i32 0, i32 0
+  store i32 %49, ptr %70, align 4
+  %71 = getelementptr { i32, ptr, i1 }, ptr %45, i32 0, i32 2
+  %72 = load i1, ptr %71, align 1
+  %73 = getelementptr { i32, ptr, i1 }, ptr %47, i32 0, i32 2
+  store i1 %72, ptr %73, align 1
+  %74 = load { i32, ptr, i1 }, ptr %47, align 8
+  store { i32, ptr, i1 } %74, ptr %46, align 8
+  %75 = getelementptr { { i32, ptr, i1 }, { i32, ptr, i1 } }, ptr %14, i32 0, i32 0
+  call void @printArray_019addab_1674_72d4_aa4a_ac782e511e7a(ptr %75, i32 0)
+  %76 = getelementptr { { i32, ptr, i1 }, { i32, ptr, i1 } }, ptr %14, i32 0, i32 1
+  call void @printArray_019addab_1674_72d4_aa4a_ac782e511e7a(ptr %76, i32 3)
+  %77 = alloca i32, align 4
+  store i32 0, ptr %77, align 4
+  %78 = getelementptr { i32, ptr, i1 }, ptr %75, i32 0, i32 0
+  %79 = load i32, ptr %78, align 4
+  %80 = getelementptr { i32, ptr, i1 }, ptr %75, i32 0, i32 1
+  %81 = load ptr, ptr %80, align 8
+  call void @free(ptr %81)
+  store i32 0, ptr %78, align 4
+  store ptr null, ptr %80, align 8
+  %82 = getelementptr { i32, ptr, i1 }, ptr %76, i32 0, i32 0
+  %83 = load i32, ptr %82, align 4
+  %84 = getelementptr { i32, ptr, i1 }, ptr %76, i32 0, i32 1
+  %85 = load ptr, ptr %84, align 8
+  call void @free(ptr %85)
+  store i32 0, ptr %82, align 4
+  store ptr null, ptr %84, align 8
+  %86 = load i32, ptr %77, align 4
+  ret i32 %86
+}

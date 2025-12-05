@@ -12,6 +12,28 @@ std::any Backend::visitArray(std::shared_ptr<ast::expressions::ArrayLiteralAst> 
     elementType = _elementType;
     is2dArray = true;
   }
+
+  if (ctx->getElements().empty() && !arrayType->getType()) {
+    // Empty array with unknown element type
+    auto arrayStructType = getMLIRType(arrayType);
+    auto arrayStruct =
+        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructType, constOne());
+
+    auto sizeFieldPtr = getArraySizeAddr(*builder, loc, arrayStructType, arrayStruct);
+    builder->create<mlir::LLVM::StoreOp>(loc, constZero(), sizeFieldPtr);
+
+    auto dataFieldPtr = getArrayDataAddr(*builder, loc, arrayStructType, arrayStruct);
+    auto nullPtr = builder->create<mlir::LLVM::ZeroOp>(loc, ptrTy());
+    builder->create<mlir::LLVM::StoreOp>(loc, nullPtr, dataFieldPtr);
+
+    auto is2dValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), is2dArray ? 1 : 0);
+    auto is2dFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, arrayStruct);
+    builder->create<mlir::LLVM::StoreOp>(loc, is2dValue, is2dFieldPtr);
+
+    pushElementToScopeStack(ctx, arrayType, arrayStruct);
+    return {};
+  }
+
   elementType = arrayType->getType();
   auto elementMLIRType = getMLIRType(elementType);
   auto arrayStructType = getMLIRType(arrayType);

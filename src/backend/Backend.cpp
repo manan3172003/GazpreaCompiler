@@ -325,7 +325,7 @@ mlir::Type Backend::getMLIRType(const std::shared_ptr<symTable::Type> &returnTyp
     return structTy(memberTypes);
   }
   const auto typeName = returnType->getName();
-  if (typeName.substr(0, 5) == "array") {
+  if (typeName.substr(0, 5) == "array" || typeName == "empty_array") {
     std::vector<mlir::Type> memberTypes;
     memberTypes.push_back(intTy());  // size
     memberTypes.push_back(ptrTy());  // data
@@ -1094,6 +1094,33 @@ mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value val
     // Load the scalar value and create a new array
     auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(fromType), valueAddr);
     return castScalarToArray(ctx, scalarValue, fromType, toType);
+  }
+
+  if (fromType->getName() == "empty_array" && toType->getName().substr(0, 5) == "array") {
+    auto toArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
+    if (toArrayType) {
+      if (toArrayType->getSizes().empty()) {
+        if (!toArrayType->declaredElementSize.empty()) {
+          for (auto size : toArrayType->declaredElementSize) {
+            toArrayType->addSize(size);
+          }
+        }
+      }
+
+      auto newArrayAddr =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(toType), constOne());
+
+      // Get the innermost element type to determine the default value
+      auto elementType = toArrayType->getType();
+      while (auto nestedArrayType =
+                 std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+        elementType = nestedArrayType->getType();
+      }
+
+      auto defaultValue = getDefaultValue(elementType);
+      fillArrayFromScalar(newArrayAddr, toArrayType, defaultValue);
+      return newArrayAddr;
+    }
   }
 
   // Check if we need array-to-array padding (different sizes)

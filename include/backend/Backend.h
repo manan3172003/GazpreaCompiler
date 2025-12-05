@@ -112,6 +112,7 @@ public:
   std::any visitLoop(std::shared_ptr<ast::statements::LoopAst> ctx) override;
   std::any visitIteratorLoop(std::shared_ptr<ast::statements::IteratorLoopAst> ctx) override;
   std::any visitArray(std::shared_ptr<ast::expressions::ArrayLiteralAst> ctx) override;
+  std::any visitArrayType(std::shared_ptr<ast::types::ArrayTypeAst> ctx) override;
   std::any visitVectorType(std::shared_ptr<ast::types::VectorTypeAst> ctx) override;
   std::any
   visitLengthBuiltinFunc(std::shared_ptr<ast::expressions::LengthBuiltinFuncAst> ctx) override;
