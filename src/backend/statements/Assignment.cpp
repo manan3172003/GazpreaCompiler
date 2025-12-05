@@ -10,7 +10,7 @@ namespace gazprea::backend {
 
 std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst> ctx) {
   visit(ctx->getExpr());
-  auto [type, valueAddr] = popElementFromStack(ctx);
+  auto [type, valueAddr] = popElementFromStack(ctx->getExpr());
   auto variableSymbol =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLVal()->getSymbol());
   if (auto tupleUnpackAssignAst = std::dynamic_pointer_cast<ast::statements::TupleUnpackAssignAst>(
@@ -29,63 +29,50 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
           loc, mlir::LLVM::LLVMPointerType::get(builder->getContext()),
           getMLIRType(tupleTypeSymbol), valueAddr, gepIndices);
       const auto destinationPtr = lVal->getEvaluatedAddr();
-      if (isTypeArray(lValSymbol->getType())) {
-        freeArray(lValSymbol->getType(), destinationPtr);
-      } else if (isTypeVector(lValSymbol->getType())) {
-        freeVector(lValSymbol->getType(), destinationPtr);
-      }
-      copyValue(lValSymbol->getType(), elementPtr, destinationPtr);
-      castIfNeeded(ctx, destinationPtr, tupleTypeSymbol->getResolvedTypes()[i],
-                   lVal->getAssignSymbolType());
+      freeAllocatedMemory(lVal->getAssignSymbolType(), destinationPtr);
+
+      const auto fromType = tupleTypeSymbol->getResolvedTypes()[i];
+      const auto castedPtr = castIfNeeded(ctx, elementPtr, fromType, lVal->getAssignSymbolType());
+      copyValue(lVal->getAssignSymbolType(), castedPtr, destinationPtr);
+      freeAllocatedMemory(lVal->getAssignSymbolType(), castedPtr);
     }
   } else if (auto tupleElementAssign =
                  std::dynamic_pointer_cast<ast::statements::TupleElementAssignAst>(
                      ctx->getLVal())) { // check if tuple assign
     visit(tupleElementAssign);
-    auto elementAddr = tupleElementAssign->getEvaluatedAddr();
-    auto tupleTy = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(variableSymbol->getType());
-    if (isTypeArray(variableSymbol->getType())) {
-      freeArray(variableSymbol->getType(), variableSymbol->value);
-    } else if (isTypeVector(variableSymbol->getType())) {
-      freeVector(variableSymbol->getType(), variableSymbol->value);
-    }
-    valueAddr = castIfNeeded(ctx, valueAddr, ctx->getExpr()->getInferredSymbolType(),
-                             tupleTy->getResolvedTypes()[tupleElementAssign->getFieldIndex() - 1]);
-    copyValue(type, valueAddr, elementAddr);
-    castIfNeeded(ctx, elementAddr, ctx->getExpr()->getInferredSymbolType(),
-                 tupleTy->getResolvedTypes()[tupleElementAssign->getFieldIndex() - 1]);
+    const auto elementAddr = tupleElementAssign->getEvaluatedAddr();
+    freeAllocatedMemory(tupleElementAssign->getAssignSymbolType(), elementAddr);
+
+    const auto fromType = ctx->getExpr()->getInferredSymbolType();
+    valueAddr = castIfNeeded(ctx, valueAddr, fromType, tupleElementAssign->getAssignSymbolType());
+    copyValue(tupleElementAssign->getAssignSymbolType(), valueAddr, elementAddr);
+    freeAllocatedMemory(tupleElementAssign->getAssignSymbolType(), valueAddr);
+
   } else if (const auto structElementAssign =
                  std::dynamic_pointer_cast<ast::statements::StructElementAssignAst>(
                      ctx->getLVal())) { // check if struct assign
     visit(structElementAssign);
-    const auto structTy =
-        std::dynamic_pointer_cast<symTable::StructTypeSymbol>(variableSymbol->getType());
-    auto elementAddr = structElementAssign->getEvaluatedAddr();
-    if (isTypeArray(variableSymbol->getType())) {
-      freeArray(variableSymbol->getType(), variableSymbol->value);
-    } else if (isTypeVector(variableSymbol->getType())) {
-      freeVector(variableSymbol->getType(), variableSymbol->value);
-    }
-    valueAddr = castIfNeeded(ctx, valueAddr, ctx->getExpr()->getInferredSymbolType(),
-                             structTy->getResolvedType(structElementAssign->getElementName()));
-    copyValue(type, valueAddr, elementAddr);
-    castIfNeeded(ctx, elementAddr, ctx->getExpr()->getInferredSymbolType(),
-                 structTy->getResolvedType(structElementAssign->getElementName()));
+    const auto elementAddr = structElementAssign->getEvaluatedAddr();
+    freeAllocatedMemory(structElementAssign->getAssignSymbolType(), elementAddr);
+
+    const auto fromType = ctx->getExpr()->getInferredSymbolType();
+    valueAddr = castIfNeeded(ctx, valueAddr, fromType, structElementAssign->getAssignSymbolType());
+    copyValue(structElementAssign->getAssignSymbolType(), valueAddr, elementAddr);
+    freeAllocatedMemory(structElementAssign->getAssignSymbolType(), valueAddr);
+
   } else if (const auto arrayElementAssign =
                  std::dynamic_pointer_cast<ast::statements::ArrayElementAssignAst>(
                      ctx->getLVal())) {
     visit(arrayElementAssign);
     if (arrayElementAssign->getElementIndex()->getNodeType() == ast::NodeType::SingularIndexExpr) {
       const auto elementAddr = arrayElementAssign->getEvaluatedAddr();
-      // TODO: not sure if this is correct
-      if (isTypeArray(arrayElementAssign->getAssignSymbolType())) {
-        freeArray(arrayElementAssign->getAssignSymbolType(), elementAddr);
-      } else if (isTypeVector(arrayElementAssign->getAssignSymbolType())) {
-        freeVector(arrayElementAssign->getAssignSymbolType(), elementAddr);
-      }
-      copyValue(type, valueAddr, elementAddr);
-      castIfNeeded(ctx, elementAddr, ctx->getExpr()->getInferredSymbolType(),
-                   arrayElementAssign->getAssignSymbolType());
+      freeAllocatedMemory(arrayElementAssign->getAssignSymbolType(), elementAddr);
+
+      const auto fromType = ctx->getExpr()->getInferredSymbolType();
+      valueAddr = castIfNeeded(ctx, valueAddr, fromType, arrayElementAssign->getAssignSymbolType());
+      copyValue(arrayElementAssign->getAssignSymbolType(), valueAddr, elementAddr);
+      freeAllocatedMemory(arrayElementAssign->getAssignSymbolType(), valueAddr);
+
     } else if (arrayElementAssign->getElementIndex()->getNodeType() ==
                ast::NodeType::RangedIndexExpr) {
       auto sliceStructPtr = arrayElementAssign->getEvaluatedAddr();
@@ -112,12 +99,10 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       copyArrayElementsToSlice(finalAddr, lhsArrayType, sliceDataPtr, elementType, sliceSize);
       freeArray(arrayElementAssign->getArrayInstance()->getAssignSymbolType(), finalAddr);
     }
-  } else {
-    if (isTypeArray(variableSymbol->getType())) {
-      freeArray(variableSymbol->getType(), variableSymbol->value);
-    } else if (isTypeVector(variableSymbol->getType())) {
-      freeVector(variableSymbol->getType(), variableSymbol->value);
-    }
+  } else if (const auto identifierLeft =
+                 std::dynamic_pointer_cast<ast::statements::IdentifierLeftAst>(ctx->getLVal())) {
+    visit(identifierLeft);
+    freeAllocatedMemory(identifierLeft->getAssignSymbolType(), identifierLeft->getEvaluatedAddr());
     if (auto vectorType =
             std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(variableSymbol->getType())) {
       auto newVectorAddr = createVectorValue(vectorType, type, valueAddr);
@@ -125,10 +110,10 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
       freeVector(vectorType, newVectorAddr);
       return {};
     }
-    copyValue(type, valueAddr, variableSymbol->value);
-    variableSymbol->value =
-        castIfNeeded(ctx, variableSymbol->value, ctx->getExpr()->getInferredSymbolType(),
-                     variableSymbol->getType());
+    const auto fromType = ctx->getExpr()->getInferredSymbolType();
+    valueAddr = castIfNeeded(ctx, valueAddr, fromType, identifierLeft->getAssignSymbolType());
+    copyValue(identifierLeft->getAssignSymbolType(), valueAddr, identifierLeft->getEvaluatedAddr());
+    freeAllocatedMemory(identifierLeft->getAssignSymbolType(), valueAddr);
   }
   return {};
 }

@@ -21,14 +21,29 @@ std::any Backend::visitProcedureCall(std::shared_ptr<ast::statements::ProcedureC
         std::dynamic_pointer_cast<symTable::VariableSymbol>(params[i]->getSymbol());
 
     // castIfNeeded now handles scalar-to-array conversion and returns the final address
-    auto finalAddr = castIfNeeded(params[i], valueAddr, valueType, variableSymbol->getType());
-
-    params[i]->getSymbol()->value = finalAddr;
-    mlirArgs.push_back(finalAddr);
+    if (variableSymbol->getQualifier() == ast::Qualifier::Const) {
+      params[i]->getSymbol()->value = builder->create<mlir::LLVM::AllocaOp>(
+          loc, ptrTy(), getMLIRType(variableSymbol->getType()), constOne());
+      valueAddr = castIfNeeded(params[i], valueAddr, valueType, variableSymbol->getType());
+      copyValue(variableSymbol->getType(), valueAddr, params[i]->getSymbol()->value);
+      mlirArgs.push_back(params[i]->getSymbol()->value);
+      freeAllocatedMemory(variableSymbol->getType(), valueAddr);
+    } else {
+      params[i]->getSymbol()->value = valueAddr;
+      mlirArgs.push_back(valueAddr);
+    }
   }
 
   auto procOp = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(methodSym->getName());
   builder->create<mlir::LLVM::CallOp>(loc, procOp, mlir::ValueRange(mlirArgs));
+
+  for (size_t i = 0; i < ctx->getArgs().size(); ++i) {
+    if (auto variableSymbol =
+            std::dynamic_pointer_cast<symTable::VariableSymbol>(params[i]->getSymbol());
+        variableSymbol->getQualifier() == ast::Qualifier::Const) {
+      freeAllocatedMemory(variableSymbol->getType(), params[i]->getSymbol()->value);
+    }
+  }
 
   return {};
 }

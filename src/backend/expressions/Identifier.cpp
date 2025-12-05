@@ -14,38 +14,39 @@ std::any Backend::visitIdentifier(std::shared_ptr<ast::expressions::IdentifierAs
       auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
           loc, ptrTy(), getMLIRType(variableSymType), constOne());
       copyValue(variableSymType, iteratorAddr, newAddr);
-      ctx->getScope()->pushElementToScopeStack(variableSymType, newAddr);
+      pushElementToScopeStack(ctx, variableSymType, newAddr);
       return {};
     }
-    ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), iteratorAddr);
+    pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), iteratorAddr);
     return {};
   }
 
   if (ctx->getSymbol()->getScope().lock()->getScopeType() == symTable::ScopeType::Global) {
     auto globalAddr = builder->create<mlir::LLVM::AddressOfOp>(loc, ptrTy(), ctx->getName());
-    if (variableSymbol->getQualifier() == ast::Qualifier::Const ||
-        isTypeArray(ctx->getInferredSymbolType()) || isTypeVector(ctx->getInferredSymbolType())) {
+
+    if (not ctx->isLValue()) {
       auto newAddr = builder->create<mlir::LLVM::AllocaOp>(
           loc, ptrTy(), getMLIRType(ctx->getInferredSymbolType()), constOne());
       copyValue(ctx->getInferredSymbolType(), globalAddr, newAddr);
-      ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), newAddr);
-      return {};
+      pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), newAddr);
+    } else {
+      pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), globalAddr);
     }
-    ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), globalAddr);
     return {};
   }
+
   const auto valueAddr = ctx->getSymbol()->value;
   auto variableSymType =
       std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol())->getType();
-  if (variableSymbol->getQualifier() == ast::Qualifier::Const || isTypeArray(variableSymType) ||
-      isTypeVector(variableSymType)) {
+
+  if (not ctx->isLValue()) {
     auto newAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(variableSymType),
                                                          constOne());
     copyValue(variableSymType, valueAddr, newAddr);
-    ctx->getScope()->pushElementToScopeStack(variableSymType, newAddr);
-    return {};
+    pushElementToScopeStack(ctx, variableSymType, newAddr);
+  } else {
+    pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), valueAddr);
   }
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), valueAddr);
   return {};
 }
 

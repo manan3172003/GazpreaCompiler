@@ -6,7 +6,7 @@ std::any Backend::visitBool(std::shared_ptr<ast::expressions::BoolLiteralAst> ct
   auto value = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), ctx->getValue() ? 1 : 0);
   auto valueAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), boolTy(), constOne());
   builder->create<mlir::LLVM::StoreOp>(loc, value, valueAddr);
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), valueAddr);
+  pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), valueAddr);
   return {};
 }
 

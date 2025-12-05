@@ -1463,44 +1463,30 @@ void Backend::pushElementToScopeStack(std::shared_ptr<ast::Ast> ctx,
 }
 
 std::pair<std::shared_ptr<symTable::Type>, mlir::Value>
-Backend::popElementFromStack(std::shared_ptr<ast::Ast> ctx) {
-  auto topElement = ctx->getScope()->getTopElementInStack();
-  ctx->getScope()->pushElementToFree(topElement);
+Backend::popElementFromStack(std::shared_ptr<ast::expressions::ExpressionAst> ctx) {
+  auto [type, mlirStruct] = ctx->getScope()->getTopElementInStack();
+  if (not ctx->isLValue())
+    ctx->getScope()->pushElementToFree({type, mlirStruct});
   ctx->getScope()->popElementFromScopeStack();
-  return topElement;
+  return {type, mlirStruct};
 }
 
 void Backend::freeScopeResources(std::shared_ptr<symTable::Scope> scope, bool clear) {
   const auto elements = scope->getElementsToFree();
   const auto stackElements = scope->getScopeStack();
   for (auto element : stackElements) {
-    if (element.first->getName().substr(0, 5) == "array") {
-      freeArray(element.first, element.second);
-    } else if (element.first->getName().substr(0, 6) == "vector") {
-      freeVector(element.first, element.second);
-    }
+    freeAllocatedMemory(element.first, element.second);
   }
   for (auto element : elements) {
-    if (element.first->getName().substr(0, 5) == "array") {
-      freeArray(element.first, element.second);
-    } else if (element.first->getName().substr(0, 6) == "vector") {
-      freeVector(element.first, element.second);
-    }
+    freeAllocatedMemory(element.first, element.second);
   }
 
   if (auto baseScope = std::dynamic_pointer_cast<symTable::BaseScope>(scope)) {
     for (const auto &[name, symbol] : baseScope->getSymbols()) {
       if (auto varSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(symbol)) {
         auto type = varSymbol->getType();
-        if (type->getName().substr(0, 5) == "array") {
-          if (varSymbol->value) {
-            freeArray(type, varSymbol->value);
-          }
-        } else if (type->getName().substr(0, 6) == "vector") {
-          if (varSymbol->value) {
-            freeVector(type, varSymbol->value);
-          }
-        }
+        if (varSymbol->value)
+          freeAllocatedMemory(type, varSymbol->value);
       }
     }
   }
@@ -1530,6 +1516,19 @@ void Backend::freeResourcesUntilFunction(std::shared_ptr<symTable::Scope> startS
   }
 }
 
+void Backend::freeAllocatedMemory(const std::shared_ptr<symTable::Type> &type,
+                                  mlir::Value ptrToMemory) {
+  if (isTypeArray(type)) {
+    freeArray(type, ptrToMemory);
+  } else if (isTypeVector(type)) {
+    freeVector(type, ptrToMemory);
+  } else if (isTypeTuple(type)) {
+    freeTuple(type, ptrToMemory);
+  } else if (isTypeStruct(type)) {
+    freeStruct(type, ptrToMemory);
+  }
+}
+
 void Backend::createGlobalDeclaration(const std::string &typeName,
                                       std::shared_ptr<ast::Ast> exprAst,
                                       std::shared_ptr<symTable::Symbol> symbol,
@@ -1537,7 +1536,7 @@ void Backend::createGlobalDeclaration(const std::string &typeName,
   auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(symbol);
   if (typeName == "integer") {
     auto intAst = std::dynamic_pointer_cast<ast::expressions::IntegerLiteralAst>(exprAst);
-    // Do implicit type conversiont here
+    // Do implicit type conversion here
     if (variableSymbol->getType()->getName() == "real") {
       builder->create<mlir::LLVM::GlobalOp>(
           loc, floatTy(),

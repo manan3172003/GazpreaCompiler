@@ -12,7 +12,7 @@ std::any Backend::visitBinary(std::shared_ptr<ast::expressions::BinaryAst> ctx) 
       binaryOperandToValue(ctx, ctx->getBinaryOpType(), ctx->getInferredSymbolType(),
                            ctx->getLeft()->getInferredSymbolType(),
                            ctx->getRight()->getInferredSymbolType(), leftAddr, rightAddr);
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), newAddr);
+  pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), newAddr);
   return {};
 }
 

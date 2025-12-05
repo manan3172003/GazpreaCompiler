@@ -90,7 +90,7 @@ Backend::visitLengthBuiltinFunc(std::shared_ptr<ast::expressions::LengthBuiltinF
 
   auto resultAlloca = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
   builder->create<mlir::LLVM::StoreOp>(loc, callOp.getResult(), resultAlloca);
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), resultAlloca);
+  pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), resultAlloca);
 
   return {};
 }
@@ -267,7 +267,7 @@ Backend::visitShapeBuiltinFunc(std::shared_ptr<ast::expressions::ShapeBuiltinFun
 
   auto resultAlloca = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayTy(), constOne());
   builder->create<mlir::LLVM::StoreOp>(loc, callOp.getResult(), resultAlloca);
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), resultAlloca);
+  pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), resultAlloca);
 
   return {};
 }
@@ -491,7 +491,7 @@ Backend::visitReverseBuiltinFunc(std::shared_ptr<ast::expressions::ReverseBuilti
     builder->create<mlir::LLVM::StoreOp>(loc, is2dValue, flagPtr);
   }
 
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), resultAlloca);
+  pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), resultAlloca);
   return {};
 }
 std::any

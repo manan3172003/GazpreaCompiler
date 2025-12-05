@@ -6,7 +6,7 @@ std::any Backend::visitInteger(std::shared_ptr<ast::expressions::IntegerLiteralA
   auto value = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), ctx->integerValue);
   auto valueAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
   builder->create<mlir::LLVM::StoreOp>(loc, value, valueAddr);
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), valueAddr);
+  pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), valueAddr);
   return {};
 }
 

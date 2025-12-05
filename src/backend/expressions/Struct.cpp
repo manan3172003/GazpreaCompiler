@@ -21,11 +21,10 @@ std::any Backend::visitStruct(std::shared_ptr<ast::expressions::StructLiteralAst
     elementValueAddr =
         castIfNeeded(ctx, elementValueAddr, ctx->getElements()[i]->getInferredSymbolType(),
                      structTypeSymbol->getResolvedTypes()[i]);
-    auto elementValue = builder->create<mlir::LLVM::LoadOp>(
-        loc, getMLIRType(structTypeSymbol->getResolvedTypes()[i]), elementValueAddr);
-    builder->create<mlir::LLVM::StoreOp>(loc, elementValue, elementPtr);
+    copyValue(structTypeSymbol->getResolvedTypes()[i], elementValueAddr, elementPtr);
+    freeAllocatedMemory(structTypeSymbol->getResolvedTypes()[i], elementValueAddr);
   }
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), structAddr);
+  pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), structAddr);
   return {};
 }
 

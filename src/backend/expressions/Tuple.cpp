@@ -20,7 +20,7 @@ std::any Backend::visitTuple(std::shared_ptr<ast::expressions::TupleLiteralAst> 
 
     builder->create<mlir::LLVM::StoreOp>(loc, elementValue, elementPtr);
   }
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), structAddr);
+  pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), structAddr);
   return {};
 }
 

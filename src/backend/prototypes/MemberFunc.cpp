@@ -33,7 +33,7 @@ std::any Backend::visitLenMemberFunc(std::shared_ptr<ast::statements::LenMemberF
   auto integerType =
       std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType("integer"));
   if (integerType) {
-    ctx->getScope()->pushElementToScopeStack(integerType, lenAlloca);
+    pushElementToScopeStack(ctx, integerType, lenAlloca);
   }
 
   return {};
@@ -151,6 +151,7 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
         loc, ptrTy(), elementMLIRType, ensuredDataPtr, mlir::ValueRange{currentSize});
     argAddr = castIfNeeded(ctx, argAddr, argType, elementType);
     copyValue(elementType, argAddr, insertPtr);
+    freeAllocatedMemory(elementType, argAddr);
 
     // Pad array element if the element type is an array
     if (auto arrayElementType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {

@@ -16,8 +16,8 @@ std::any Backend::visitStructAccess(std::shared_ptr<ast::expressions::StructAcce
                                               structTypeSymbol->getIdx(ctx->getElementName()) -
                                                   1)}; // Structs are 1-based indexing
   auto elementPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, structAddr, gepIndices);
-  ctx->getScope()->pushElementToScopeStack(structTypeSymbol->getResolvedType(ctx->getElementName()),
-                                           elementPtr);
+  pushElementToScopeStack(ctx, structTypeSymbol->getResolvedType(ctx->getElementName()),
+                          elementPtr);
   return {};
 }
 

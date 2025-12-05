@@ -10,7 +10,7 @@ Backend::visitArrayElementAssign(std::shared_ptr<ast::statements::ArrayElementAs
 
   visit(ctx->getElementIndex());
   if (ctx->getElementIndex()->getNodeType() == ast::NodeType::SingularIndexExpr) {
-    auto [indexType, indexAddr] = popElementFromStack(ctx);
+    auto [indexType, indexAddr] = popElementFromStack(ctx->getElementIndex());
     auto arraySizeAddr =
         getArraySizeAddr(*builder, loc, leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr());
     auto arraySize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arraySizeAddr);
@@ -35,15 +35,19 @@ Backend::visitArrayElementAssign(std::shared_ptr<ast::statements::ArrayElementAs
     std::shared_ptr<symTable::Type> rightIndexType;
     mlir::Value rightIndexAddr;
     bool hasRight = false;
-    if (std::dynamic_pointer_cast<ast::expressions::RangedIndexExprAst>(ctx->getElementIndex())
-            ->getRightIndexExpr()) {
-      auto [tempRightIndexType, tempRightIndexAddr] = popElementFromStack(ctx);
+    if (auto rightIndexExpr =
+            std::dynamic_pointer_cast<ast::expressions::RangedIndexExprAst>(ctx->getElementIndex())
+                ->getRightIndexExpr()) {
+      auto [tempRightIndexType, tempRightIndexAddr] = popElementFromStack(rightIndexExpr);
       rightIndexType = tempRightIndexType;
       rightIndexAddr = tempRightIndexAddr;
       hasRight = true;
     }
 
-    auto [leftIndexType, leftIndexAddr] = popElementFromStack(ctx);
+    auto leftIndexExpr =
+        std::dynamic_pointer_cast<ast::expressions::RangedIndexExprAst>(ctx->getElementIndex())
+            ->getLeftIndexExpr();
+    auto [leftIndexType, leftIndexAddr] = popElementFromStack(leftIndexExpr);
 
     auto leftVal =
         builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftIndexType), leftIndexAddr)

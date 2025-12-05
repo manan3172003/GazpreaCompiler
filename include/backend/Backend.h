@@ -183,10 +183,16 @@ protected:
                         mlir::Value targetOuterSize, mlir::Value targetInnerSize);
   void copyArrayStruct(std::shared_ptr<symTable::Type> type, mlir::Value fromArrayStruct,
                        mlir::Value destArrayStruct);
+  bool isTypeTuple(const std::shared_ptr<symTable::Type> &value);
+  bool isTypeStruct(const std::shared_ptr<symTable::Type> &value);
+  void freeCompositeType(const std::vector<std::shared_ptr<symTable::Type>> &resolvedTypes,
+                         mlir::Type compositeStructType, mlir::Value compositeStruct);
   mlir::Value copyArray(std::shared_ptr<symTable::Type> elementType, mlir::Value srcDataPtr,
                         mlir::Value size);
   void cloneArrayStructure(std::shared_ptr<symTable::Type> type, mlir::Value sourceArrayStruct,
                            mlir::Value destArrayStruct);
+  void freeTuple(std::shared_ptr<symTable::Type> type, mlir::Value tupleStruct);
+  void freeStruct(std::shared_ptr<symTable::Type> type, mlir::Value structStruct);
   void freeArray(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct);
   void createArrayFromVector(std::vector<std::shared_ptr<ast::expressions::ExpressionAst>> elements,
                              mlir::Type elementMLIRType, mlir::Value dest,
@@ -224,10 +230,11 @@ protected:
   void pushElementToScopeStack(std::shared_ptr<ast::Ast> ctx,
                                std::shared_ptr<symTable::Type> elementType, mlir::Value val);
   std::pair<std::shared_ptr<symTable::Type>, mlir::Value>
-  popElementFromStack(std::shared_ptr<ast::Ast> ctx);
+  popElementFromStack(std::shared_ptr<ast::expressions::ExpressionAst> ctx);
   void freeElementsFromMemory(std::shared_ptr<ast::Ast> ctx);
   void freeScopeResources(std::shared_ptr<symTable::Scope> scope, bool clear = true);
   void freeResourcesUntilFunction(std::shared_ptr<symTable::Scope> startScope);
+  void freeAllocatedMemory(const std::shared_ptr<symTable::Type> &type, mlir::Value ptrToMemory);
   void createGlobalDeclaration(const std::string &typeName, std::shared_ptr<ast::Ast> exprAst,
                                std::shared_ptr<symTable::Symbol> symbol,
                                const std::string &variableName);

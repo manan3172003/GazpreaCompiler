@@ -62,7 +62,7 @@ std::any Backend::visitArray(std::shared_ptr<ast::expressions::ArrayLiteralAst> 
   padArrayIfNeeded(arrayStruct, arrayType,
                    builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), elements.size()),
                    maxSubArraySize(arrayStruct, arrayType));
-  ctx->getScope()->pushElementToScopeStack(arrayType, arrayStruct);
+  pushElementToScopeStack(ctx, arrayType, arrayStruct);
 
   return {};
 }

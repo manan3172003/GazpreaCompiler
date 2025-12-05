@@ -15,7 +15,7 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
   visit(ctx->getType());
   visit(ctx->getExpr());
   auto [type, valueAddr] = popElementFromStack(ctx->getExpr());
-  auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
+  const auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
   if (ctx->getType()->getNodeType() == ast::NodeType::VectorType) {
     auto vectorTypeSymbol =
         std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(variableSymbol->getType());
@@ -28,13 +28,11 @@ std::any Backend::visitDeclaration(std::shared_ptr<ast::statements::DeclarationA
   }
   mlir::Value newAddr = builder->create<mlir::LLVM::AllocaOp>(
       loc, ptrTy(), getMLIRType(variableSymbol->getType()), constOne());
-  copyValue(type, valueAddr, newAddr);
-  newAddr = castIfNeeded(ctx, newAddr, ctx->getExpr()->getInferredSymbolType(),
-                         variableSymbol->getType());
+  valueAddr = castIfNeeded(ctx, valueAddr, ctx->getExpr()->getInferredSymbolType(),
+                           variableSymbol->getType());
+  copyValue(variableSymbol->getType(), valueAddr, newAddr);
   ctx->getSymbol()->value = newAddr;
-  if (isTypeArray(variableSymbol->getType())) {
-    ctx->getScope()->pushElementToFree(std::make_pair(variableSymbol->getType(), newAddr));
-  }
+  freeAllocatedMemory(variableSymbol->getType(), valueAddr);
   return {};
 }
 } // namespace gazprea::backend

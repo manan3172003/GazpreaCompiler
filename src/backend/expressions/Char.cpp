@@ -7,7 +7,7 @@ std::any Backend::visitChar(std::shared_ptr<ast::expressions::CharLiteralAst> ct
       loc, charTy(), builder->getIntegerAttr(charTy(), ctx->getValue()));
   auto valueAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), charTy(), constOne());
   builder->create<mlir::LLVM::StoreOp>(loc, value, valueAddr);
-  ctx->getScope()->pushElementToScopeStack(ctx->getInferredSymbolType(), valueAddr);
+  pushElementToScopeStack(ctx, ctx->getInferredSymbolType(), valueAddr);
   return {};
 }
 

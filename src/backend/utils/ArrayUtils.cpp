@@ -1,6 +1,7 @@
 #include "CompileTimeExceptions.h"
 #include "ast/walkers/DefRefWalker.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/StructTypeSymbol.h"
 #include "symTable/VectorTypeSymbol.h"
 
 #include <backend/Backend.h>
@@ -114,6 +115,7 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
   }
 }
 
+// Responsibility of caller to free arrayStruct
 void Backend::fillArrayFromScalar(mlir::Value arrayStruct,
                                   std::shared_ptr<symTable::ArrayTypeSymbol> arrayTypeSym,
                                   mlir::Value scalarValue) {
@@ -932,6 +934,24 @@ void Backend::padArrayIfNeeded(mlir::Value arrayStruct, std::shared_ptr<symTable
 
               b2.create<mlir::scf::YieldOp>(l2, mlir::ValueRange{});
             });
+        // Free the data inside old sub-arrays before freeing the struct array
+        b.create<mlir::scf::ForOp>(
+            l, constZero(), arraySize, constOne(), mlir::ValueRange{},
+            [&](mlir::OpBuilder &b2, mlir::Location l2, mlir::Value i, mlir::ValueRange iterArgs) {
+              auto oldSubArrayPtr = b2.create<mlir::LLVM::GEPOp>(l2, ptrTy(), subArrayStructType,
+                                                                 dataPtr, mlir::ValueRange{i});
+
+              // Free the data pointer inside this old sub-array struct
+              auto oldSubArrayDataAddr =
+                  getArrayDataAddr(b2, l2, subArrayStructType, oldSubArrayPtr);
+              mlir::Value oldSubDataPtr =
+                  b2.create<mlir::LLVM::LoadOp>(l2, ptrTy(), oldSubArrayDataAddr);
+
+              auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+              b2.create<mlir::LLVM::CallOp>(l2, freeFunc, mlir::ValueRange{oldSubDataPtr});
+
+              b2.create<mlir::scf::YieldOp>(l2, mlir::ValueRange{});
+            });
 
         auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
         b.create<mlir::LLVM::CallOp>(l, freeFunc, mlir::ValueRange{dataPtr});
@@ -1064,7 +1084,62 @@ void Backend::copyArrayStruct(std::shared_ptr<symTable::Type> type, mlir::Value 
   auto destIs2DFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, destArrayStruct);
   builder->create<mlir::LLVM::StoreOp>(loc, srcIs2D, destIs2DFieldPtr);
 }
+bool Backend::isTypeTuple(const std::shared_ptr<symTable::Type> &value) {
+  return value->getName() == "tuple";
+}
+bool Backend::isTypeStruct(const std::shared_ptr<symTable::Type> &value) {
+  return value->getName() == "struct";
+}
 
+// Helper function that frees fields of composite types (tuples/structs)
+void Backend::freeCompositeType(const std::vector<std::shared_ptr<symTable::Type>> &resolvedTypes,
+                                mlir::Type compositeStructType, mlir::Value compositeStruct) {
+  // Iterate through each field
+  for (size_t i = 0; i < resolvedTypes.size(); i++) {
+    auto fieldType = resolvedTypes[i];
+
+    // Only free heap-allocated types (skip scalars - they're stack-allocated)
+    if (!isTypeArray(fieldType) && !isTypeVector(fieldType) && !isTypeTuple(fieldType) &&
+        !isTypeStruct(fieldType)) {
+      continue;
+    }
+
+    // Get pointer to the i-th field using GEP
+    auto gepIndices = std::vector<mlir::Value>{
+        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
+
+    auto fieldPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), compositeStructType,
+                                                       compositeStruct, gepIndices);
+
+    // Recursively free the field (handles nested arrays/structs/etc.)
+    freeAllocatedMemory(fieldType, fieldPtr);
+  }
+}
+
+void Backend::freeTuple(std::shared_ptr<symTable::Type> type, mlir::Value tupleStruct) {
+  auto tupleTypeSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(type);
+  if (!tupleTypeSym) {
+    return;
+  }
+
+  auto tupleStructType = getMLIRType(type);
+  auto resolvedTypes = tupleTypeSym->getResolvedTypes();
+
+  freeCompositeType(resolvedTypes, tupleStructType, tupleStruct);
+}
+
+void Backend::freeStruct(std::shared_ptr<symTable::Type> type, mlir::Value structStruct) {
+  auto structTypeSym = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(type);
+  if (!structTypeSym) {
+    return;
+  }
+
+  auto structStructType = getMLIRType(type);
+  auto resolvedTypes = structTypeSym->getResolvedTypes();
+
+  freeCompositeType(resolvedTypes, structStructType, structStruct);
+}
 void Backend::freeArray(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct) {
   auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type);
   if (!arrayTypeSym) {
