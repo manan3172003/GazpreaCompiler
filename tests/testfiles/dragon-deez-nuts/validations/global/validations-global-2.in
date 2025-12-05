@@ -1,7 +1,0 @@
-const integer i = 0;
-const integer j = 0;
-const tuple (integer, integer) l = (0, 2);
-const character c = 'a';
-const character d = c;
-
-//CHECK_FILE:validations-global-2.out
