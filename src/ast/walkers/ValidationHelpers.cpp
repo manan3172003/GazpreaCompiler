@@ -33,6 +33,8 @@ bool ValidationWalker::isScalar(const std::shared_ptr<symTable::Type> &type) {
 bool ValidationWalker::isCollection(const std::shared_ptr<symTable::Type> &type) {
   if (type->getName().substr(0, 5) == "array")
     return true;
+  if (type->getName().substr(0, 6) == "vector")
+    return true;
   return false;
 }
 
@@ -164,6 +166,10 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
     if (destArray && typesMatch(destArray->getType(), source)) {
       return true;
     }
+    const auto destVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(destination);
+    if (destVector && typesMatch(destVector->getType(), source)) {
+      return true;
+    }
   }
   // exactMatch is used to verify types within the array
   if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "array")) {
@@ -246,17 +252,33 @@ bool ValidationWalker::isValidOp(std::shared_ptr<symTable::Type> type,
       opType == expressions::BinaryOpType::DPIPE)
     return true;
   if (isCollection((type))) {
-    if (isCollection(std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)->getType()))
-      return isValidOp(std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)->getType(),
-                       opType);
+    // Handle both arrays and vectors
+    std::shared_ptr<symTable::Type> elementType;
+    if (auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)) {
+      elementType = arrayType->getType();
+    } else if (auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type)) {
+      elementType = vectorType->getType();
+    } else {
+      throw std::runtime_error("Collection type is neither array nor vector");
+    }
+
+    if (isCollection(elementType))
+      return isValidOp(elementType, opType);
     else
-      return isValidOp(std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)->getType(),
-                       expressions::BinaryOpType::MULTIPLY);
+      return isValidOp(elementType, expressions::BinaryOpType::MULTIPLY);
   }
   return opTable[nodeTypeToIndex(type->getName())][static_cast<int>(opType)];
 }
 
 bool ValidationWalker::isArrayRealType(const std::shared_ptr<symTable::Type> &type) {
+  if (type->getName().find("real") != std::string::npos) {
+    return true;
+  }
+  return false;
+}
+
+bool ValidationWalker::isVectorRealType(const std::shared_ptr<symTable::Type> &type) {
+  std::string name = type->getName();
   if (type->getName().find("real") != std::string::npos) {
     return true;
   }
@@ -380,6 +402,33 @@ bool ValidationWalker::isComparisonOperator(expressions::BinaryOpType opType) {
 // check if left and right are real or integer
 bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
                                       const std::shared_ptr<expressions::ExpressionAst> &right) {
+  // Check if both are vectors
+  if (std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(left->getInferredSymbolType()) &&
+      std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(right->getInferredSymbolType())) {
+    auto leftVectorType =
+        std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(left->getInferredSymbolType());
+    auto rightVectorType =
+        std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(right->getInferredSymbolType());
+    return isArrayNumericType(leftVectorType->getType()) &&
+           isArrayNumericType(rightVectorType->getType());
+  }
+
+  // Check if one is a vector and the other is not
+  if (std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(left->getInferredSymbolType()) ||
+      std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(right->getInferredSymbolType())) {
+    if (auto leftVectorTy =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(left->getInferredSymbolType())) {
+      return isNumericType(leftVectorTy->getType()) &&
+             isNumericType(right->getInferredSymbolType());
+    } else if (auto rightVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(
+                   right->getInferredSymbolType())) {
+      return isNumericType(rightVectorType->getType()) &&
+             isNumericType(left->getInferredSymbolType());
+    }
+    return false;
+  }
+
+  // Check if both are arrays
   if (std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(left->getInferredSymbolType()) &&
       std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(right->getInferredSymbolType())) {
     auto leftArrayType =
@@ -389,6 +438,8 @@ bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::Express
     return isArrayNumericType(leftArrayType->getType()) &&
            isArrayNumericType(rightArrayType->getType());
   }
+
+  // Check if one is an array and the other is not
   if (std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(left->getInferredSymbolType()) ||
       std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(right->getInferredSymbolType())) {
     if (auto leftArrayTy =
@@ -401,6 +452,8 @@ bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::Express
     }
     return false;
   }
+
+  // Both are scalars
   return isNumericType(left->getInferredSymbolType()) &&
          isNumericType(right->getInferredSymbolType());
 }

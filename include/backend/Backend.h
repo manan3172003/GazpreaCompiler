@@ -135,6 +135,8 @@ public:
       std::shared_ptr<ast::expressions::StreamStateBuiltinFuncAst> ctx) override;
   mlir::Value concatArrays(std::shared_ptr<symTable::Type> type, mlir::Value leftArrayStruct,
                            mlir::Value rightArrayStruct);
+  mlir::Value concatVectors(std::shared_ptr<symTable::Type> type, mlir::Value leftVectorStruct,
+                            mlir::Value rightVectorStruct);
   mlir::Value strideArrayByScalar(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct,
                                   mlir::Value scalarValue);
 
@@ -178,6 +180,8 @@ protected:
                           VectorOffset offset) const;
   mlir::LLVM::LLVMFuncOp getOrCreateMallocFunc();
   mlir::Value maxSubArraySize(mlir::Value arrayStruct, std::shared_ptr<symTable::Type> arrayType);
+  mlir::Value maxSubVectorSize(mlir::Value vectorStruct,
+                               std::shared_ptr<symTable::Type> vectorType);
   mlir::Value mallocArray(mlir::Type elementMLIRType, mlir::Value elementCount);
   mlir::Value getTypeSizeInBytes(mlir::Type elementType);
   mlir::Value getDefaultValue(std::shared_ptr<symTable::Type> type);
@@ -254,6 +258,13 @@ protected:
                                 const std::shared_ptr<symTable::Type> &sourceType,
                                 mlir::Value sourceAddr);
   void freeVector(std::shared_ptr<symTable::Type> type, mlir::Value vectorStruct);
+  void fillVectorWithScalarValueWithVectorStruct(mlir::Value vectorValueAddr,
+                                                 mlir::Value scalarValue,
+                                                 mlir::Value referenceVectorStruct,
+                                                 std::shared_ptr<symTable::Type> vectorType);
+  void fillVectorWithScalar(mlir::Value vectorStruct, std::shared_ptr<symTable::Type> vectorType,
+                            mlir::Value scalarValue, std::shared_ptr<symTable::Type> scalarType,
+                            mlir::Value targetOuterSize, mlir::Value targetInnerSize);
 
 private:
   std::shared_ptr<ast::Ast> ast;

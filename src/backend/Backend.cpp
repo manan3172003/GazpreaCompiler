@@ -238,7 +238,7 @@ void Backend::printVector(mlir::Value vectorStructAddr,
     return;
 
   auto elementType = vectorTypeSym->getType();
-  if (auto arrayElement = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+  while (auto arrayElement = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
     elementType = arrayElement->getType();
   }
 
@@ -579,6 +579,295 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
     }
     return newAddr;
   }
+  if (isTypeVector(leftType) || isTypeVector(rightType)) {
+
+    if (not isTypeVector(leftType)) {
+      // should be a scalar
+      // promote scalar to the same size as vector by making it a vector of same size
+      auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftType), leftAddr);
+      leftAddr =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(rightType), constOne());
+      fillVectorWithScalarValueWithVectorStruct(leftAddr, scalarValue, rightAddr, rightType);
+      leftType = rightType;
+    }
+
+    if (not isTypeVector(rightType)) {
+      // should be a scalar
+      // promote scalar to the same size as vector by making it a vector of same size
+      auto scalarValue =
+          builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(rightType), rightAddr);
+      rightAddr =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(leftType), constOne());
+      fillVectorWithScalarValueWithVectorStruct(rightAddr, scalarValue, leftAddr, leftType);
+      rightType = leftType;
+    }
+    if (op != ast::expressions::BinaryOpType::DPIPE) {
+      // throwIfNotEqualArrayStructs(leftAddr, rightAddr, combinedType);
+    }
+
+    mlir::Value newAddr;
+    if (op == ast::expressions::BinaryOpType::DPIPE) {
+      return concatVectors(opType, leftAddr, rightAddr);
+    } else if (op == ast::expressions::BinaryOpType::DMUL) {
+      if (auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(opType)) {
+        auto childType = vectorType->getType();
+        auto leftChildTy =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType)->getType();
+        auto rightChildTy =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
+        auto is2D = false;
+        auto is3D = false;
+
+        auto elementTy = vectorType->getType();
+        auto leftElementTy =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType)->getType();
+        auto rightElementTy =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
+
+        auto vectorStructTy = getMLIRType(opType);
+        auto rightVectorStructTy = getMLIRType(rightType);
+
+        auto makeIndexConst = [&](int idx) {
+          return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), idx);
+        };
+
+        auto makeFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr, VectorOffset offset) {
+          return builder->create<mlir::LLVM::GEPOp>(
+              loc, ptrTy(), structTy, baseAddr,
+              mlir::ValueRange{makeIndexConst(0), makeIndexConst(static_cast<int>(offset))});
+        };
+
+        auto vectorOuterSizeAddr = makeFieldPtr(rightVectorStructTy, rightAddr, VectorOffset::Size);
+        auto vectorOuterSize =
+            builder->create<mlir::LLVM::LoadOp>(loc, intTy(), vectorOuterSizeAddr);
+        auto vectorInnerSize = constZero();
+
+        if (auto subArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementTy)) {
+          elementTy = subArrayType->getType();
+          is2D = true;
+          vectorInnerSize = maxSubVectorSize(rightAddr, rightType);
+          leftElementTy =
+              std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(leftElementTy)->getType();
+          rightElementTy =
+              std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(rightElementTy)->getType();
+
+          // Check if we have nested arrays (3D case)
+          if (auto subSubArrayType =
+                  std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementTy)) {
+            elementTy = subSubArrayType->getType();
+            is3D = true;
+          }
+        }
+
+        newAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), vectorStructTy, constOne());
+        fillVectorWithScalar(newAddr, vectorType, getDefaultValue(elementTy), elementTy,
+                             vectorOuterSize, vectorInnerSize);
+
+        auto leftVectorStructTy = getMLIRType(leftType);
+        auto leftDataPtrAddr = makeFieldPtr(leftVectorStructTy, leftAddr, VectorOffset::Data);
+        mlir::Value leftDataPtr =
+            builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), leftDataPtrAddr);
+        auto rightDataPtrAddr = makeFieldPtr(rightVectorStructTy, rightAddr, VectorOffset::Data);
+        mlir::Value rightDataPtr =
+            builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), rightDataPtrAddr);
+        auto newDataPtrAddr = makeFieldPtr(vectorStructTy, newAddr, VectorOffset::Data);
+        mlir::Value newDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), newDataPtrAddr);
+
+        builder->create<mlir::scf::ForOp>(
+            loc, constZero(), vectorOuterSize, constOne(), mlir::ValueRange{},
+            [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+              auto leftElementPtr = b.create<mlir::LLVM::GEPOp>(
+                  l, ptrTy(), getMLIRType(leftChildTy), leftDataPtr, mlir::ValueRange{i});
+              auto rightElementPtr = b.create<mlir::LLVM::GEPOp>(
+                  l, ptrTy(), getMLIRType(rightChildTy), rightDataPtr, mlir::ValueRange{i});
+              auto newValueAddr = binaryOperandToValue(
+                  ctx, op, std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(opType)->getType(),
+                  leftChildTy, rightChildTy, leftElementPtr, rightElementPtr);
+              auto newElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), getMLIRType(childType),
+                                                               newDataPtr, mlir::ValueRange{i});
+              if (is2D) {
+                auto newStructTy = getMLIRType(childType);
+                auto newStructAddr =
+                    b.create<mlir::LLVM::AllocaOp>(l, ptrTy(), newStructTy, constOne());
+                copyArrayStruct(childType, newValueAddr, newStructAddr);
+                auto newValue =
+                    b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newStructAddr);
+                b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
+              } else {
+                auto newValue =
+                    b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newValueAddr);
+                b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
+              }
+              b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+            });
+        return newAddr;
+      } else {
+        // scalar result type (dot product)
+        auto cumalativeValueAddr =
+            builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(opType), constOne());
+        builder->create<mlir::LLVM::StoreOp>(loc, getDefaultValue(opType), cumalativeValueAddr);
+
+        auto leftVectorStructTy = getMLIRType(leftType);
+        auto rightVectorStructTy = getMLIRType(rightType);
+
+        auto makeIndexConst = [&](int idx) {
+          return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), idx);
+        };
+
+        auto makeFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr, VectorOffset offset) {
+          return builder->create<mlir::LLVM::GEPOp>(
+              loc, ptrTy(), structTy, baseAddr,
+              mlir::ValueRange{makeIndexConst(0), makeIndexConst(static_cast<int>(offset))});
+        };
+
+        // Get vector size
+        auto vectorSizeAddr = makeFieldPtr(leftVectorStructTy, leftAddr, VectorOffset::Size);
+        auto vectorSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), vectorSizeAddr);
+
+        // Get data pointers for both vectors
+        auto leftDataPtrAddr = makeFieldPtr(leftVectorStructTy, leftAddr, VectorOffset::Data);
+        mlir::Value leftDataPtr =
+            builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), leftDataPtrAddr);
+        auto rightDataPtrAddr = makeFieldPtr(rightVectorStructTy, rightAddr, VectorOffset::Data);
+        mlir::Value rightDataPtr =
+            builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), rightDataPtrAddr);
+
+        // Get child types
+        auto leftChildTy =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType)->getType();
+        auto rightChildTy =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
+
+        builder->create<mlir::scf::ForOp>(
+            loc, constZero(), vectorSize, constOne(), mlir::ValueRange{},
+            [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+              // Get pointer to left element
+              auto leftElementPtr = b.create<mlir::LLVM::GEPOp>(
+                  l, ptrTy(), getMLIRType(leftChildTy), leftDataPtr, mlir::ValueRange{i});
+
+              // Get pointer to right element
+              auto rightElementPtr = b.create<mlir::LLVM::GEPOp>(
+                  l, ptrTy(), getMLIRType(rightChildTy), rightDataPtr, mlir::ValueRange{i});
+
+              auto productValueAddr =
+                  binaryOperandToValue(ctx, ast::expressions::BinaryOpType::MULTIPLY, opType,
+                                       leftChildTy, rightChildTy, leftElementPtr, rightElementPtr);
+
+              auto productValue =
+                  b.create<mlir::LLVM::LoadOp>(l, getMLIRType(opType), productValueAddr);
+
+              auto cumalativeValue =
+                  b.create<mlir::LLVM::LoadOp>(loc, getMLIRType(opType), cumalativeValueAddr)
+                      .getResult();
+              if (opType->getName() == "real") {
+                cumalativeValue = b.create<mlir::LLVM::FAddOp>(l, cumalativeValue, productValue);
+              } else {
+                cumalativeValue = b.create<mlir::LLVM::AddOp>(l, cumalativeValue, productValue);
+              }
+              b.create<mlir::LLVM::StoreOp>(l, cumalativeValue, cumalativeValueAddr);
+
+              b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+            });
+        return cumalativeValueAddr;
+      }
+    } else {
+      // Handle regular binary operations for vectors
+      auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(opType);
+
+      auto childType = vectorType->getType();
+      auto leftChildTy = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType)->getType();
+      auto rightChildTy =
+          std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
+      auto is2D = false;
+      auto is3D = false;
+
+      auto elementTy = vectorType->getType();
+      auto leftElementTy =
+          std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType)->getType();
+      auto rightElementTy =
+          std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
+
+      auto vectorStructTy = getMLIRType(opType);
+
+      auto makeIndexConst = [&](int idx) {
+        return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), idx);
+      };
+
+      auto makeFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr, VectorOffset offset) {
+        return builder->create<mlir::LLVM::GEPOp>(
+            loc, ptrTy(), structTy, baseAddr,
+            mlir::ValueRange{makeIndexConst(0), makeIndexConst(static_cast<int>(offset))});
+      };
+
+      auto rightVectorStructTy = getMLIRType(rightType);
+      auto vectorOuterSizeAddr = makeFieldPtr(rightVectorStructTy, rightAddr, VectorOffset::Size);
+      auto vectorOuterSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), vectorOuterSizeAddr);
+      auto vectorInnerSize = constZero();
+
+      // Check if element type is an array (2D case)
+      if (auto subArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementTy)) {
+        elementTy = subArrayType->getType();
+        is2D = true;
+        vectorInnerSize = maxSubVectorSize(rightAddr, rightType);
+        leftElementTy =
+            std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(leftElementTy)->getType();
+        rightElementTy =
+            std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(rightElementTy)->getType();
+
+        // Check if we have nested arrays (3D case)
+        if (auto subSubArrayType =
+                std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementTy)) {
+          elementTy = subSubArrayType->getType();
+          is3D = true;
+        }
+      }
+
+      newAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), vectorStructTy, constOne());
+      fillVectorWithScalar(newAddr, vectorType, getDefaultValue(elementTy), elementTy,
+                           vectorOuterSize, vectorInnerSize);
+
+      auto leftVectorStructTy = getMLIRType(leftType);
+      auto leftDataPtrAddr = makeFieldPtr(leftVectorStructTy, leftAddr, VectorOffset::Data);
+      mlir::Value leftDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), leftDataPtrAddr);
+      auto rightDataPtrAddr = makeFieldPtr(rightVectorStructTy, rightAddr, VectorOffset::Data);
+      mlir::Value rightDataPtr =
+          builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), rightDataPtrAddr);
+      auto newDataPtrAddr = makeFieldPtr(vectorStructTy, newAddr, VectorOffset::Data);
+      mlir::Value newDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), newDataPtrAddr);
+
+      builder->create<mlir::scf::ForOp>(
+          loc, constZero(), vectorOuterSize, constOne(), mlir::ValueRange{},
+          [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+            auto leftElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), getMLIRType(leftChildTy),
+                                                              leftDataPtr, mlir::ValueRange{i});
+            auto rightElementPtr = b.create<mlir::LLVM::GEPOp>(
+                l, ptrTy(), getMLIRType(rightChildTy), rightDataPtr, mlir::ValueRange{i});
+            auto newValueAddr = binaryOperandToValue(
+                ctx, op, std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(opType)->getType(),
+                leftChildTy, rightChildTy, leftElementPtr, rightElementPtr);
+            auto newElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), getMLIRType(childType),
+                                                             newDataPtr, mlir::ValueRange{i});
+            if (is2D) {
+              auto newStructTy = getMLIRType(childType);
+              auto newStructAddr =
+                  b.create<mlir::LLVM::AllocaOp>(l, ptrTy(), newStructTy, constOne());
+              copyArrayStruct(childType, newValueAddr, newStructAddr);
+              auto newValue =
+                  b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newStructAddr);
+              b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
+            } else {
+              auto newValue = b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newValueAddr);
+              b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
+            }
+            b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+          });
+
+      return newAddr;
+    }
+
+    return leftAddr;
+  }
+
   if (isTypeArray(leftType) || isTypeArray(rightType)) {
     mlir::Value newAddr;
     bool freeLeft = false;

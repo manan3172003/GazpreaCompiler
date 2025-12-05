@@ -182,43 +182,42 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
   visitExpression(leftExpr);
   visitExpression(rightExpr);
 
+  auto leftType = leftExpr->getInferredSymbolType();
+  auto rightType = rightExpr->getInferredSymbolType();
+  auto leftDataType = leftExpr->getInferredDataType();
+  auto rightDataType = rightExpr->getInferredDataType();
+  auto op = ctx->getBinaryOpType();
+
+  bool is_arithmetic =
+      op == expressions::BinaryOpType::ADD || op == expressions::BinaryOpType::SUBTRACT ||
+      op == expressions::BinaryOpType::MULTIPLY || op == expressions::BinaryOpType::DIVIDE;
+
   // Type promote Integer to Real if either of the operands is a real
-  if (isOfSymbolType(leftExpr->getInferredSymbolType(), "integer") &&
-      isOfSymbolType(rightExpr->getInferredSymbolType(), "integer")) {
-    ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
-    ctx->setInferredDataType(leftExpr->getInferredDataType());
-  } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "integer") &&
-             isOfSymbolType(rightExpr->getInferredSymbolType(), "real")) {
-    promoteIfNeeded(ctx, leftExpr->getInferredSymbolType(), rightExpr->getInferredSymbolType(),
-                    rightExpr->getInferredDataType());
-  } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "real") &&
-             isOfSymbolType(rightExpr->getInferredSymbolType(), "integer")) {
-    promoteIfNeeded(ctx, rightExpr->getInferredSymbolType(), leftExpr->getInferredSymbolType(),
-                    leftExpr->getInferredDataType());
-  } else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "real") &&
-             isOfSymbolType(rightExpr->getInferredSymbolType(), "real")) {
-    ctx->setInferredSymbolType(leftExpr->getInferredSymbolType());
-    ctx->setInferredDataType(leftExpr->getInferredDataType());
+  if (isOfSymbolType(leftType, "integer") && isOfSymbolType(rightType, "integer")) {
+    ctx->setInferredSymbolType(leftType);
+    ctx->setInferredDataType(leftDataType);
+  } else if (isOfSymbolType(leftType, "integer") && isOfSymbolType(rightType, "real")) {
+    promoteIfNeeded(ctx, leftType, rightType, rightDataType);
+  } else if (isOfSymbolType(leftType, "real") && isOfSymbolType(rightType, "integer")) {
+    promoteIfNeeded(ctx, rightType, leftType, leftDataType);
+  } else if (isOfSymbolType(leftType, "real") && isOfSymbolType(rightType, "real")) {
+    ctx->setInferredSymbolType(leftType);
+    ctx->setInferredDataType(leftDataType);
   }
   // stride by operation
-  else if (ctx->getBinaryOpType() == expressions::BinaryOpType::BY) {
-    if (not isCollection(ctx->getLeft()->getInferredSymbolType()) ||
-        not isOfSymbolType(ctx->getRight()->getInferredSymbolType(), "integer")) {
+  else if (op == expressions::BinaryOpType::BY) {
+    if (not isCollection(leftType) || not isOfSymbolType(rightType, "integer")) {
       throw TypeError(ctx->getLineNumber(), "Invalid types for stride by operation");
     }
-    ctx->setInferredDataType(ctx->getLeft()->getInferredDataType());
-    ctx->setInferredSymbolType(ctx->getLeft()->getInferredSymbolType());
+    ctx->setInferredDataType(leftDataType);
+    ctx->setInferredSymbolType(leftType);
     return {};
   }
-  // handle arrays and vectors
-  // examples that are valid: (1 + [2]), ([2] + [2])
-  else if (isOfSymbolType(leftExpr->getInferredSymbolType(), "array") &&
-           typesMatch(leftExpr->getInferredSymbolType(), rightExpr->getInferredSymbolType())) {
+  // handle arrays and vectors for arithmetic operations
+  else if (is_arithmetic && isOfSymbolType(leftType, "array") && typesMatch(leftType, rightType)) {
     // Promote to real if either operand is real type
-    if (isArrayRealType(leftExpr->getInferredSymbolType()) ||
-        isArrayRealType(rightExpr->getInferredSymbolType())) {
-      auto arrayDataType =
-          std::dynamic_pointer_cast<types::ArrayTypeAst>(leftExpr->getInferredDataType());
+    if (isArrayRealType(leftType) || isArrayRealType(rightType)) {
+      auto arrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(leftDataType);
 
       // Collect array nesting levels
       std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
@@ -245,16 +244,14 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
       ctx->setInferredDataType(resultType);
       ctx->setInferredSymbolType(resolvedInferredType(resultType));
     } else {
-      ctx->setInferredDataType(ctx->getLeft()->getInferredDataType());
-      ctx->setInferredSymbolType(ctx->getLeft()->getInferredSymbolType());
+      ctx->setInferredDataType(leftDataType);
+      ctx->setInferredSymbolType(leftType);
     }
-  } else if (isOfSymbolType(rightExpr->getInferredSymbolType(), "array") &&
-             typesMatch(rightExpr->getInferredSymbolType(), leftExpr->getInferredSymbolType())) {
+  } else if (is_arithmetic && isOfSymbolType(rightType, "array") &&
+             typesMatch(rightType, leftType)) {
     // Promote to real if either operand is real type
-    if (isArrayRealType(leftExpr->getInferredSymbolType()) ||
-        isArrayRealType(rightExpr->getInferredSymbolType())) {
-      auto arrayDataType =
-          std::dynamic_pointer_cast<types::ArrayTypeAst>(rightExpr->getInferredDataType());
+    if (isArrayRealType(leftType) || isArrayRealType(rightType)) {
+      auto arrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(rightDataType);
 
       // Collect array nesting levels
       std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
@@ -281,63 +278,270 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
       ctx->setInferredDataType(resultType);
       ctx->setInferredSymbolType(resolvedInferredType(resultType));
     } else {
-      ctx->setInferredDataType(ctx->getRight()->getInferredDataType());
-      ctx->setInferredSymbolType(ctx->getRight()->getInferredSymbolType());
+      ctx->setInferredDataType(rightDataType);
+      ctx->setInferredSymbolType(rightType);
+    }
+  }
+  // handle vectors for arithmetic operations
+  else if (is_arithmetic && isOfSymbolType(leftType, "vector") && typesMatch(leftType, rightType)) {
+    // Promote to real if either operand is real type
+    if (isVectorRealType(leftType) || isVectorRealType(rightType)) {
+      auto vectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(leftDataType);
+
+      // Build vector type with real as base
+      auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
+      std::shared_ptr<types::DataTypeAst> elementType = realDataType;
+
+      // Check if the element type is an array (vector of arrays)
+      if (vectorDataType && vectorDataType->getElementType()) {
+        if (auto arrayElementType =
+                std::dynamic_pointer_cast<types::ArrayTypeAst>(vectorDataType->getElementType())) {
+          // Collect array nesting levels
+          std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
+          auto currentType = arrayElementType;
+          while (currentType) {
+            arrayLevels.push_back(currentType);
+            currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
+          }
+
+          // Wrap in array types from innermost to outermost, preserving sizes
+          for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
+            auto newArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+            newArrayType->setType(elementType);
+            for (const auto &size : (*it)->getSizes()) {
+              newArrayType->pushSize(size);
+            }
+            elementType = newArrayType;
+          }
+        }
+      }
+
+      auto resultVectorType = std::make_shared<types::VectorTypeAst>(ctx->token);
+      resultVectorType->setElementType(elementType);
+
+      ctx->setInferredDataType(resultVectorType);
+      ctx->setInferredSymbolType(resolvedInferredType(resultVectorType));
+    } else {
+      ctx->setInferredDataType(leftDataType);
+      ctx->setInferredSymbolType(leftType);
+    }
+  } else if (is_arithmetic && isOfSymbolType(rightType, "vector") &&
+             typesMatch(rightType, leftType)) {
+    // Promote to real if either operand is real type
+    if (isVectorRealType(leftType) || isVectorRealType(rightType)) {
+      auto vectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(rightDataType);
+
+      // Build vector type with real as base
+      auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
+      std::shared_ptr<types::DataTypeAst> elementType = realDataType;
+
+      // Check if the element type is an array (vector of arrays)
+      if (vectorDataType && vectorDataType->getElementType()) {
+        if (auto arrayElementType =
+                std::dynamic_pointer_cast<types::ArrayTypeAst>(vectorDataType->getElementType())) {
+          // Collect array nesting levels
+          std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
+          auto currentType = arrayElementType;
+          while (currentType) {
+            arrayLevels.push_back(currentType);
+            currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
+          }
+
+          // Wrap in array types from innermost to outermost, preserving sizes
+          for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
+            auto newArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+            newArrayType->setType(elementType);
+            for (const auto &size : (*it)->getSizes()) {
+              newArrayType->pushSize(size);
+            }
+            elementType = newArrayType;
+          }
+        }
+      }
+
+      auto resultVectorType = std::make_shared<types::VectorTypeAst>(ctx->token);
+      resultVectorType->setElementType(elementType);
+
+      ctx->setInferredDataType(resultVectorType);
+      ctx->setInferredSymbolType(resolvedInferredType(resultVectorType));
+    } else {
+      ctx->setInferredDataType(rightDataType);
+      ctx->setInferredSymbolType(rightType);
+    }
+  }
+  // Handle scalar + vector and vector + scalar for arithmetic operations
+  else if (is_arithmetic && ((isScalar(leftType) && isOfSymbolType(rightType, "vector")) ||
+                             (isOfSymbolType(leftType, "vector") && isScalar(rightType)))) {
+    std::shared_ptr<symTable::VectorTypeSymbol> vectorTypeSym;
+    std::shared_ptr<symTable::Type> scalarType;
+    std::shared_ptr<types::DataTypeAst> scalarDataType;
+
+    if (isOfSymbolType(rightType, "vector")) {
+      vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType);
+      scalarType = leftType;
+      scalarDataType = leftDataType;
+    } else {
+      vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType);
+      scalarType = rightType;
+      scalarDataType = rightDataType;
+    }
+
+    if (!isOfSymbolType(scalarType, "integer") && !isOfSymbolType(scalarType, "real")) {
+      throw TypeError(ctx->getLineNumber(), "Scalar operand must be numeric for vector operation");
+    }
+
+    auto vectorElementType = vectorTypeSym->getType();
+    auto vectorElementDataType =
+        std::dynamic_pointer_cast<types::VectorTypeAst>(
+            (isOfSymbolType(rightType, "vector") ? rightDataType : leftDataType))
+            ->getElementType();
+
+    if (!typesMatch(scalarType, vectorElementType) &&
+        !(isOfSymbolType(scalarType, "integer") && isOfSymbolType(vectorElementType, "real")) &&
+        !(isOfSymbolType(scalarType, "real") && isOfSymbolType(vectorElementType, "integer"))) {
+      throw TypeError(ctx->getLineNumber(), "Scalar type incompatible with vector element type");
+    }
+
+    // Promote to real if either scalar or vector element is real
+    if ((isOfSymbolType(scalarType, "integer") && isOfSymbolType(vectorElementType, "real")) ||
+        (isOfSymbolType(scalarType, "real") && isOfSymbolType(vectorElementType, "integer")) ||
+        (isOfSymbolType(scalarType, "real") && isOfSymbolType(vectorElementType, "real"))) {
+      auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
+      std::shared_ptr<types::DataTypeAst> newVectorElementType = realDataType;
+
+      // If vector element was an array, rebuild the array type with real base
+      if (auto arrayElementType =
+              std::dynamic_pointer_cast<types::ArrayTypeAst>(vectorElementDataType)) {
+        std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
+        auto currentType = arrayElementType;
+        while (currentType) {
+          arrayLevels.push_back(currentType);
+          currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
+        }
+
+        std::shared_ptr<types::DataTypeAst> resultType = realDataType;
+        for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
+          auto newArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+          newArrayType->setType(resultType);
+          for (const auto &size : (*it)->getSizes()) {
+            newArrayType->pushSize(size);
+          }
+          resultType = newArrayType;
+        }
+        newVectorElementType = resultType;
+      }
+
+      auto resultVectorTypeAst = std::make_shared<types::VectorTypeAst>(ctx->token);
+      resultVectorTypeAst->setElementType(newVectorElementType);
+      ctx->setInferredDataType(resultVectorTypeAst);
+      ctx->setInferredSymbolType(resolvedInferredType(resultVectorTypeAst));
+    } else {
+      // No promotion needed, keep original vector type
+      ctx->setInferredDataType(isOfSymbolType(rightType, "vector") ? rightDataType : leftDataType);
+      ctx->setInferredSymbolType(vectorTypeSym);
     }
   } else {
-    if (not typesMatch(ctx->getLeft()->getInferredSymbolType(),
-                       ctx->getRight()->getInferredSymbolType())) {
-      throw TypeError(ctx->getLineNumber(), "Binary operation: Type mismatch");
+    if (op != expressions::BinaryOpType::DPIPE) {
+      if (not typesMatch(leftType, rightType)) {
+        throw TypeError(ctx->getLineNumber(), "Binary operation: Type mismatch");
+      }
     }
   }
 
-  // Both left and right expressions from here on will be equal because of the
-  // above else statement throwing error
-
-  // TODO: isValidOp add DMUL and DPIPE
-  if (!isValidOp(leftExpr->getInferredSymbolType(), ctx->getBinaryOpType()))
+  if (op != expressions::BinaryOpType::DPIPE && op != expressions::BinaryOpType::DMUL &&
+      !isValidOp(leftType, op))
     throw TypeError(ctx->getLineNumber(), "Invalid binary operation");
 
   if (ctx->getBinaryOpType() == expressions::BinaryOpType::DMUL) {
     if (not areBothNumeric(ctx->getLeft(), ctx->getRight()))
       throw TypeError(ctx->getLineNumber(), "Cannot perform dot product on non-numeric types");
-    auto originalDataType =
-        std::dynamic_pointer_cast<types::ArrayTypeAst>(leftExpr->getInferredDataType());
 
-    // Find the innermost element type by traversing all nested arrays
-    auto elementType = originalDataType->getType();
-    while (auto innerArray = std::dynamic_pointer_cast<types::ArrayTypeAst>(elementType)) {
-      elementType = innerArray->getType();
-    }
+    // Handle both vectors and arrays
+    std::shared_ptr<types::DataTypeAst> elementType;
+    bool isVector = false;
+    bool isMultiDimensional = false;
 
-    // Promote to real if either operand is real type
-    if (isArrayRealType(leftExpr->getInferredSymbolType()) ||
-        isArrayRealType(rightExpr->getInferredSymbolType())) {
-      elementType = std::make_shared<types::RealTypeAst>(ctx->token);
-    }
+    if (auto originalVectorDataType =
+            std::dynamic_pointer_cast<types::VectorTypeAst>(leftDataType)) {
+      isVector = true;
+      // Get the element type of the vector
+      elementType = originalVectorDataType->getElementType();
 
-    if (std::dynamic_pointer_cast<types::ArrayTypeAst>(originalDataType->getType())) {
-      // Multi-dimensional array: reduce by one dimension
-      auto arrayDataType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-      arrayDataType->setType(elementType);
-      if (!arrayDataType->getSizes().empty()) {
-        for (int i = 0; i < originalDataType->getSizes().size() - 1; i++) {
-          arrayDataType->pushSize(originalDataType->getSizes()[i]);
+      // Check if element is an array (making this a multi-dimensional vector)
+      if (auto innerArray = std::dynamic_pointer_cast<types::ArrayTypeAst>(elementType)) {
+        isMultiDimensional = true;
+
+        // Find the innermost scalar type for potential real promotion
+        auto scalarType = innerArray->getType();
+        while (auto nestedArray = std::dynamic_pointer_cast<types::ArrayTypeAst>(scalarType)) {
+          scalarType = nestedArray->getType();
         }
+
+        // Promote to real if either operand is real type
+        if (isArrayRealType(leftType) || isArrayRealType(rightType)) {
+          scalarType = std::make_shared<types::RealTypeAst>(ctx->token);
+        }
+
+        // Reduce by one dimension: the result element type is innerArray->getType()
+        // but with potentially promoted scalar type
+        if (std::dynamic_pointer_cast<types::ArrayTypeAst>(innerArray->getType())) {
+          // Still multi-dimensional after reduction, need to rebuild the type tree
+          // For now, just use the inner array type
+          elementType = innerArray->getType();
+        } else {
+          // Was 2D, now becomes 1D with scalar elements
+          elementType = scalarType;
+        }
+
+        auto vectorDataType = std::make_shared<types::VectorTypeAst>(ctx->token);
+        vectorDataType->setElementType(elementType);
+        ctx->setInferredDataType(vectorDataType);
+        ctx->setInferredSymbolType(resolvedInferredType(vectorDataType));
+      } else {
+        // 1D vector: result is scalar (element type)
+        // Promote to real if needed
+        if (isArrayRealType(leftType) || isArrayRealType(rightType)) {
+          elementType = std::make_shared<types::RealTypeAst>(ctx->token);
+        }
+        ctx->setInferredDataType(elementType);
+        ctx->setInferredSymbolType(resolvedInferredType(elementType));
       }
-      ctx->setInferredDataType(arrayDataType);
-      ctx->setInferredSymbolType(resolvedInferredType(arrayDataType));
-    } else {
-      // 1D array: result is scalar (element type)
-      ctx->setInferredDataType(elementType);
-      ctx->setInferredSymbolType(resolvedInferredType(elementType));
+    } else if (auto originalDataType =
+                   std::dynamic_pointer_cast<types::ArrayTypeAst>(leftDataType)) {
+      // Find the innermost element type by traversing all nested arrays
+      elementType = originalDataType->getType();
+      while (auto innerArray = std::dynamic_pointer_cast<types::ArrayTypeAst>(elementType)) {
+        elementType = innerArray->getType();
+      }
+
+      // Promote to real if either operand is real type
+      if (isArrayRealType(leftType) || isArrayRealType(rightType)) {
+        elementType = std::make_shared<types::RealTypeAst>(ctx->token);
+      }
+
+      if (std::dynamic_pointer_cast<types::ArrayTypeAst>(originalDataType->getType())) {
+        // Multi-dimensional array: reduce by one dimension
+        auto arrayDataType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+        arrayDataType->setType(elementType);
+        if (!arrayDataType->getSizes().empty()) {
+          for (int i = 0; i < originalDataType->getSizes().size() - 1; i++) {
+            arrayDataType->pushSize(originalDataType->getSizes()[i]);
+          }
+        }
+        ctx->setInferredDataType(arrayDataType);
+        ctx->setInferredSymbolType(resolvedInferredType(arrayDataType));
+      } else {
+        // 1D array: result is scalar (element type)
+        ctx->setInferredDataType(elementType);
+        ctx->setInferredSymbolType(resolvedInferredType(elementType));
+      }
     }
   }
   // If the operation is == or != or operands are bool set expression type to
   // boolean
   if (ctx->getBinaryOpType() == expressions::BinaryOpType::EQUAL ||
       ctx->getBinaryOpType() == expressions::BinaryOpType::NOT_EQUAL ||
-      isOfSymbolType(ctx->getLeft()->getInferredSymbolType(), "boolean")) {
+      isOfSymbolType(leftType, "boolean")) {
     auto booleanDataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
     auto booleanTypeSymbol = resolvedInferredType(booleanDataType);
     ctx->setInferredSymbolType(booleanTypeSymbol);
@@ -345,9 +549,6 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
   }
 
   if (ctx->getBinaryOpType() == expressions::BinaryOpType::DPIPE) {
-    auto leftType = leftExpr->getInferredSymbolType();
-    auto rightType = rightExpr->getInferredSymbolType();
-
     bool leftIsEmpty =
         std::dynamic_pointer_cast<symTable::EmptyArrayTypeSymbol>(leftType) != nullptr;
     bool rightIsEmpty =
@@ -356,22 +557,61 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
     if (leftIsEmpty && rightIsEmpty) {
       // Both empty: result is empty array
       ctx->setInferredSymbolType(std::make_shared<symTable::EmptyArrayTypeSymbol>("empty_array"));
-      ctx->setInferredDataType(leftExpr->getInferredDataType());
+      ctx->setInferredDataType(leftDataType);
     } else if (leftIsEmpty && !rightIsEmpty) {
       // Left empty, right has type: use right's type
       ctx->setInferredSymbolType(rightType);
-      ctx->setInferredDataType(rightExpr->getInferredDataType());
+      ctx->setInferredDataType(rightDataType);
     } else if (!leftIsEmpty && rightIsEmpty) {
       // Right empty, left has type: use left's type
       ctx->setInferredSymbolType(leftType);
-      ctx->setInferredDataType(leftExpr->getInferredDataType());
+      ctx->setInferredDataType(leftDataType);
+    } else if (isOfSymbolType(leftType, "vector") && isOfSymbolType(rightType, "vector")) {
+      auto leftVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType);
+      auto rightVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType);
+
+      if (!leftVectorType || !rightVectorType) {
+        throw TypeError(ctx->getLineNumber(),
+                        "Concatenation (||) requires both operands to be vectors");
+      }
+
+      auto leftElementType = leftVectorType->getType();
+      auto rightElementType = rightVectorType->getType();
+
+      if (!typesMatch(leftElementType, rightElementType, true)) {
+        if ((isOfSymbolType(leftElementType, "integer") &&
+             isOfSymbolType(rightElementType, "real")) ||
+            (isOfSymbolType(leftElementType, "real") &&
+             isOfSymbolType(rightElementType, "integer"))) {
+          // Promotion is handled below
+        } else {
+          throw TypeError(ctx->getLineNumber(),
+                          "Vector element types are incompatible for concatenation");
+        }
+      }
+
+      // Check for promotion
+      if (isOfSymbolType(leftElementType, "integer") && isOfSymbolType(rightElementType, "real")) {
+        auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
+        auto resultVectorTypeAst = std::make_shared<types::VectorTypeAst>(ctx->token);
+        resultVectorTypeAst->setElementType(realDataType);
+        ctx->setInferredDataType(resultVectorTypeAst);
+        ctx->setInferredSymbolType(resolvedInferredType(resultVectorTypeAst));
+      } else if (isOfSymbolType(leftElementType, "real") &&
+                 isOfSymbolType(rightElementType, "integer")) {
+        ctx->setInferredSymbolType(leftType);
+        ctx->setInferredDataType(leftDataType);
+      } else {
+        // Element types match, use left's vector type
+        ctx->setInferredSymbolType(leftType);
+        ctx->setInferredDataType(leftDataType);
+      }
     } else {
       // Both have types: promote to real if either is real
       if (isArrayRealType(leftType) || isArrayRealType(rightType)) {
-        auto arrayDataType =
-            leftIsEmpty
-                ? std::dynamic_pointer_cast<types::ArrayTypeAst>(rightExpr->getInferredDataType())
-                : std::dynamic_pointer_cast<types::ArrayTypeAst>(leftExpr->getInferredDataType());
+        auto arrayDataType = leftIsEmpty
+                                 ? std::dynamic_pointer_cast<types::ArrayTypeAst>(rightDataType)
+                                 : std::dynamic_pointer_cast<types::ArrayTypeAst>(leftDataType);
 
         // Collect array nesting levels
         std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
@@ -400,18 +640,16 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
       } else {
         // Both same type (integer): use left's type
         ctx->setInferredSymbolType(leftType);
-        ctx->setInferredDataType(leftExpr->getInferredDataType());
+        ctx->setInferredDataType(leftDataType);
       }
     }
   }
   // if left expr and right expr in cond is real or int then if the operation is
   // <,>,<=,>= then set expression type to boolean
   if (isComparisonOperator(ctx->getBinaryOpType()) && areBothNumeric(leftExpr, rightExpr)) {
-    if (auto arraySymbolType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(
-            leftExpr->getInferredSymbolType())) {
+    if (auto arraySymbolType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(leftType)) {
       // Get the array data type
-      auto arrayDataType =
-          std::dynamic_pointer_cast<types::ArrayTypeAst>(leftExpr->getInferredDataType());
+      auto arrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(leftDataType);
 
       // Collect array nesting levels
       std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;

@@ -115,6 +115,7 @@ public:
   getEnclosingFuncProcScope(std::shared_ptr<symTable::Scope> currentScope);
   static bool isValidOp(std::shared_ptr<symTable::Type> type, expressions::BinaryOpType opType);
   bool isArrayRealType(const std::shared_ptr<symTable::Type> &type);
+  bool isVectorRealType(const std::shared_ptr<symTable::Type> &type);
   static void promoteIfNeeded(std::shared_ptr<expressions::ExpressionAst> ctx,
                               std::shared_ptr<symTable::Type> promoteFrom,
                               std::shared_ptr<symTable::Type> promoteTo,
