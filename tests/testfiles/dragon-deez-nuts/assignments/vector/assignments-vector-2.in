@@ -1,9 +1,8 @@
 procedure main() returns integer {
     vector<integer> x = [1, 2, 3];
     var vector<integer> y = [4, 5, 6];
-    y -> std_output;
     y = x;
-    y -> std_output;
+    y[1] -> std_output;
     return 0;
 }
-//CHECK:[4 5 6][1 2 3]
+//CHECK:1

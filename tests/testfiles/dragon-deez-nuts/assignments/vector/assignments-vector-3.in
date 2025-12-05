@@ -2,7 +2,7 @@ procedure main() returns integer {
     var vector<integer[5]> x = [[3],[4,6,7],[5,2]];
     vector<integer[4]> y = [[1],[2,3,4],[7,1]];
     x = y;
-    x -> std_output;
+    x[1] -> std_output;
     return 0;
 }
-//CHECK:[[1 0 0 0 0] [2 3 4 0 0] [7 1 0 0 0]]
+//CHECK:[1 0 0 0 0]

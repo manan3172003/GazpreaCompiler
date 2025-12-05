@@ -3,7 +3,6 @@ procedure main() returns integer {
     y.len() -> std_output;
     y.push(1);
     y.len() -> std_output;
-    y -> std_output;
     return 0;
 }
-//CHECK:01[1]
+//CHECK:01

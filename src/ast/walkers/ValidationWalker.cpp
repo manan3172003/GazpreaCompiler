@@ -805,7 +805,7 @@ std::any ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ct
   }
   visit(ctx->getExpression());
   const auto typeName = ctx->getExpression()->getInferredSymbolType()->getName();
-  if (typeName == "tuple" || typeName == "struct")
+  if (typeName == "tuple" || typeName == "struct" || typeName.substr(0, 6) == "vector")
     throw TypeError(ctx->getLineNumber(), "Cannot print this datatype");
   return {};
 }
