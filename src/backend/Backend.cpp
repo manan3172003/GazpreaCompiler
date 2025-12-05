@@ -580,7 +580,7 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
     return newAddr;
   }
   if (isTypeVector(leftType) || isTypeVector(rightType)) {
-
+    auto combinedType = leftType;
     if (not isTypeVector(leftType)) {
       // should be a scalar
       // promote scalar to the same size as vector by making it a vector of same size
@@ -589,6 +589,7 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(rightType), constOne());
       fillVectorWithScalarValueWithVectorStruct(leftAddr, scalarValue, rightAddr, rightType);
       leftType = rightType;
+      combinedType = rightType;
     }
 
     if (not isTypeVector(rightType)) {
@@ -602,7 +603,7 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       rightType = leftType;
     }
     if (op != ast::expressions::BinaryOpType::DPIPE) {
-      // throwIfNotEqualArrayStructs(leftAddr, rightAddr, combinedType);
+      throwIfVectorSizeNotEqual(leftAddr, rightAddr, combinedType);
     }
 
     mlir::Value newAddr;

@@ -137,6 +137,8 @@ public:
                            mlir::Value rightArrayStruct);
   mlir::Value concatVectors(std::shared_ptr<symTable::Type> type, mlir::Value leftVectorStruct,
                             mlir::Value rightVectorStruct);
+  void throwIfVectorSizeNotEqual(mlir::Value left, mlir::Value right,
+                                 std::shared_ptr<symTable::Type> type);
   mlir::Value strideArrayByScalar(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct,
                                   mlir::Value scalarValue);
 

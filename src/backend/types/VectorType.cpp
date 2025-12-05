@@ -831,4 +831,81 @@ mlir::Value Backend::concatVectors(std::shared_ptr<symTable::Type> type,
 
   return newVectorStruct;
 }
+
+void Backend::throwIfVectorSizeNotEqual(mlir::Value left, mlir::Value right,
+                                        std::shared_ptr<symTable::Type> type) {
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type);
+  if (!vectorTypeSym) {
+    return;
+  }
+
+  auto vectorStructType = getMLIRType(type);
+
+  auto makeIndexConst = [&](int idx) {
+    return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), idx);
+  };
+
+  auto makeFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr, VectorOffset offset) {
+    return builder->create<mlir::LLVM::GEPOp>(
+        loc, ptrTy(), structTy, baseAddr,
+        mlir::ValueRange{makeIndexConst(0), makeIndexConst(static_cast<int>(offset))});
+  };
+
+  // Get sizes
+  auto leftVectorSizeAddr = makeFieldPtr(vectorStructType, left, VectorOffset::Size);
+  auto leftVectorSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), leftVectorSizeAddr);
+  auto rightVectorSizeAddr = makeFieldPtr(vectorStructType, right, VectorOffset::Size);
+  auto rightVectorSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), rightVectorSizeAddr);
+
+  // Compare sizes and throw if not equal
+  auto throwSizeErrorFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowVectorSizeErrorName);
+  auto sizesAreNotEqual = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne,
+                                                              leftVectorSize, rightVectorSize);
+  builder->create<mlir::scf::IfOp>(
+      loc, sizesAreNotEqual,
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        if (throwSizeErrorFunc) {
+          b.create<mlir::LLVM::CallOp>(l, throwSizeErrorFunc, mlir::ValueRange{});
+        }
+        b.create<mlir::scf::YieldOp>(l);
+      },
+      [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
+
+  // Check if it's a 2D vector and compare sub-arrays
+  auto is2DAddr = makeFieldPtr(vectorStructType, left, VectorOffset::Is2D);
+  auto is2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), is2DAddr);
+
+  builder->create<mlir::scf::IfOp>(
+      loc, is2D,
+      [&, this](mlir::OpBuilder &b, mlir::Location l) {
+        auto elementType = vectorTypeSym->getType();
+        auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
+
+        if (elementArrayType) {
+          auto subArrayStructType = getMLIRType(elementArrayType);
+
+          auto leftDataAddr = makeFieldPtr(vectorStructType, left, VectorOffset::Data);
+          auto leftDataPtr = b.create<mlir::LLVM::LoadOp>(l, ptrTy(), leftDataAddr);
+          auto rightDataAddr = makeFieldPtr(vectorStructType, right, VectorOffset::Data);
+          auto rightDataPtr = b.create<mlir::LLVM::LoadOp>(l, ptrTy(), rightDataAddr);
+
+          b.create<mlir::scf::ForOp>(
+              l, constZero(), leftVectorSize, constOne(), mlir::ValueRange{},
+              [&, this](mlir::OpBuilder &b2, mlir::Location l2, mlir::Value i,
+                        mlir::ValueRange iterArgs) {
+                auto leftSubArrayPtr = b2.create<mlir::LLVM::GEPOp>(
+                    l2, ptrTy(), subArrayStructType, leftDataPtr, mlir::ValueRange{i});
+                auto rightSubArrayPtr = b2.create<mlir::LLVM::GEPOp>(
+                    l2, ptrTy(), subArrayStructType, rightDataPtr, mlir::ValueRange{i});
+
+                throwIfNotEqualArrayStructs(leftSubArrayPtr, rightSubArrayPtr, elementArrayType);
+
+                b2.create<mlir::scf::YieldOp>(l2);
+              });
+        }
+        b.create<mlir::scf::YieldOp>(l);
+      },
+      [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
+}
+
 } // namespace gazprea::backend
