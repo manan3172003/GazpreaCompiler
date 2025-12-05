@@ -713,6 +713,14 @@ std::any ValidationWalker::visitCast(std::shared_ptr<expressions::CastAst> ctx) 
   const auto exprType = ctx->getExpression()->getInferredSymbolType();
   const auto targetType = ctx->getResolvedTargetType();
 
+  if (auto arrayLiteral =
+          std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(ctx->getExpression())) {
+    if (arrayLiteral->getElements().empty()) {
+      throw TypeError(ctx->getLineNumber(), "Casting non-variable empty arrays [] is not allowed, "
+                                            "because a literal empty array does not have a type.");
+    }
+  }
+
   if (isTuple(exprType) && isTuple(targetType)) {
     const auto targetTupleTypeSymbol =
         std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(targetType);
