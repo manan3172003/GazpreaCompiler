@@ -1453,17 +1453,34 @@ std::any ValidationWalker::visitArrayAccess(std::shared_ptr<expressions::ArrayAc
 
   const auto arraySymbolType =
       std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayInstance->getInferredSymbolType());
-  if (not arraySymbolType)
-    throw TypeError(ctx->getLineNumber(), "Cannot slice or index non array type");
-  const auto arrayDataType =
-      std::dynamic_pointer_cast<types::ArrayTypeAst>(arrayInstance->getInferredDataType());
+  const auto vectorSymbolType =
+      std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(arrayInstance->getInferredSymbolType());
 
-  if (elementIndex->getNodeType() == NodeType::SingularIndexExpr) {
-    ctx->setInferredSymbolType(arraySymbolType->getType());
-    ctx->setInferredDataType(arrayDataType->getType());
-  } else if (elementIndex->getNodeType() == NodeType::RangedIndexExpr) {
-    ctx->setInferredSymbolType(arraySymbolType);
-    ctx->setInferredDataType(arrayDataType);
+  if (!arraySymbolType && !vectorSymbolType)
+    throw TypeError(ctx->getLineNumber(), "Cannot slice or index non array type");
+
+  if (arraySymbolType) {
+    const auto arrayDataType =
+        std::dynamic_pointer_cast<types::ArrayTypeAst>(arrayInstance->getInferredDataType());
+
+    if (elementIndex->getNodeType() == NodeType::SingularIndexExpr) {
+      ctx->setInferredSymbolType(arraySymbolType->getType());
+      ctx->setInferredDataType(arrayDataType->getType());
+    } else if (elementIndex->getNodeType() == NodeType::RangedIndexExpr) {
+      ctx->setInferredSymbolType(arraySymbolType);
+      ctx->setInferredDataType(arrayDataType);
+    }
+  } else {
+    const auto vectorDataType =
+        std::dynamic_pointer_cast<types::VectorTypeAst>(arrayInstance->getInferredDataType());
+
+    if (elementIndex->getNodeType() == NodeType::SingularIndexExpr) {
+      ctx->setInferredSymbolType(vectorSymbolType->getType());
+      ctx->setInferredDataType(vectorDataType->getElementType());
+    } else if (elementIndex->getNodeType() == NodeType::RangedIndexExpr) {
+      ctx->setInferredSymbolType(vectorSymbolType);
+      ctx->setInferredDataType(vectorDataType);
+    }
   }
   return {};
 }

@@ -345,5 +345,14 @@ private:
   void readReal(mlir::Value destAddr);
   void readCharacter(mlir::Value destAddr);
   void readBoolean(mlir::Value destAddr);
+
+  void handleSingularIndexAccess(std::shared_ptr<ast::expressions::ArrayAccessAst> ctx,
+                                 std::shared_ptr<symTable::Type> instanceType, mlir::Value size,
+                                 mlir::Value dataPtr);
+
+  void handleRangedIndexAccess(std::shared_ptr<ast::expressions::ArrayAccessAst> ctx,
+                               std::shared_ptr<symTable::Type> instanceType,
+                               mlir::Value instanceAddr, mlir::Value size, mlir::Value dataPtr,
+                               mlir::Type structType);
 };
 } // namespace gazprea::backend
