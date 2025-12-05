@@ -40,6 +40,9 @@ void throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029() {
 void throwArrayIndexError_019ae3a1_54f9_7452_b095_6faaebe8aa2e() {
   IndexError("Array index out of range");
 }
+void throwStrideError_a2beb751_ff3b_4d60_aefb_60f92ff9f4be() {
+  StrideError("Array stride error");
+}
 
 enum ElementType { ELEM_INT = 0, ELEM_REAL = 1, ELEM_CHAR = 2, ELEM_BOOL = 3, ELEM_ARRAY = 4 };
 

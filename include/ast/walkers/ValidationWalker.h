@@ -10,7 +10,7 @@ class ValidationWalker final : public AstWalker {
   std::shared_ptr<symTable::SymbolTable> symTab;
   bool inBinaryOp = false;
   bool inAssignment = false;
-  static int opTable[7][15];
+  static int opTable[7][17];
   void visitExpression(const std::shared_ptr<Ast> &exprAst) {
     inBinaryOp = true;
     visit(exprAst);
@@ -113,7 +113,8 @@ public:
                              const std::string &typeName);
   static std::shared_ptr<symTable::Scope>
   getEnclosingFuncProcScope(std::shared_ptr<symTable::Scope> currentScope);
-  static bool isValidOp(const std::string &typeName, expressions::BinaryOpType opType);
+  static bool isValidOp(std::shared_ptr<symTable::Type> type, expressions::BinaryOpType opType);
+  bool isArrayRealType(const std::shared_ptr<symTable::Type> &type);
   static void promoteIfNeeded(std::shared_ptr<expressions::ExpressionAst> ctx,
                               std::shared_ptr<symTable::Type> promoteFrom,
                               std::shared_ptr<symTable::Type> promoteTo,
@@ -124,6 +125,7 @@ public:
   static bool isComparisonOperator(expressions::BinaryOpType opType);
   static bool areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
                              const std::shared_ptr<expressions::ExpressionAst> &right);
+  static bool isArrayNumericType(const std::shared_ptr<symTable::Type> &type);
   void validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
                     symTable::ScopeType scopeType, int lineNumber);

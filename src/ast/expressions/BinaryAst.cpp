@@ -57,6 +57,10 @@ std::string BinaryAst::getOperator(BinaryOpType opType) {
     return "OR or";
   case BinaryOpType::XOR:
     return "XOR xor";
+  case BinaryOpType::DMUL:
+    return "DMUL **";
+  case BinaryOpType::DPIPE:
+    return "DPIPE ||";
   }
   return "";
 }

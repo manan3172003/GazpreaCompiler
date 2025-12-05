@@ -227,23 +227,41 @@ ValidationWalker::getEnclosingFuncProcScope(std::shared_ptr<symTable::Scope> cur
   return currentScope;
 }
 
-int ValidationWalker::opTable[7][15] = {
+int ValidationWalker::opTable[7][17] = {
     //  ^  *  /  %  +  -  <  > <= >= == !=  & or xor ** || by
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Integer
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // Real
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Character
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1}, // Boolean
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Tuple
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0}, // Struct
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // array
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0}, // Integer
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0}, // Real
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0}, // Character
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0}, // Boolean
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0}, // Tuple
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0}, // Struct
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // array
 };
 
-bool ValidationWalker::isValidOp(const std::string &typeName, expressions::BinaryOpType opType) {
-  if (nodeTypeToIndex(typeName) == -1)
+bool ValidationWalker::isValidOp(std::shared_ptr<symTable::Type> type,
+                                 expressions::BinaryOpType opType) {
+  if (nodeTypeToIndex(type->getName()) == -1)
     throw std::runtime_error("Invalid data type");
-  return opTable[nodeTypeToIndex(typeName)][static_cast<int>(opType)];
+  if (std::dynamic_pointer_cast<symTable::EmptyArrayTypeSymbol>(type) &&
+      opType == expressions::BinaryOpType::DPIPE)
+    return true;
+  if (isCollection((type))) {
+    if (isCollection(std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)->getType()))
+      return isValidOp(std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)->getType(),
+                       opType);
+    else
+      return isValidOp(std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)->getType(),
+                       expressions::BinaryOpType::MULTIPLY);
+  }
+  return opTable[nodeTypeToIndex(type->getName())][static_cast<int>(opType)];
 }
 
+bool ValidationWalker::isArrayRealType(const std::shared_ptr<symTable::Type> &type) {
+  if (type->getName().find("real") != std::string::npos) {
+    return true;
+  }
+  return false;
+}
 void ValidationWalker::promoteIfNeeded(std::shared_ptr<expressions::ExpressionAst> ctx,
                                        std::shared_ptr<symTable::Type> promoteFrom,
                                        std::shared_ptr<symTable::Type> promoteTo,
@@ -268,7 +286,8 @@ int ValidationWalker::nodeTypeToIndex(const std::string &typeName) {
     return 4;
   if (typeName == "struct")
     return 5;
-  if (typeName.substr(0, 5) == "array" || typeName.substr(0, 6) == "vector")
+  if (typeName.substr(0, 5) == "array" || typeName.substr(0, 6) == "vector" ||
+      typeName == "empty_array")
     return 6;
   return -1;
 }
@@ -361,10 +380,40 @@ bool ValidationWalker::isComparisonOperator(expressions::BinaryOpType opType) {
 // check if left and right are real or integer
 bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
                                       const std::shared_ptr<expressions::ExpressionAst> &right) {
+  if (std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(left->getInferredSymbolType()) &&
+      std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(right->getInferredSymbolType())) {
+    auto leftArrayType =
+        std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(left->getInferredSymbolType());
+    auto rightArrayType =
+        std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(right->getInferredSymbolType());
+    return isArrayNumericType(leftArrayType->getType()) &&
+           isArrayNumericType(rightArrayType->getType());
+  }
+  if (std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(left->getInferredSymbolType()) ||
+      std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(right->getInferredSymbolType())) {
+    if (auto leftArrayTy =
+            std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(left->getInferredSymbolType())) {
+      return isNumericType(leftArrayTy->getType()) && isNumericType(right->getInferredSymbolType());
+    } else if (auto rightArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(
+                   right->getInferredSymbolType())) {
+      return isNumericType(rightArrayType->getType()) &&
+             isNumericType(left->getInferredSymbolType());
+    }
+    return false;
+  }
   return isNumericType(left->getInferredSymbolType()) &&
          isNumericType(right->getInferredSymbolType());
 }
 
+bool ValidationWalker::isArrayNumericType(const std::shared_ptr<symTable::Type> &type) {
+  if (auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)) {
+    auto elementType = arrayType->getType();
+    return isArrayNumericType(elementType);
+  }
+  if (type->getName() == "integer" || type->getName() == "real")
+    return true;
+  return false;
+}
 void ValidationWalker::validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
                                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
                                     const symTable::ScopeType scopeType, const int lineNumber) {

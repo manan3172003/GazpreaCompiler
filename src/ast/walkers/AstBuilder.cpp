@@ -469,7 +469,7 @@ std::any AstBuilder::visitFloatLiteral(GazpreaParser::FloatLiteralContext *ctx) 
   return visit(ctx->float_lit());
 }
 std::any AstBuilder::visitAppendExpr(GazpreaParser::AppendExprContext *ctx) {
-  return GazpreaBaseVisitor::visitAppendExpr(ctx);
+  return createBinaryExpr(ctx->expr(0), ctx->APPEND()->getText(), ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitTupleAccessExpr(GazpreaParser::TupleAccessExprContext *ctx) {
   const auto tupleExpression = std::make_shared<expressions::TupleAccessAst>(ctx->getStart());
@@ -497,7 +497,7 @@ AstBuilder::visitScientificFloatLiteral(GazpreaParser::ScientificFloatLiteralCon
   return visit(ctx->float_parse());
 }
 std::any AstBuilder::visitByExpr(GazpreaParser::ByExprContext *ctx) {
-  return GazpreaBaseVisitor::visitByExpr(ctx);
+  return createBinaryExpr(ctx->expr(0), "by", ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitCharLiteral(GazpreaParser::CharLiteralContext *ctx) {
   const auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->getStart());
@@ -811,7 +811,7 @@ std::any AstBuilder::visitBuiltinFuncExpr(GazpreaParser::BuiltinFuncExprContext 
   return GazpreaBaseVisitor::visitBuiltinFuncExpr(ctx);
 }
 std::any AstBuilder::visitDstarExpr(GazpreaParser::DstarExprContext *ctx) {
-  return GazpreaBaseVisitor::visitDstarExpr(ctx);
+  return createBinaryExpr(ctx->expr(0), ctx->DSTAR()->getText(), ctx->expr(1), ctx->getStart());
 }
 std::any AstBuilder::visitShapeExpr(GazpreaParser::ShapeExprContext *ctx) {
   const auto shapeAst = std::make_shared<expressions::ShapeBuiltinFuncAst>(ctx->getStart());
@@ -921,6 +921,12 @@ expressions::BinaryOpType AstBuilder::stringToBinaryOpType(const std::string &op
     return expressions::BinaryOpType::OR;
   if (op == "xor")
     return expressions::BinaryOpType::XOR;
+  if (op == "**")
+    return expressions::BinaryOpType::DMUL;
+  if (op == "||")
+    return expressions::BinaryOpType::DPIPE;
+  if (op == "by")
+    return expressions::BinaryOpType::BY;
   throw std::runtime_error("Unknown binary operator: " + op);
 }
 

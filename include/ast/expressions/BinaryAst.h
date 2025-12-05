@@ -20,7 +20,9 @@ enum class BinaryOpType {
   OR,
   XOR,
   APPEND,
-  DMUL
+  DMUL,
+  DPIPE,
+  BY
 };
 
 class BinaryAst final : public ExpressionAst {

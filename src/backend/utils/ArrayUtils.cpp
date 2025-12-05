@@ -1529,5 +1529,191 @@ void Backend::copyArrayElementsToSlice(mlir::Value srcArrayStruct,
         b.create<mlir::scf::YieldOp>(l);
       });
 }
+mlir::Value Backend::concatArrays(std::shared_ptr<symTable::Type> type, mlir::Value leftArrayStruct,
+                                  mlir::Value rightArrayStruct) {
+  // Get array type information
+  auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type);
+  auto elementType = arrayTypeSym->getType();
+  auto elementMLIRType = getMLIRType(elementType);
+  auto arrayStructType = getMLIRType(type);
 
+  // Get sizes
+  auto leftArraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, leftArrayStruct);
+  auto rightArraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, rightArrayStruct);
+  auto leftArraySize =
+      builder->create<mlir::LLVM::LoadOp>(loc, intTy(), leftArraySizeAddr).getResult();
+  auto rightArraySize =
+      builder->create<mlir::LLVM::LoadOp>(loc, intTy(), rightArraySizeAddr).getResult();
+
+  // Calculate total size
+  auto totalSize =
+      builder->create<mlir::LLVM::AddOp>(loc, leftArraySize, rightArraySize).getResult();
+
+  // Allocate new array struct
+  auto newArrayStruct =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructType, constOne());
+
+  // Allocate memory for the concatenated data
+  mlir::Value newDataPtr = mallocArray(elementMLIRType, totalSize);
+
+  // Get data pointers from source arrays
+  auto leftDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, leftArrayStruct);
+  mlir::Value leftDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), leftDataAddr);
+
+  auto rightDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, rightArrayStruct);
+  mlir::Value rightDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), rightDataAddr);
+
+  // Check if elements are arrays (for nested arrays)
+  if (auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+    // For nested arrays, we need to copy each sub-array struct
+
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), leftArraySize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, leftDataPtr,
+                                                    mlir::ValueRange{i});
+          auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                    mlir::ValueRange{i});
+
+          copyArrayStruct(elementType, srcPtr, dstPtr);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), rightArraySize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto offset = b.create<mlir::LLVM::AddOp>(l, leftArraySize, i);
+          auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, rightDataPtr,
+                                                    mlir::ValueRange{i});
+          auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                    mlir::ValueRange{offset});
+
+          copyArrayStruct(elementType, srcPtr, dstPtr);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  } else {
+    // For scalar elements, simple load/store
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), leftArraySize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, leftDataPtr,
+                                                    mlir::ValueRange{i});
+          auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                    mlir::ValueRange{i});
+
+          auto value = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcPtr);
+          b.create<mlir::LLVM::StoreOp>(l, value, dstPtr);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), rightArraySize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto offset = b.create<mlir::LLVM::AddOp>(l, leftArraySize, i);
+          auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, rightDataPtr,
+                                                    mlir::ValueRange{i});
+          auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                    mlir::ValueRange{offset});
+
+          auto value = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcPtr);
+          b.create<mlir::LLVM::StoreOp>(l, value, dstPtr);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  }
+
+  // Set the data pointer in the new array struct
+  auto newArrayDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, newArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, newDataPtr, newArrayDataAddr);
+
+  // Set the size in the new array struct
+  auto newArraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, newArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, totalSize, newArraySizeAddr);
+
+  // Set the is2D flag
+  auto leftIs2DAddr = get2DArrayBoolAddr(*builder, loc, arrayStructType, leftArrayStruct);
+  mlir::Value is2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), leftIs2DAddr);
+  auto newIs2DAddr = get2DArrayBoolAddr(*builder, loc, arrayStructType, newArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, is2D, newIs2DAddr);
+
+  return newArrayStruct;
+}
+
+mlir::Value Backend::strideArrayByScalar(std::shared_ptr<symTable::Type> type,
+                                         mlir::Value arrayStruct, mlir::Value scalarValue) {
+  auto newSizeAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
+  builder->create<mlir::LLVM::StoreOp>(loc, constZero(), newSizeAddr);
+  auto arrayType = getMLIRType(type);
+
+  auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayType, arrayStruct);
+  mlir::Value arraySize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arraySizeAddr);
+  auto arrayDataAddr = getArrayDataAddr(*builder, loc, arrayType, arrayStruct);
+  mlir::Value dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), arrayDataAddr);
+  auto is2dAddr = get2DArrayBoolAddr(*builder, loc, arrayType, arrayStruct);
+  mlir::Value is2d = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), is2dAddr);
+
+  // Get element type to check if we're dealing with nested arrays
+  auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type);
+  auto elementType = arrayTypeSym->getType();
+  auto elementMLIRType = getMLIRType(elementType);
+  auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
+
+  // for loop over array and skip by scalarValue to count how many elements we'll have
+  builder->create<mlir::scf::ForOp>(
+      loc, constZero(), arraySize, scalarValue, mlir::ValueRange{},
+      [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+        auto newSize = b.create<mlir::LLVM::LoadOp>(l, intTy(), newSizeAddr);
+        auto incrementedSize = b.create<mlir::LLVM::AddOp>(l, newSize, constOne());
+        b.create<mlir::LLVM::StoreOp>(l, incrementedSize, newSizeAddr);
+        b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+      });
+  auto newSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), newSizeAddr);
+
+  auto newArrayStruct = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayType, constOne());
+
+  auto newArraySizeAddr = getArraySizeAddr(*builder, loc, arrayType, newArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, newSize, newArraySizeAddr);
+
+  auto newDataPtr = mallocArray(elementMLIRType, newSize);
+  auto newArrayDataAddr = getArrayDataAddr(*builder, loc, arrayType, newArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, newDataPtr, newArrayDataAddr);
+
+  auto is2dAddrNew = get2DArrayBoolAddr(*builder, loc, arrayType, newArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, is2d, is2dAddrNew);
+
+  // Check if element type is an array (multi-dimensional case)
+  if (elementArrayType) {
+    // For nested arrays, use copyArrayStruct
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), newSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto offset = b.create<mlir::LLVM::MulOp>(l, i, scalarValue);
+          auto srcElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, dataPtr,
+                                                           mlir::ValueRange{offset});
+          auto destElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                            mlir::ValueRange{i});
+          copyArrayStruct(elementType, srcElementPtr, destElementPtr);
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  } else {
+    // For scalar elements, use load/store
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), newSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto offset = b.create<mlir::LLVM::MulOp>(l, i, scalarValue);
+          auto srcElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, dataPtr,
+                                                           mlir::ValueRange{offset});
+          auto destElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                            mlir::ValueRange{i});
+          auto elementValue = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcElementPtr);
+          b.create<mlir::LLVM::StoreOp>(l, elementValue, destElementPtr);
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  }
+
+  return newArrayStruct;
+}
 } // namespace gazprea::backend

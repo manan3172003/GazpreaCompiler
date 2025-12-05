@@ -51,6 +51,7 @@ constexpr char kThrowArraySizeErrorName[] =
 constexpr char kThrowVectorSizeErrorName[] =
     "throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029";
 constexpr char kPrintArrayName[] = "printArray_019addab_1674_72d4_aa4a_ac782e511e7a";
+constexpr char kThrowStrideErrorName[] = "throwStrideError_a2beb751_ff3b_4d60_aefb_60f92ff9f4be";
 enum class VectorOffset { Size = 0, Capacity = 1, Data = 2, Is2D = 3 };
 class Backend final : public ast::walkers::AstWalker {
 public:
@@ -132,6 +133,10 @@ public:
   std::any visitGenerator(std::shared_ptr<ast::expressions::GeneratorAst> ctx) override;
   std::any visitStreamStateBuiltinFunc(
       std::shared_ptr<ast::expressions::StreamStateBuiltinFuncAst> ctx) override;
+  mlir::Value concatArrays(std::shared_ptr<symTable::Type> type, mlir::Value leftArrayStruct,
+                           mlir::Value rightArrayStruct);
+  mlir::Value strideArrayByScalar(std::shared_ptr<symTable::Type> type, mlir::Value arrayStruct,
+                                  mlir::Value scalarValue);
 
 protected:
   void setupPrintf() const;
@@ -142,6 +147,7 @@ protected:
   void setupThrowArraySizeError() const;
   void setupThrowVectorSizeError() const;
   void setupThrowArrayIndexError() const;
+  void setupThrowStrideError() const;
   void printFloat(mlir::Value floatValue);
   void printInt(mlir::Value integer);
   void printIntChar(mlir::Value integer);
@@ -228,6 +234,7 @@ protected:
                                    std::shared_ptr<symTable::Type> arrayType);
   void copyValue(std::shared_ptr<symTable::Type> type, mlir::Value fromAddr, mlir::Value destAddr);
   bool isTypeArray(std::shared_ptr<symTable::Type> type);
+  bool isEmptyArray(std::shared_ptr<symTable::Type> type);
   bool isTypeVector(std::shared_ptr<symTable::Type> type);
   void copyVectorStruct(std::shared_ptr<symTable::Type> type, mlir::Value fromVectorStruct,
                         mlir::Value destVectorStruct);

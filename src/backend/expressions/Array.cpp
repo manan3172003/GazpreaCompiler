@@ -1,8 +1,26 @@
 #include "backend/Backend.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/EmptyArrayTypeSymbol.h"
 namespace gazprea::backend {
 
 std::any Backend::visitArray(std::shared_ptr<ast::expressions::ArrayLiteralAst> ctx) {
+  if (auto emptyArrayType =
+          std::dynamic_pointer_cast<symTable::EmptyArrayTypeSymbol>(ctx->getInferredSymbolType())) {
+    auto arrayStructType = getMLIRType(emptyArrayType);
+    auto arrayStruct =
+        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructType, constOne());
+    auto sizeFieldPtr = getArraySizeAddr(*builder, loc, arrayStructType, arrayStruct);
+    builder->create<mlir::LLVM::StoreOp>(loc, constZero(), sizeFieldPtr);
+    mlir::Value dataPtr = mallocArray(intTy(), constZero());
+    auto dataFieldPtr = getArrayDataAddr(*builder, loc, arrayStructType, arrayStruct);
+    builder->create<mlir::LLVM::StoreOp>(loc, dataPtr, dataFieldPtr);
+
+    auto is2dValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
+    auto is2dFieldPtr = get2DArrayBoolAddr(*builder, loc, arrayStructType, arrayStruct);
+    builder->create<mlir::LLVM::StoreOp>(loc, is2dValue, is2dFieldPtr);
+    ctx->getScope()->pushElementToScopeStack(emptyArrayType, arrayStruct);
+    return {};
+  }
   auto arrayType =
       std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(ctx->getInferredSymbolType());
   bool is2dArray = false;
