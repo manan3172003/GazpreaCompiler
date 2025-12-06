@@ -594,7 +594,10 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
             b.create<mlir::scf::YieldOp>(l);
           },
           [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
-      return strideVectorByScalar(opType, leftAddr, skipByIndex);
+      auto res = strideVectorByScalar(opType, leftAddr, skipByIndex);
+      freeAllocatedMemory(leftType, leftAddr);
+      freeAllocatedMemory(rightType, rightAddr);
+      return res;
     }
     if (not isTypeVector(leftType)) {
       // should be a scalar
@@ -625,7 +628,10 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
 
     mlir::Value newAddr;
     if (op == ast::expressions::BinaryOpType::DPIPE) {
-      return concatVectors(opType, leftAddr, rightAddr);
+      auto res = concatVectors(opType, leftAddr, rightAddr);
+      freeAllocatedMemory(leftType, leftAddr);
+      freeAllocatedMemory(rightType, rightAddr);
+      return res;
     } else if (op == ast::expressions::BinaryOpType::DMUL) {
       if (auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(opType)) {
         auto childType = vectorType->getType();
@@ -710,7 +716,9 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
                 copyArrayStruct(childType, newValueAddr, newStructAddr);
                 auto newValue =
                     b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newStructAddr);
+                freeAllocatedMemory(childType, newElementPtr);
                 b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
+                freeAllocatedMemory(childType, newValueAddr);
               } else {
                 auto newValue =
                     b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newValueAddr);
@@ -718,6 +726,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
               }
               b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
             });
+        freeAllocatedMemory(leftType, leftAddr);
+        freeAllocatedMemory(rightType, rightAddr);
         return newAddr;
       } else {
         // scalar result type (dot product)
@@ -786,6 +796,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
 
               b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
             });
+        freeAllocatedMemory(leftType, leftAddr);
+        freeAllocatedMemory(rightType, rightAddr);
         return cumalativeValueAddr;
       }
     } else if (op == ast::expressions::BinaryOpType::EQUAL ||
@@ -800,6 +812,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
         builder->create<mlir::LLVM::StoreOp>(loc, notEqualResult, resultAddr);
       }
 
+      freeAllocatedMemory(leftType, leftAddr);
+      freeAllocatedMemory(rightType, rightAddr);
       return resultAddr;
     } else {
       // Handle regular binary operations for vectors
@@ -885,7 +899,9 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
               copyArrayStruct(childType, newValueAddr, newStructAddr);
               auto newValue =
                   b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newStructAddr);
+              freeAllocatedMemory(childType, newElementPtr);
               b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
+              freeAllocatedMemory(childType, newValueAddr);
             } else {
               auto newValue = b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newValueAddr);
               b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
@@ -893,6 +909,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
             b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
           });
 
+      freeAllocatedMemory(leftType, leftAddr);
+      freeAllocatedMemory(rightType, rightAddr);
       return newAddr;
     }
 
@@ -901,8 +919,6 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
 
   if (isTypeArray(leftType) || isTypeArray(rightType)) {
     mlir::Value newAddr;
-    bool freeLeft = false;
-    bool freeRight = false;
     auto combinedType = leftType;
     if (op == ast::expressions::BinaryOpType::BY) {
       auto skipByIndex = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), rightAddr);
@@ -917,14 +933,16 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
             b.create<mlir::scf::YieldOp>(l);
           },
           [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
-      return strideArrayByScalar(opType, leftAddr, skipByIndex);
+      auto res = strideArrayByScalar(opType, leftAddr, skipByIndex);
+      freeAllocatedMemory(leftType, leftAddr);
+      freeAllocatedMemory(rightType, rightAddr);
+      return res;
     }
     if (!isTypeArray(leftType) && !isEmptyArray(leftType)) {
       auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftType), leftAddr);
       leftAddr =
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(rightType), constOne());
       fillArrayWithScalarValueWithArrayStruct(leftAddr, scalarValue, rightAddr, rightType);
-      freeLeft = true;
       leftType = rightType;
       combinedType = rightType;
     }
@@ -936,7 +954,6 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       fillArrayWithScalarValueWithArrayStruct(rightAddr, scalarValue, leftAddr, leftType);
       rightType = leftType;
       combinedType = leftType;
-      freeRight = true;
     }
 
     // TODO: cast either arrayStructs if needed
@@ -947,7 +964,10 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       throwIfNotEqualArrayStructs(leftAddr, rightAddr, combinedType);
     }
     if (op == ast::expressions::BinaryOpType::DPIPE) {
-      return concatArrays(combinedType, leftAddr, rightAddr);
+      auto result = concatArrays(combinedType, leftAddr, rightAddr);
+      freeAllocatedMemory(leftType, leftAddr);
+      freeAllocatedMemory(rightType, rightAddr);
+      return result;
     } else if (op == ast::expressions::BinaryOpType::DMUL) {
       // array is multi-dimentional
       if (auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(opType)) {
@@ -1009,7 +1029,9 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
                 copyArrayStruct(childType, newValueAddr, newStructAddr);
                 auto newValue =
                     b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newStructAddr);
+                freeAllocatedMemory(childType, newElementPtr);
                 b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
+                freeAllocatedMemory(childType, newValueAddr);
               } else {
                 auto newValue =
                     b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newValueAddr);
@@ -1017,6 +1039,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
               }
               b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
             });
+        freeAllocatedMemory(leftType, leftAddr);
+        freeAllocatedMemory(rightType, rightAddr);
         return newAddr;
       } else {
         // scalar result type
@@ -1078,6 +1102,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
 
               b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
             });
+        freeAllocatedMemory(leftType, leftAddr);
+        freeAllocatedMemory(rightType, rightAddr);
         return cumalativeValueAddr;
       }
     } else if (op == ast::expressions::BinaryOpType::EQUAL ||
@@ -1092,6 +1118,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
         builder->create<mlir::LLVM::StoreOp>(loc, notEqualResult, resultAddr);
       }
 
+      freeAllocatedMemory(leftType, leftAddr);
+      freeAllocatedMemory(rightType, rightAddr);
       return resultAddr;
     }
 
@@ -1147,7 +1175,9 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
                 b.create<mlir::LLVM::AllocaOp>(l, ptrTy(), newStructTy, constOne());
             copyArrayStruct(childType, newValueAddr, newStructAddr);
             auto newValue = b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newStructAddr);
+            freeAllocatedMemory(childType, newElementPtr);
             b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
+            freeAllocatedMemory(childType, newValueAddr);
           } else {
             auto newValue = b.create<mlir::LLVM::LoadOp>(l, getMLIRType(childType), newValueAddr);
             b.create<mlir::LLVM::StoreOp>(l, newValue, newElementPtr);
@@ -1155,6 +1185,8 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
           b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
         });
 
+    freeAllocatedMemory(leftType, leftAddr);
+    freeAllocatedMemory(rightType, rightAddr);
     return newAddr;
   } else { // other primitive types
     leftAddr = castIfNeeded(ctx, leftAddr, leftType, rightType);

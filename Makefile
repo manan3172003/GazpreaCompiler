@@ -34,7 +34,7 @@ test: build
 	cd tests/ && dragon-runner GazpreaCompileConfig.json -v && cd -
 
 test-lab: build
-	cd tests/ && dragon-runner LabMachineConfig.json -v && cd -
+	cd tests/ && dragon-runner memcheck LabMachineConfig.json -v && cd -
 
 file:
 	touch include/$(path).h
