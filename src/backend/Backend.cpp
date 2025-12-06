@@ -586,6 +586,12 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
   if (isTypeVector(leftType) || isTypeVector(rightType)) {
     auto combinedType = leftType;
     if (op == ast::expressions::BinaryOpType::BY) {
+      auto shouldLeftBeCasted = isTypeInteger(leftType) && isTypeReal(opType);
+      leftAddr = castIntegerVectorToReal(leftAddr, leftType, shouldLeftBeCasted);
+      if (shouldLeftBeCasted) {
+        leftType = convertIntegerTypeToRealType(leftType);
+        combinedType = leftType;
+      }
       auto skipByIndex = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), rightAddr);
       auto isSkipByLessThanOne = builder->create<mlir::LLVM::ICmpOp>(
           loc, mlir::LLVM::ICmpPredicate::slt, skipByIndex, constOne());
@@ -603,13 +609,34 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       freeAllocatedMemory(rightType, rightAddr);
       return res;
     }
+    auto leftVectorNeedToBeCasted = isTypeInteger(leftType) && isTypeReal(rightType);
+    auto rightVectorNeedToBeCasted = isTypeInteger(rightType) && isTypeReal(leftType);
+
+    if (isTypeVector(leftType)) {
+      leftAddr = castIntegerVectorToReal(leftAddr, leftType, leftVectorNeedToBeCasted);
+      if (leftVectorNeedToBeCasted)
+        leftType = convertIntegerTypeToRealType(leftType);
+    }
+
+    if (isTypeVector(rightType)) {
+      rightAddr = castIntegerVectorToReal(rightAddr, rightType, rightVectorNeedToBeCasted);
+      if (rightVectorNeedToBeCasted)
+        rightType = convertIntegerTypeToRealType(rightType);
+    }
     if (not isTypeVector(leftType)) {
       // should be a scalar
       // promote scalar to the same size as vector by making it a vector of same size
       auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftType), leftAddr);
       leftAddr =
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(rightType), constOne());
-      fillVectorWithScalarValueWithVectorStruct(leftAddr, scalarValue, rightAddr, rightType);
+      if (isTypeInteger(leftType) && isTypeReal(rightType)) {
+        // need to cast scalar integer to real first
+        auto castedScalarValue = builder->create<mlir::LLVM::SIToFPOp>(loc, floatTy(), scalarValue);
+        fillVectorWithScalarValueWithVectorStruct(leftAddr, castedScalarValue, rightAddr,
+                                                  rightType);
+      } else {
+        fillVectorWithScalarValueWithVectorStruct(leftAddr, scalarValue, rightAddr, rightType);
+      }
       leftType = rightType;
       combinedType = rightType;
     }
@@ -621,7 +648,12 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
           builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(rightType), rightAddr);
       rightAddr =
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(leftType), constOne());
-      fillVectorWithScalarValueWithVectorStruct(rightAddr, scalarValue, leftAddr, leftType);
+      if (isTypeInteger(rightType) && isTypeReal(leftType)) {
+        // need to cast scalar integer to real first
+        auto castedScalarValue = builder->create<mlir::LLVM::SIToFPOp>(loc, floatTy(), scalarValue);
+        fillVectorWithScalarValueWithVectorStruct(rightAddr, castedScalarValue, leftAddr, leftType);
+      } else
+        fillVectorWithScalarValueWithVectorStruct(rightAddr, scalarValue, leftAddr, leftType);
       rightType = leftType;
     }
     if (op != ast::expressions::BinaryOpType::DPIPE &&
@@ -644,7 +676,7 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
         auto rightChildTy =
             std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
         auto is2D = false;
-        auto is3D = false;
+        [[maybe_unused]] auto is3D = false;
 
         auto elementTy = vectorType->getType();
         auto leftElementTy =
@@ -828,7 +860,7 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       auto rightChildTy =
           std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
       auto is2D = false;
-      auto is3D = false;
+      [[maybe_unused]] auto is3D = false;
 
       auto elementTy = vectorType->getType();
       auto leftElementTy =
@@ -937,16 +969,38 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
             b.create<mlir::scf::YieldOp>(l);
           },
           [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
+      // TODO: add casting here
+      auto leftShouldBeCasted = isTypeInteger(leftType) && isTypeReal(opType);
+      leftAddr = castIntegerArrayToReal(leftAddr, leftType, leftShouldBeCasted);
+      if (leftShouldBeCasted)
+        leftType = convertIntegerTypeToRealType(opType);
       auto res = strideArrayByScalar(opType, leftAddr, skipByIndex);
       freeAllocatedMemory(leftType, leftAddr);
       freeAllocatedMemory(rightType, rightAddr);
       return res;
     }
+    auto leftCastNeeded = isTypeInteger(leftType) && isTypeReal(opType);
+    auto rightCastNeeded = isTypeInteger(rightType) && isTypeReal(opType);
+    if (isTypeArray(leftType)) {
+      leftAddr = castIntegerArrayToReal(leftAddr, leftType, leftCastNeeded);
+      if (leftCastNeeded)
+        leftType = convertIntegerTypeToRealType(leftType);
+    }
+    if (isTypeArray(rightType)) {
+      rightAddr = castIntegerArrayToReal(rightAddr, rightType, rightCastNeeded);
+      if (rightCastNeeded)
+        rightType = convertIntegerTypeToRealType(rightType);
+    }
     if (!isTypeArray(leftType) && !isEmptyArray(leftType)) {
       auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftType), leftAddr);
       leftAddr =
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(rightType), constOne());
-      fillArrayWithScalarValueWithArrayStruct(leftAddr, scalarValue, rightAddr, rightType);
+      if (isTypeInteger(leftType) && isTypeReal(rightType)) {
+        auto casted = builder->create<mlir::LLVM::SIToFPOp>(loc, floatTy(), scalarValue);
+        fillArrayWithScalarValueWithArrayStruct(leftAddr, casted, rightAddr, rightType);
+      } else {
+        fillArrayWithScalarValueWithArrayStruct(leftAddr, scalarValue, rightAddr, rightType);
+      }
       leftType = rightType;
       combinedType = rightType;
     }
@@ -955,12 +1009,16 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
           builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(rightType), rightAddr);
       rightAddr =
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(leftType), constOne());
-      fillArrayWithScalarValueWithArrayStruct(rightAddr, scalarValue, leftAddr, leftType);
+      if (isTypeInteger(rightType) && isTypeReal(leftType)) {
+        // Cast scalar to real before filling the array
+        auto casted = builder->create<mlir::LLVM::SIToFPOp>(loc, floatTy(), scalarValue);
+        fillArrayWithScalarValueWithArrayStruct(rightAddr, casted, leftAddr, leftType);
+      } else {
+        fillArrayWithScalarValueWithArrayStruct(rightAddr, scalarValue, leftAddr, leftType);
+      }
       rightType = leftType;
       combinedType = leftType;
     }
-
-    // TODO: cast either arrayStructs if needed
     // Check if the size of the arrays are not the same (for operations that require equal sizes)
     if (op != ast::expressions::BinaryOpType::DPIPE &&
         op != ast::expressions::BinaryOpType::EQUAL &&
@@ -1083,14 +1141,14 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
               auto leftElementPtr = b.create<mlir::LLVM::GEPOp>(
                   l, ptrTy(), getMLIRType(leftChildTy), leftDataPtr, mlir::ValueRange{i});
               // Load left element value
-              auto leftValue =
+              [[maybe_unused]] auto leftValue =
                   b.create<mlir::LLVM::LoadOp>(l, getMLIRType(leftChildTy), leftElementPtr);
 
               // Get pointer to right element
               auto rightElementPtr = b.create<mlir::LLVM::GEPOp>(
                   l, ptrTy(), getMLIRType(rightChildTy), rightDataPtr, mlir::ValueRange{i});
               // Load right element value
-              auto rightValue =
+              [[maybe_unused]] auto rightValue =
                   b.create<mlir::LLVM::LoadOp>(l, getMLIRType(rightChildTy), rightElementPtr);
 
               auto productValueAddr =

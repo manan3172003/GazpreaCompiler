@@ -452,6 +452,80 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
       ctx->setInferredDataType(isOfSymbolType(rightType, "vector") ? rightDataType : leftDataType);
       ctx->setInferredSymbolType(vectorTypeSym);
     }
+  }
+  // Handle scalar + array and array + scalar for arithmetic operations
+  else if (is_arithmetic && ((isScalar(leftType) && isOfSymbolType(rightType, "array")) ||
+                             (isOfSymbolType(leftType, "array") && isScalar(rightType)))) {
+    std::shared_ptr<symTable::ArrayTypeSymbol> arrayTypeSym;
+    std::shared_ptr<symTable::Type> scalarType;
+    std::shared_ptr<types::DataTypeAst> scalarDataType;
+    std::shared_ptr<types::DataTypeAst> arrayDataType;
+
+    if (isOfSymbolType(rightType, "array")) {
+      arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(rightType);
+      arrayDataType = rightDataType;
+      scalarType = leftType;
+      scalarDataType = leftDataType;
+    } else {
+      arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(leftType);
+      arrayDataType = leftDataType;
+      scalarType = rightType;
+      scalarDataType = rightDataType;
+    }
+
+    if (!isOfSymbolType(scalarType, "integer") && !isOfSymbolType(scalarType, "real")) {
+      throw TypeError(ctx->getLineNumber(), "Scalar operand must be numeric for array operation");
+    }
+
+    auto arrayElementType = arrayTypeSym->getType();
+
+    // Get the innermost element type of the array
+    auto innermostElementType = arrayElementType;
+    while (auto nestedArray =
+               std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(innermostElementType)) {
+      innermostElementType = nestedArray->getType();
+    }
+
+    if (!typesMatch(scalarType, innermostElementType) &&
+        !(isOfSymbolType(scalarType, "integer") && isOfSymbolType(innermostElementType, "real")) &&
+        !(isOfSymbolType(scalarType, "real") && isOfSymbolType(innermostElementType, "integer"))) {
+      throw TypeError(ctx->getLineNumber(), "Scalar type incompatible with array element type");
+    }
+
+    // Promote to real if either scalar or array element is real
+    if ((isOfSymbolType(scalarType, "real") || isOfSymbolType(innermostElementType, "real"))) {
+      auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
+
+      auto originalArrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(arrayDataType);
+
+      // Collect array nesting levels
+      std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
+      auto currentType = originalArrayDataType;
+      while (currentType) {
+        arrayLevels.push_back(currentType);
+        currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
+      }
+
+      // Build array type with real as base, preserving nesting structure and sizes
+      std::shared_ptr<types::DataTypeAst> resultType = realDataType;
+
+      // Wrap in array types from innermost to outermost, preserving sizes
+      for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
+        auto newArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+        newArrayType->setType(resultType);
+        for (const auto &size : (*it)->getSizes()) {
+          newArrayType->pushSize(size);
+        }
+        resultType = newArrayType;
+      }
+
+      ctx->setInferredDataType(resultType);
+      ctx->setInferredSymbolType(resolvedInferredType(resultType));
+    } else {
+      // No promotion needed, keep original array type
+      ctx->setInferredDataType(arrayDataType);
+      ctx->setInferredSymbolType(arrayTypeSym);
+    }
   } else {
     if (op != expressions::BinaryOpType::DPIPE) {
       if (rightType->getName() != leftType->getName() &&

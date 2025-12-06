@@ -146,6 +146,16 @@ public:
                                    mlir::Value scalarValue);
   mlir::Value areArraysEqual(mlir::Value leftArrayStruct, mlir::Value rightArrayStruct,
                              std::shared_ptr<symTable::Type> arrayType);
+  bool typeContainsReal(std::shared_ptr<symTable::Type> type);
+  bool typeContainsInteger(std::shared_ptr<symTable::Type> type);
+  mlir::Value castIntegerArrayToReal(mlir::Value fromArrayStruct,
+                                     std::shared_ptr<symTable::Type> srcType, bool shouldCast);
+  mlir::Value castIntegerVectorToReal(mlir::Value fromVectorStruct,
+                                      std::shared_ptr<symTable::Type> srcType, bool shouldCast);
+  std::shared_ptr<symTable::Type>
+  convertIntegerTypeToRealType(std::shared_ptr<symTable::Type> type);
+  bool isTypeReal(std::shared_ptr<symTable::Type> type);
+  bool isTypeInteger(std::shared_ptr<symTable::Type> type);
   mlir::Value areVectorsEqual(mlir::OpBuilder &b, mlir::Location l, mlir::Value leftVectorStruct,
                               mlir::Value rightVectorStruct,
                               std::shared_ptr<symTable::Type> vectorType);

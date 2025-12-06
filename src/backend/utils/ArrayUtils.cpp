@@ -2,6 +2,7 @@
 #include "ast/expressions/UnaryAst.h"
 #include "ast/walkers/DefRefWalker.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/BuiltInTypeSymbol.h"
 #include "symTable/StructTypeSymbol.h"
 #include "symTable/VectorTypeSymbol.h"
 
@@ -1920,4 +1921,416 @@ mlir::Value Backend::areArraysEqual(mlir::Value leftArrayStruct, mlir::Value rig
 
   return resultAddr;
 }
+
+bool Backend::typeContainsReal(std::shared_ptr<symTable::Type> type) {
+  if (!type) {
+    return false;
+  }
+
+  // Check if the type itself is real
+  if (type->getName() == "real") {
+    return true;
+  }
+
+  // Check if it's an array type - recursively check element type
+  if (auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)) {
+    return typeContainsReal(arrayType->getType());
+  }
+
+  // Check if it's a vector type - recursively check element type
+  if (auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type)) {
+    return typeContainsReal(vectorType->getType());
+  }
+
+  return false;
+}
+
+bool Backend::typeContainsInteger(std::shared_ptr<symTable::Type> type) {
+  if (!type) {
+    return false;
+  }
+
+  // Check if the type itself is integer
+  if (type->getName() == "integer") {
+    return true;
+  }
+
+  // Check if it's an array type - recursively check element type
+  if (auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)) {
+    return typeContainsInteger(arrayType->getType());
+  }
+
+  // Check if it's a vector type - recursively check element type
+  if (auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type)) {
+    return typeContainsInteger(vectorType->getType());
+  }
+
+  return false;
+}
+
+mlir::Value Backend::castIntegerArrayToReal(mlir::Value fromArrayStruct,
+                                            std::shared_ptr<symTable::Type> srcType,
+                                            bool shouldCast) {
+  // Early return if casting is disabled
+  if (!shouldCast) {
+    return fromArrayStruct;
+  }
+
+  // Cast to ArrayTypeSymbol
+  auto srcArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(srcType);
+  if (!srcArrayType) {
+    return fromArrayStruct;
+  }
+
+  auto srcElementType = srcArrayType->getType();
+
+  // Check if this array actually contains integers that need casting
+  // If it doesn't contain integers, just return the original
+  if (!typeContainsInteger(srcType)) {
+    return fromArrayStruct;
+  }
+
+  // Get MLIR types - destination uses real (float) elements
+  auto srcArrayStructType = getMLIRType(srcType);
+  // Destination struct is {i32 size, ptr data, i1 is2D}
+  auto destArrayStructType = structTy({intTy(), ptrTy(), boolTy()});
+
+  // Allocate a new destination struct
+  mlir::Value destArrayStruct =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), destArrayStructType, constOne());
+
+  // Get source array size and data
+  auto srcSizeAddr = getArraySizeAddr(*builder, loc, srcArrayStructType, fromArrayStruct);
+  mlir::Value srcSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcSizeAddr);
+
+  auto srcDataAddr = getArrayDataAddr(*builder, loc, srcArrayStructType, fromArrayStruct);
+  mlir::Value srcDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataAddr);
+
+  // Get destination array data address
+  auto destDataAddr = getArrayDataAddr(*builder, loc, destArrayStructType, destArrayStruct);
+
+  // Check if elements are arrays (multi-dimensional case)
+  auto srcElementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(srcElementType);
+
+  if (srcElementArrayType) {
+    // Multi-dimensional array: allocate array of array structures and recursively cast
+    mlir::Value newDestDataPtr = mallocArray(destArrayStructType, srcSize);
+
+    // Iterate through sub-arrays and recursively cast each one
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), srcSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcSubArrayStructType = getMLIRType(srcElementType);
+
+          auto srcSubArrayPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), srcSubArrayStructType,
+                                                            srcDataPtr, mlir::ValueRange{i});
+
+          auto destSubArrayPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), destArrayStructType,
+                                                             newDestDataPtr, mlir::ValueRange{i});
+
+          // Recursively cast sub-array and copy the result
+          auto savedInsertionPoint = builder->saveInsertionPoint();
+          auto savedLoc = loc;
+          builder->setInsertionPoint(b.getInsertionBlock(), b.getInsertionPoint());
+          loc = l;
+
+          mlir::Value newSubArray =
+              castIntegerArrayToReal(srcSubArrayPtr, srcElementType, shouldCast);
+          // Copy the struct fields from newSubArray to destSubArrayPtr
+          auto newSubSizeAddr = getArraySizeAddr(b, l, destArrayStructType, newSubArray);
+          auto newSubSize = b.create<mlir::LLVM::LoadOp>(l, intTy(), newSubSizeAddr);
+          auto destSubSizeAddr = getArraySizeAddr(b, l, destArrayStructType, destSubArrayPtr);
+          b.create<mlir::LLVM::StoreOp>(l, newSubSize, destSubSizeAddr);
+
+          auto newSubDataAddr = getArrayDataAddr(b, l, destArrayStructType, newSubArray);
+          auto newSubData = b.create<mlir::LLVM::LoadOp>(l, ptrTy(), newSubDataAddr);
+          auto destSubDataAddr = getArrayDataAddr(b, l, destArrayStructType, destSubArrayPtr);
+          b.create<mlir::LLVM::StoreOp>(l, newSubData, destSubDataAddr);
+
+          auto newSubIs2DAddr = get2DArrayBoolAddr(b, l, destArrayStructType, newSubArray);
+          auto newSubIs2D = b.create<mlir::LLVM::LoadOp>(l, boolTy(), newSubIs2DAddr);
+          auto destSubIs2DAddr = get2DArrayBoolAddr(b, l, destArrayStructType, destSubArrayPtr);
+          b.create<mlir::LLVM::StoreOp>(l, newSubIs2D, destSubIs2DAddr);
+
+          loc = savedLoc;
+          builder->restoreInsertionPoint(savedInsertionPoint);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    // Store new data pointer in destination
+    builder->create<mlir::LLVM::StoreOp>(loc, newDestDataPtr, destDataAddr);
+  } else {
+    // 1D array: cast scalar elements from integer to real
+    mlir::Value newDestDataPtr = mallocArray(floatTy(), srcSize);
+
+    auto srcElementMLIRType = getMLIRType(srcElementType);
+
+    // Iterate through elements and cast each integer to real
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), srcSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          // Get source element pointer and load integer value
+          auto srcElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), srcElementMLIRType,
+                                                           srcDataPtr, mlir::ValueRange{i});
+          mlir::Value intValue = b.create<mlir::LLVM::LoadOp>(l, srcElementMLIRType, srcElementPtr);
+
+          // Cast integer to real using SIToFPOp
+          mlir::Value realValue = b.create<mlir::LLVM::SIToFPOp>(l, floatTy(), intValue);
+
+          // Get destination element pointer and store real value
+          auto destElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), floatTy(), newDestDataPtr,
+                                                            mlir::ValueRange{i});
+          b.create<mlir::LLVM::StoreOp>(l, realValue, destElementPtr);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    // Store new data pointer in destination
+    builder->create<mlir::LLVM::StoreOp>(loc, newDestDataPtr, destDataAddr);
+  }
+
+  // Store size in destination
+  auto destSizeAddr = getArraySizeAddr(*builder, loc, destArrayStructType, destArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcSize, destSizeAddr);
+
+  // Copy the 2D array bool field if it exists
+  auto srcIs2DAddr = get2DArrayBoolAddr(*builder, loc, srcArrayStructType, fromArrayStruct);
+  mlir::Value srcIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), srcIs2DAddr);
+  auto destIs2DAddr = get2DArrayBoolAddr(*builder, loc, destArrayStructType, destArrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcIs2D, destIs2DAddr);
+
+  return destArrayStruct;
+}
+
+mlir::Value Backend::castIntegerVectorToReal(mlir::Value fromVectorStruct,
+                                             std::shared_ptr<symTable::Type> srcType,
+                                             bool shouldCast) {
+  // Early return if casting is disabled
+  if (!shouldCast) {
+    return fromVectorStruct;
+  }
+
+  // Cast to VectorTypeSymbol
+  auto srcVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(srcType);
+  if (!srcVectorType) {
+    return fromVectorStruct;
+  }
+
+  auto srcElementType = srcVectorType->getType();
+
+  // Check if this vector actually contains integers that need casting
+  // If it doesn't contain integers, just return the original
+  if (!typeContainsInteger(srcType)) {
+    return fromVectorStruct;
+  }
+
+  // Get MLIR types - destination uses real (float) elements
+  auto srcVectorStructType = getMLIRType(srcType);
+  // Destination struct is {i32 size, i32 capacity, ptr data, i1 is2D}
+  auto destVectorStructType = structTy({intTy(), intTy(), ptrTy(), boolTy()});
+
+  // Allocate a new destination struct
+  mlir::Value destVectorStruct =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), destVectorStructType, constOne());
+
+  // Helper lambda to access vector struct fields
+  auto makeFieldPtr = [&](mlir::Type structTy, mlir::Value baseAddr, VectorOffset offset) {
+    auto makeIndexConst = [&](int idx) {
+      return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), idx);
+    };
+    return builder->create<mlir::LLVM::GEPOp>(
+        loc, ptrTy(), structTy, baseAddr,
+        mlir::ValueRange{makeIndexConst(0), makeIndexConst(static_cast<int>(offset))});
+  };
+
+  // Get source vector size and data
+  auto srcSizeAddr = makeFieldPtr(srcVectorStructType, fromVectorStruct, VectorOffset::Size);
+  mlir::Value srcSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcSizeAddr);
+
+  auto srcCapacityAddr =
+      makeFieldPtr(srcVectorStructType, fromVectorStruct, VectorOffset::Capacity);
+  mlir::Value srcCapacity = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcCapacityAddr);
+
+  auto srcDataAddr = makeFieldPtr(srcVectorStructType, fromVectorStruct, VectorOffset::Data);
+  mlir::Value srcDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataAddr);
+
+  // Get destination vector data address
+  auto destDataAddr = makeFieldPtr(destVectorStructType, destVectorStruct, VectorOffset::Data);
+
+  // Check if elements are arrays (vector of arrays case)
+  auto srcElementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(srcElementType);
+
+  if (srcElementArrayType) {
+    // Vector of arrays: allocate array of array structures and recursively cast
+    mlir::Value newDestDataPtr = mallocArray(destVectorStructType, srcSize);
+
+    // Iterate through sub-arrays and recursively cast each one
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), srcSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcSubArrayStructType = getMLIRType(srcElementType);
+          auto destArrayStructType = structTy({intTy(), ptrTy(), boolTy()});
+
+          auto srcSubArrayPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), srcSubArrayStructType,
+                                                            srcDataPtr, mlir::ValueRange{i});
+
+          auto destSubArrayPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), destArrayStructType,
+                                                             newDestDataPtr, mlir::ValueRange{i});
+
+          // Recursively cast sub-array and copy the result
+          auto savedInsertionPoint = builder->saveInsertionPoint();
+          auto savedLoc = loc;
+          builder->setInsertionPoint(b.getInsertionBlock(), b.getInsertionPoint());
+          loc = l;
+
+          mlir::Value newSubArray =
+              castIntegerArrayToReal(srcSubArrayPtr, srcElementType, shouldCast);
+          // Copy the struct fields from newSubArray to destSubArrayPtr
+          auto newSubSizeAddr = getArraySizeAddr(b, l, destArrayStructType, newSubArray);
+          auto newSubSize = b.create<mlir::LLVM::LoadOp>(l, intTy(), newSubSizeAddr);
+          auto destSubSizeAddr = getArraySizeAddr(b, l, destArrayStructType, destSubArrayPtr);
+          b.create<mlir::LLVM::StoreOp>(l, newSubSize, destSubSizeAddr);
+
+          auto newSubDataAddr = getArrayDataAddr(b, l, destArrayStructType, newSubArray);
+          auto newSubData = b.create<mlir::LLVM::LoadOp>(l, ptrTy(), newSubDataAddr);
+          auto destSubDataAddr = getArrayDataAddr(b, l, destArrayStructType, destSubArrayPtr);
+          b.create<mlir::LLVM::StoreOp>(l, newSubData, destSubDataAddr);
+
+          auto newSubIs2DAddr = get2DArrayBoolAddr(b, l, destArrayStructType, newSubArray);
+          auto newSubIs2D = b.create<mlir::LLVM::LoadOp>(l, boolTy(), newSubIs2DAddr);
+          auto destSubIs2DAddr = get2DArrayBoolAddr(b, l, destArrayStructType, destSubArrayPtr);
+          b.create<mlir::LLVM::StoreOp>(l, newSubIs2D, destSubIs2DAddr);
+
+          loc = savedLoc;
+          builder->restoreInsertionPoint(savedInsertionPoint);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    // Store new data pointer in destination
+    builder->create<mlir::LLVM::StoreOp>(loc, newDestDataPtr, destDataAddr);
+  } else {
+    // Vector of scalars: cast scalar elements from integer to real
+    mlir::Value newDestDataPtr = mallocArray(floatTy(), srcCapacity);
+
+    auto srcElementMLIRType = getMLIRType(srcElementType);
+
+    // Iterate through elements and cast each integer to real
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), srcSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          // Get source element pointer and load integer value
+          auto srcElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), srcElementMLIRType,
+                                                           srcDataPtr, mlir::ValueRange{i});
+          mlir::Value intValue = b.create<mlir::LLVM::LoadOp>(l, srcElementMLIRType, srcElementPtr);
+
+          // Cast integer to real using SIToFPOp
+          mlir::Value realValue = b.create<mlir::LLVM::SIToFPOp>(l, floatTy(), intValue);
+
+          // Get destination element pointer and store real value
+          auto destElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), floatTy(), newDestDataPtr,
+                                                            mlir::ValueRange{i});
+          b.create<mlir::LLVM::StoreOp>(l, realValue, destElementPtr);
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    // Store new data pointer in destination
+    builder->create<mlir::LLVM::StoreOp>(loc, newDestDataPtr, destDataAddr);
+  }
+
+  // Store size in destination
+  auto destSizeAddr = makeFieldPtr(destVectorStructType, destVectorStruct, VectorOffset::Size);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcSize, destSizeAddr);
+
+  // Store capacity in destination
+  auto destCapacityAddr =
+      makeFieldPtr(destVectorStructType, destVectorStruct, VectorOffset::Capacity);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcCapacity, destCapacityAddr);
+
+  // Copy the 2D vector bool field if it exists
+  auto srcIs2DAddr = makeFieldPtr(srcVectorStructType, fromVectorStruct, VectorOffset::Is2D);
+  mlir::Value srcIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), srcIs2DAddr);
+  auto destIs2DAddr = makeFieldPtr(destVectorStructType, destVectorStruct, VectorOffset::Is2D);
+  builder->create<mlir::LLVM::StoreOp>(loc, srcIs2D, destIs2DAddr);
+
+  return destVectorStruct;
+}
+
+std::shared_ptr<symTable::Type>
+Backend::convertIntegerTypeToRealType(std::shared_ptr<symTable::Type> type) {
+  if (!type) {
+    return type;
+  }
+
+  // Check if it's a basic integer type
+  if (type->getName() == "integer") {
+    return std::make_shared<symTable::BuiltInTypeSymbol>("real");
+  }
+
+  // Check if it's an array type - recursively convert element type
+  if (auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)) {
+    auto elementType = arrayType->getType();
+    auto convertedElementType = convertIntegerTypeToRealType(elementType);
+
+    // If the element type didn't change, return the original type
+    if (convertedElementType == elementType) {
+      return type;
+    }
+
+    // Create a new array type with the converted element type
+    auto newArrayType = std::make_shared<symTable::ArrayTypeSymbol>(arrayType->getName());
+    newArrayType->setType(convertedElementType);
+
+    // Copy over sizes and other metadata
+    for (auto size : arrayType->getSizes()) {
+      newArrayType->addSize(size);
+    }
+    newArrayType->inferredSize = arrayType->inferredSize;
+    newArrayType->inferredElementSize = arrayType->inferredElementSize;
+    newArrayType->declaredElementSize = arrayType->declaredElementSize;
+    newArrayType->elementSizeInferenceFlags = arrayType->elementSizeInferenceFlags;
+    newArrayType->isElement2D = arrayType->isElement2D;
+
+    return newArrayType;
+  }
+
+  // Check if it's a vector type - recursively convert element type
+  if (auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type)) {
+    auto elementType = vectorType->getType();
+    auto convertedElementType = convertIntegerTypeToRealType(elementType);
+
+    // If the element type didn't change, return the original type
+    if (convertedElementType == elementType) {
+      return type;
+    }
+
+    // Create a new vector type with the converted element type
+    auto newVectorType = std::make_shared<symTable::VectorTypeSymbol>(vectorType->getName());
+    newVectorType->setType(convertedElementType);
+
+    // Copy over metadata
+    newVectorType->inferredSize = vectorType->inferredSize;
+    newVectorType->inferredElementSize = vectorType->inferredElementSize;
+    newVectorType->declaredElementSize = vectorType->declaredElementSize;
+    newVectorType->setElementSizeInferenceFlags(vectorType->getElementSizeInferenceFlags());
+    newVectorType->isScalar = vectorType->isScalar;
+    newVectorType->isElement2D = vectorType->isElement2D;
+
+    return newVectorType;
+  }
+
+  // For all other types, return unchanged
+  return type;
+}
+
+bool Backend::isTypeReal(std::shared_ptr<symTable::Type> type) {
+  return type && type->getName().find("real") != std::string::npos;
+}
+
+bool Backend::isTypeInteger(std::shared_ptr<symTable::Type> type) {
+  return type && type->getName().find("integer") != std::string::npos;
+}
+
 } // namespace gazprea::backend
