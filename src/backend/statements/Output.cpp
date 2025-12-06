@@ -22,7 +22,7 @@ std::any Backend::visitOutput(std::shared_ptr<ast::statements::OutputAst> ctx) {
   } else if (type->getName().substr(0, 5) == "array") {
     printArray(valueAddr, type);
   } else if (type->getName().substr(0, 6) == "vector") {
-    printVector(valueAddr, type);
+    printVector(ctx->getLineNumber(), valueAddr, type);
   }
   return {};
 }

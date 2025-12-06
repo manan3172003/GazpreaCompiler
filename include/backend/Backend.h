@@ -230,7 +230,8 @@ protected:
                                 std::shared_ptr<symTable::Type> srcArrayType,
                                 mlir::Value dstDataPtr, std::shared_ptr<symTable::Type> elementType,
                                 mlir::Value count);
-  void printVector(mlir::Value vectorStructAddr, std::shared_ptr<symTable::Type> vectorType);
+  void printVector(int lineNumber, mlir::Value vectorStructAddr,
+                   std::shared_ptr<symTable::Type> vectorType);
   void createGlobalString(const char *str, const char *stringName) const;
   mlir::Value castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
                            std::shared_ptr<symTable::Type> fromType,

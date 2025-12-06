@@ -805,7 +805,7 @@ std::any ValidationWalker::visitOutput(std::shared_ptr<statements::OutputAst> ct
   }
   visit(ctx->getExpression());
   const auto typeName = ctx->getExpression()->getInferredSymbolType()->getName();
-  if (typeName == "tuple" || typeName == "struct" || typeName.substr(0, 6) == "vector")
+  if (typeName == "tuple" || typeName == "struct")
     throw TypeError(ctx->getLineNumber(), "Cannot print this datatype");
   return {};
 }
@@ -1657,8 +1657,9 @@ ValidationWalker::visitLengthBuiltinFunc(std::shared_ptr<expressions::LengthBuil
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
   const auto argType = ctx->arg->getInferredSymbolType();
-  if (!argType || (argType->getName().substr(0, 5) != "array" &&
-                   argType->getName().substr(0, 6) != "vector" && argType->getName() != "string" && argType->getName() != "empty_array")) {
+  if (!argType ||
+      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector" &&
+       argType->getName() != "string" && argType->getName() != "empty_array")) {
     throw CallError(ctx->getLineNumber(),
                     "length builtin must be called on arrays or vectors or strings");
   }
@@ -1671,8 +1672,9 @@ ValidationWalker::visitShapeBuiltinFunc(std::shared_ptr<expressions::ShapeBuilti
   auto methodSymbol = std::dynamic_pointer_cast<symTable::MethodSymbol>(ctx->getSymbol());
   visit(ctx->arg);
   const auto argType = ctx->arg->getInferredSymbolType();
-  if (!argType || (argType->getName().substr(0, 5) != "array" &&
-                   argType->getName().substr(0, 6) != "vector" && argType->getName() != "string" && argType->getName() != "empty_array")) {
+  if (!argType ||
+      (argType->getName().substr(0, 5) != "array" && argType->getName().substr(0, 6) != "vector" &&
+       argType->getName() != "string" && argType->getName() != "empty_array")) {
     throw CallError(ctx->getLineNumber(),
                     "shape builtin must be called on arrays or vectors or strings");
   }

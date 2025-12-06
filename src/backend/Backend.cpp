@@ -1,3 +1,4 @@
+#include "CompileTimeExceptions.h"
 #include "run_time_errors.h"
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/StructTypeSymbol.h"
@@ -240,7 +241,7 @@ void Backend::printChar(char c) {
   builder->create<mlir::LLVM::CallOp>(loc, printfFunc, args);
 }
 
-void Backend::printVector(mlir::Value vectorStructAddr,
+void Backend::printVector(int lineNumber, mlir::Value vectorStructAddr,
                           std::shared_ptr<symTable::Type> vectorType) {
   auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(vectorType);
   if (!vectorTypeSym)
@@ -260,22 +261,7 @@ void Backend::printVector(mlir::Value vectorStructAddr,
     builder->create<mlir::LLVM::CallOp>(loc, printStringFunc, mlir::ValueRange{vectorStructAddr});
     return;
   }
-
-  int elementTypeCode = 0;
-  if (elementTypeName == "integer") {
-    elementTypeCode = 0;
-  } else if (elementTypeName == "real") {
-    elementTypeCode = 1;
-  } else if (elementTypeName == "character") {
-    elementTypeCode = 2;
-  } else if (elementTypeName == "boolean") {
-    elementTypeCode = 3;
-  }
-
-  auto printArrayFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kPrintArrayName);
-  auto elementTypeConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), elementTypeCode);
-  mlir::ValueRange args = {vectorStructAddr, elementTypeConst};
-  builder->create<mlir::LLVM::CallOp>(loc, printArrayFunc, args);
+  throw TypeError(lineNumber, "cannot print vectors");
 }
 
 void Backend::createGlobalString(const char *str, const char *stringName) const {

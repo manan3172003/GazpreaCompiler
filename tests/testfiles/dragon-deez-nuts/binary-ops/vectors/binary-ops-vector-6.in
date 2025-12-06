@@ -15,10 +15,10 @@ procedure main() returns integer {
     vector<boolean> d2 = [false];
     vector<boolean> d3 = [true];
 
-    a1 || a2 || a3 -> std_output;
-    b1 || b2 || b3 -> std_output;
-    c1 || c2 || c3 -> std_output;
-    d1 || d2 || d3 -> std_output;
+    vector<integer> c = a1 || a2 || a3;
+    c[1] -> std_output;
+    c[2] -> std_output;
+    c[3] -> std_output;
     return 0;
 }
-//CHECK:[1 2 4][a f g][9.3 2.3 4.2][T F T]
+//CHECK:124
