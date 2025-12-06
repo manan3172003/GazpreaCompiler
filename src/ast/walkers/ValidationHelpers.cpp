@@ -327,8 +327,10 @@ bool ValidationWalker::isValidOp(std::shared_ptr<symTable::Type> type,
 
     if (isCollection(elementType))
       return isValidOp(elementType, opType);
-    else
+    else if (opType == expressions::BinaryOpType::DMUL)
       return isValidOp(elementType, expressions::BinaryOpType::MULTIPLY);
+    else
+      return isValidOp(elementType, opType);
   }
   return opTable[nodeTypeToIndex(type->getName())][static_cast<int>(opType)];
 }
