@@ -235,6 +235,9 @@ protected:
   void createArrayFromVector(std::vector<std::shared_ptr<ast::expressions::ExpressionAst>> elements,
                              mlir::Type elementMLIRType, mlir::Value dest,
                              std::shared_ptr<symTable::Type> targetElementType);
+  std::pair<mlir::Value, std::shared_ptr<symTable::ArrayTypeSymbol>>
+  convertVectorToArrayStruct(mlir::Value vectorStruct,
+                             std::shared_ptr<symTable::VectorTypeSymbol> vectorType);
   mlir::Value normalizeIndex(mlir::Value index, mlir::Value arraySize);
   void copyArrayElementsToSlice(mlir::Value srcArrayStruct,
                                 std::shared_ptr<symTable::Type> srcArrayType,

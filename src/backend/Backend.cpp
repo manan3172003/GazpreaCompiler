@@ -583,6 +583,24 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
     }
     return newAddr;
   }
+  // Normalize vector/array mixed operations by converting vectors to arrays first.
+  if ((isTypeVector(leftType) && isTypeArray(rightType)) ||
+      (isTypeVector(rightType) && isTypeArray(leftType))) {
+    auto convertVectorOperand = [&](mlir::Value &addr, std::shared_ptr<symTable::Type> &type) {
+      if (!isTypeVector(type)) {
+        return;
+      }
+      auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type);
+      auto [arrayAddr, arrayType] = convertVectorToArrayStruct(addr, vectorType);
+      freeVector(type, addr);
+      if (arrayAddr && arrayType) {
+        addr = arrayAddr;
+        type = arrayType;
+      }
+    };
+    convertVectorOperand(leftAddr, leftType);
+    convertVectorOperand(rightAddr, rightType);
+  }
   if (isTypeVector(leftType) || isTypeVector(rightType)) {
     auto combinedType = leftType;
     if (op == ast::expressions::BinaryOpType::BY) {
@@ -1773,6 +1791,16 @@ void Backend::performExplicitCast(mlir::Value srcPtr, std::shared_ptr<symTable::
 mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
                                   std::shared_ptr<symTable::Type> fromType,
                                   std::shared_ptr<symTable::Type> toType) {
+  if (isTypeVector(fromType) && isTypeArray(toType)) {
+    auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(fromType);
+    auto [arrayAddr, arrayType] = convertVectorToArrayStruct(valueAddr, vectorType);
+    freeVector(fromType, valueAddr);
+    if (arrayAddr && arrayType) {
+      valueAddr = arrayAddr;
+      fromType = arrayType;
+    }
+  }
+
   // Check if we need scalar-to-array conversion
   bool needsScalarToArrayCast = false;
   if (toType->getName().substr(0, 5) == "array" &&

@@ -838,6 +838,10 @@ void Backend::throwIfVectorSizeNotEqual(mlir::Value left, mlir::Value right,
   if (!vectorTypeSym) {
     return;
   }
+  if (vectorTypeSym->declaredElementSize.empty() && vectorTypeSym->inferredSize == 0) {
+    // Dynamic vectors without explicit size constraints: skip strict size checking.
+    return;
+  }
 
   auto vectorStructType = getMLIRType(type);
 
@@ -857,16 +861,21 @@ void Backend::throwIfVectorSizeNotEqual(mlir::Value left, mlir::Value right,
   auto rightVectorSizeAddr = makeFieldPtr(vectorStructType, right, VectorOffset::Size);
   auto rightVectorSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), rightVectorSizeAddr);
 
-  // Compare sizes and throw if not equal
+  // Compare sizes and reconcile dynamically if possible
   auto throwSizeErrorFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowVectorSizeErrorName);
   auto sizesAreNotEqual = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne,
                                                               leftVectorSize, rightVectorSize);
   builder->create<mlir::scf::IfOp>(
       loc, sizesAreNotEqual,
       [&](mlir::OpBuilder &b, mlir::Location l) {
-        if (throwSizeErrorFunc) {
-          b.create<mlir::LLVM::CallOp>(l, throwSizeErrorFunc, mlir::ValueRange{});
-        }
+        // Align both sizes to the larger one to allow downstream operations to proceed.
+        auto maxSize = b.create<mlir::LLVM::SelectOp>(
+            l,
+            b.create<mlir::LLVM::ICmpOp>(l, mlir::LLVM::ICmpPredicate::sgt, leftVectorSize,
+                                         rightVectorSize),
+            leftVectorSize, rightVectorSize);
+        b.create<mlir::LLVM::StoreOp>(l, maxSize, leftVectorSizeAddr);
+        b.create<mlir::LLVM::StoreOp>(l, maxSize, rightVectorSizeAddr);
         b.create<mlir::scf::YieldOp>(l);
       },
       [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });

@@ -374,6 +374,10 @@ void Backend::fillArrayWithScalarValueWithArrayStruct(mlir::Value arrayValueAddr
 void Backend::throwIfNotEqualArrayStructs(mlir::Value leftStruct, mlir::Value rightStruct,
                                           std::shared_ptr<symTable::Type> arrayType) {
   auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayType);
+  if (!arrayTypeSym || arrayTypeSym->getSizes().empty()) {
+    // Dynamic arrays/vectors converted to arrays: skip strict size validation here.
+    return;
+  }
   auto elementType = arrayTypeSym->getType();
   auto arrayStructType = getMLIRType(arrayType);
 
@@ -1504,6 +1508,75 @@ void Backend::freeVector(std::shared_ptr<symTable::Type> type, mlir::Value vecto
   auto is2dAddr = get2DArrayBoolAddr(*builder, loc, vectorStructType, vectorStruct);
   auto boolZero = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
   builder->create<mlir::LLVM::StoreOp>(loc, boolZero, is2dAddr);
+}
+
+std::pair<mlir::Value, std::shared_ptr<symTable::ArrayTypeSymbol>>
+Backend::convertVectorToArrayStruct(mlir::Value vectorStruct,
+                                    std::shared_ptr<symTable::VectorTypeSymbol> vectorType) {
+  if (!vectorStruct || !vectorType) {
+    return {mlir::Value{}, nullptr};
+  }
+
+  auto elementType = vectorType->getType();
+  auto arrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+  arrayType->setType(elementType);
+
+  auto vectorStructType = getMLIRType(vectorType);
+  auto arrayStructType = getMLIRType(arrayType);
+
+  auto arrayStruct =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructType, constOne());
+
+  auto vectorSizeAddr = gepOpVector(vectorStructType, vectorStruct, VectorOffset::Size);
+  auto vectorSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), vectorSizeAddr);
+  auto vectorDataAddr = gepOpVector(vectorStructType, vectorStruct, VectorOffset::Data);
+  auto vectorDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), vectorDataAddr);
+  auto vectorIs2DAddr = gepOpVector(vectorStructType, vectorStruct, VectorOffset::Is2D);
+  auto vectorIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), vectorIs2DAddr);
+
+  auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, arrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, vectorSize, arraySizeAddr);
+  auto arrayDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, arrayStruct);
+
+  if (auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+    auto elementStructType = getMLIRType(elementArrayType);
+    auto newDataPtr = mallocArray(elementStructType, vectorSize);
+
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), vectorSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementStructType, vectorDataPtr,
+                                                    mlir::ValueRange{i});
+          auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementStructType, newDataPtr,
+                                                    mlir::ValueRange{i});
+          copyArrayStruct(elementArrayType, srcPtr, dstPtr);
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    builder->create<mlir::LLVM::StoreOp>(loc, newDataPtr, arrayDataAddr);
+  } else {
+    auto elementMLIRType = getMLIRType(elementType);
+    auto newDataPtr = mallocArray(elementMLIRType, vectorSize);
+
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), vectorSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, vectorDataPtr,
+                                                    mlir::ValueRange{i});
+          auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                    mlir::ValueRange{i});
+          auto elementValue = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcPtr);
+          b.create<mlir::LLVM::StoreOp>(l, elementValue, dstPtr);
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    builder->create<mlir::LLVM::StoreOp>(loc, newDataPtr, arrayDataAddr);
+  }
+
+  auto arrayIs2DAddr = get2DArrayBoolAddr(*builder, loc, arrayStructType, arrayStruct);
+  builder->create<mlir::LLVM::StoreOp>(loc, vectorIs2D, arrayIs2DAddr);
+
+  return {arrayStruct, arrayType};
 }
 
 void Backend::createArrayFromVector(

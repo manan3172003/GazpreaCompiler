@@ -183,6 +183,11 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
     const auto sourceVector = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(source);
     return typesMatch(destVector->getType(), sourceVector->getType());
   }
+  if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "vector")) {
+    const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
+    const auto sourceVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(source);
+    return typesMatch(destArray->getType(), sourceVector->getType());
+  }
   if (isOfSymbolType(destination, "vector") && isOfSymbolType(source, "vector")) {
     const auto destVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(destination);
     const auto sourceVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(source);
