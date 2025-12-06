@@ -424,10 +424,22 @@ bool ValidationWalker::areBothNumeric(const std::shared_ptr<expressions::Express
       std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(right->getInferredSymbolType())) {
     if (auto leftVectorTy =
             std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(left->getInferredSymbolType())) {
+      // Check if right is an array (for vector ** array case)
+      if (auto rightArrayTy = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(
+              right->getInferredSymbolType())) {
+        return isVectorNumericType(left->getInferredSymbolType()) &&
+               isArrayNumericType(rightArrayTy->getType());
+      }
       return isVectorNumericType(left->getInferredSymbolType()) &&
              isNumericType(right->getInferredSymbolType());
     } else if (auto rightVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(
                    right->getInferredSymbolType())) {
+      // Check if left is an array (for array ** vector case)
+      if (auto leftArrayTy =
+              std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(left->getInferredSymbolType())) {
+        return isArrayNumericType(leftArrayTy->getType()) &&
+               isVectorNumericType(right->getInferredSymbolType());
+      }
       return isVectorNumericType(right->getInferredSymbolType()) &&
              isNumericType(left->getInferredSymbolType());
     }

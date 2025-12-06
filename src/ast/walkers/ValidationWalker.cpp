@@ -294,15 +294,15 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
       ctx->setInferredSymbolType(rightType);
     }
   }
-  // handle vectors for arithmetic operations
+  // handle vectors for arithmetic operations - result is always an array
   else if (is_arithmetic && isOfSymbolType(leftType, "vector") && typesMatch(leftType, rightType)) {
+    auto vectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(leftDataType);
+    std::shared_ptr<types::DataTypeAst> elementType;
+
     // Promote to real if either operand is real type
     if (isVectorRealType(leftType) || isVectorRealType(rightType)) {
-      auto vectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(leftDataType);
-
-      // Build vector type with real as base
       auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
-      std::shared_ptr<types::DataTypeAst> elementType = realDataType;
+      elementType = realDataType;
 
       // Check if the element type is an array (vector of arrays)
       if (vectorDataType && vectorDataType->getElementType()) {
@@ -327,25 +327,25 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
           }
         }
       }
-
-      auto resultVectorType = std::make_shared<types::VectorTypeAst>(ctx->token);
-      resultVectorType->setElementType(elementType);
-
-      ctx->setInferredDataType(resultVectorType);
-      ctx->setInferredSymbolType(resolvedInferredType(resultVectorType));
     } else {
-      ctx->setInferredDataType(leftDataType);
-      ctx->setInferredSymbolType(leftType);
+      // No real promotion needed - use original element type
+      elementType = vectorDataType ? vectorDataType->getElementType() : nullptr;
     }
+
+    // Return array type instead of vector type
+    auto resultArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+    resultArrayType->setType(elementType);
+    ctx->setInferredDataType(resultArrayType);
+    ctx->setInferredSymbolType(resolvedInferredType(resultArrayType));
   } else if (is_arithmetic && isOfSymbolType(rightType, "vector") &&
              typesMatch(rightType, leftType)) {
+    auto vectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(rightDataType);
+    std::shared_ptr<types::DataTypeAst> elementType;
+
     // Promote to real if either operand is real type
     if (isVectorRealType(leftType) || isVectorRealType(rightType)) {
-      auto vectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(rightDataType);
-
-      // Build vector type with real as base
       auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
-      std::shared_ptr<types::DataTypeAst> elementType = realDataType;
+      elementType = realDataType;
 
       // Check if the element type is an array (vector of arrays)
       if (vectorDataType && vectorDataType->getElementType()) {
@@ -370,18 +370,19 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
           }
         }
       }
-
-      auto resultVectorType = std::make_shared<types::VectorTypeAst>(ctx->token);
-      resultVectorType->setElementType(elementType);
-
-      ctx->setInferredDataType(resultVectorType);
-      ctx->setInferredSymbolType(resolvedInferredType(resultVectorType));
     } else {
-      ctx->setInferredDataType(rightDataType);
-      ctx->setInferredSymbolType(rightType);
+      // No real promotion needed - use original element type
+      elementType = vectorDataType ? vectorDataType->getElementType() : nullptr;
     }
+
+    // Return array type instead of vector type
+    auto resultArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+    resultArrayType->setType(elementType);
+    ctx->setInferredDataType(resultArrayType);
+    ctx->setInferredSymbolType(resolvedInferredType(resultArrayType));
   }
-  // Handle scalar + vector and vector + scalar for arithmetic operations
+  // Handle scalar + vector and vector + scalar for arithmetic operations - result is always an
+  // array
   else if (is_arithmetic && ((isScalar(leftType) && isOfSymbolType(rightType, "vector")) ||
                              (isOfSymbolType(leftType, "vector") && isScalar(rightType)))) {
     std::shared_ptr<symTable::VectorTypeSymbol> vectorTypeSym;
@@ -414,12 +415,14 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
       throw TypeError(ctx->getLineNumber(), "Scalar type incompatible with vector element type");
     }
 
+    std::shared_ptr<types::DataTypeAst> elementType;
+
     // Promote to real if either scalar or vector element is real
     if ((isOfSymbolType(scalarType, "integer") && isOfSymbolType(vectorElementType, "real")) ||
         (isOfSymbolType(scalarType, "real") && isOfSymbolType(vectorElementType, "integer")) ||
         (isOfSymbolType(scalarType, "real") && isOfSymbolType(vectorElementType, "real"))) {
       auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
-      std::shared_ptr<types::DataTypeAst> newVectorElementType = realDataType;
+      elementType = realDataType;
 
       // If vector element was an array, rebuild the array type with real base
       if (auto arrayElementType =
@@ -440,18 +443,18 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
           }
           resultType = newArrayType;
         }
-        newVectorElementType = resultType;
+        elementType = resultType;
       }
-
-      auto resultVectorTypeAst = std::make_shared<types::VectorTypeAst>(ctx->token);
-      resultVectorTypeAst->setElementType(newVectorElementType);
-      ctx->setInferredDataType(resultVectorTypeAst);
-      ctx->setInferredSymbolType(resolvedInferredType(resultVectorTypeAst));
     } else {
-      // No promotion needed, keep original vector type
-      ctx->setInferredDataType(isOfSymbolType(rightType, "vector") ? rightDataType : leftDataType);
-      ctx->setInferredSymbolType(vectorTypeSym);
+      // No promotion needed - use original element type
+      elementType = vectorElementDataType;
     }
+
+    // Return array type instead of vector type
+    auto resultArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+    resultArrayType->setType(elementType);
+    ctx->setInferredDataType(resultArrayType);
+    ctx->setInferredSymbolType(resolvedInferredType(resultArrayType));
   }
   // Handle scalar + array and array + scalar for arithmetic operations
   else if (is_arithmetic && ((isScalar(leftType) && isOfSymbolType(rightType, "array")) ||
