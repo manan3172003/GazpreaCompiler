@@ -1,29 +1,51 @@
 #include "backend/Backend.h"
 #include "symTable/ArrayTypeSymbol.h"
+#include "symTable/VectorTypeSymbol.h"
 
 namespace gazprea::backend {
 
 std::any
 Backend::visitArrayElementAssign(std::shared_ptr<ast::statements::ArrayElementAssignAst> ctx) {
   visit(ctx->getArrayInstance());
-  const auto leftMlirType = getMLIRType(ctx->getArrayInstance()->getAssignSymbolType());
+  const auto leftInstanceType = ctx->getArrayInstance()->getAssignSymbolType();
+  const auto leftMlirType = getMLIRType(leftInstanceType);
+  const bool isVector =
+      static_cast<bool>(std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftInstanceType));
 
   visit(ctx->getElementIndex());
   if (ctx->getElementIndex()->getNodeType() == ast::NodeType::SingularIndexExpr) {
     auto [indexType, indexAddr] = popElementFromStack(ctx->getElementIndex());
-    auto arraySizeAddr =
-        getArraySizeAddr(*builder, loc, leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr());
-    auto arraySize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arraySizeAddr);
-    auto indexValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(indexType), indexAddr);
-    auto normalizedIndex = normalizeIndex(indexValue, arraySize); // converted to 0-indexed form
-    auto dataAddr =
-        getArrayDataAddr(*builder, loc, leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr());
-    mlir::Value dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), dataAddr).getResult();
+    mlir::Value collectionSize;
+    mlir::Value dataPtr;
+    std::shared_ptr<symTable::Type> elementType;
+    mlir::Type elementMLIRType;
 
-    auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(
-        ctx->getArrayInstance()->getAssignSymbolType());
-    auto elementType = arrayTypeSym->getType();
-    mlir::Type elementMLIRType = getMLIRType(elementType);
+    if (isVector) {
+      auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftInstanceType);
+      auto sizeAddr = gepOpVector(leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr(),
+                                  VectorOffset::Size);
+      collectionSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sizeAddr);
+      auto dataAddr = gepOpVector(leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr(),
+                                  VectorOffset::Data);
+      dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), dataAddr).getResult();
+      elementType = vectorTypeSym->getType();
+      elementMLIRType = getMLIRType(elementType);
+    } else {
+      auto arraySizeAddr = getArraySizeAddr(*builder, loc, leftMlirType,
+                                            ctx->getArrayInstance()->getEvaluatedAddr());
+      collectionSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arraySizeAddr);
+      auto dataAddr = getArrayDataAddr(*builder, loc, leftMlirType,
+                                       ctx->getArrayInstance()->getEvaluatedAddr());
+      dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), dataAddr).getResult();
+
+      auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(leftInstanceType);
+      elementType = arrayTypeSym->getType();
+      elementMLIRType = getMLIRType(elementType);
+    }
+
+    auto indexValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(indexType), indexAddr);
+    auto normalizedIndex =
+        normalizeIndex(indexValue, collectionSize); // converted to 0-indexed form
 
     // elementPtr = &dataPtr[normalizedIndex]
     auto elementPtrOp = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), elementMLIRType, dataPtr,
@@ -53,24 +75,37 @@ Backend::visitArrayElementAssign(std::shared_ptr<ast::statements::ArrayElementAs
         builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftIndexType), leftIndexAddr)
             .getResult();
 
-    auto dataAddr =
-        getArrayDataAddr(*builder, loc, leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr());
-    mlir::Value dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), dataAddr).getResult();
+    mlir::Value dataAddr;
+    mlir::Value dataPtr;
+    mlir::Value collectionSize;
+    if (isVector) {
+      dataAddr = gepOpVector(leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr(),
+                             VectorOffset::Data);
+      dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), dataAddr).getResult();
 
-    auto arraySizeAddr =
-        getArraySizeAddr(*builder, loc, leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr());
-    mlir::Value arraySize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arraySizeAddr);
+      auto vectorSizeAddr = gepOpVector(leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr(),
+                                        VectorOffset::Size);
+      collectionSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), vectorSizeAddr);
+    } else {
+      dataAddr = getArrayDataAddr(*builder, loc, leftMlirType,
+                                  ctx->getArrayInstance()->getEvaluatedAddr());
+      dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), dataAddr).getResult();
 
-    mlir::Value normLeft = normalizeIndex(leftVal, arraySize);
+      auto arraySizeAddr = getArraySizeAddr(*builder, loc, leftMlirType,
+                                            ctx->getArrayInstance()->getEvaluatedAddr());
+      collectionSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arraySizeAddr);
+    }
+
+    mlir::Value normLeft = normalizeIndex(leftVal, collectionSize);
 
     mlir::Value normRight;
     if (hasRight) {
       auto rightVal =
           builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(rightIndexType), rightIndexAddr)
               .getResult();
-      normRight = normalizeIndex(rightVal, arraySize);
+      normRight = normalizeIndex(rightVal, collectionSize);
     } else {
-      normRight = arraySize;
+      normRight = collectionSize;
     }
 
     auto sliceSizeOp = builder->create<mlir::LLVM::SubOp>(loc, intTy(), normRight, normLeft);
@@ -94,40 +129,72 @@ Backend::visitArrayElementAssign(std::shared_ptr<ast::statements::ArrayElementAs
           b.create<mlir::scf::YieldOp>(l);
         });
 
-    // Now create the slice array struct (an alloca for the array struct so we can return its
+    // Now create the slice array/vector struct (an alloca for the struct so we can return its
     // address).
-    auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(
-        ctx->getArrayInstance()->getAssignSymbolType());
-    auto elementType = arrayTypeSym->getType();
-    mlir::Type elementMLIRType = getMLIRType(elementType);
+    std::shared_ptr<symTable::Type> elementType;
+    mlir::Type elementMLIRType;
 
-    auto sliceStructAlloca =
-        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), leftMlirType, constOne());
+    if (isVector) {
+      auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftInstanceType);
+      elementType = vectorTypeSym->getType();
+      elementMLIRType = getMLIRType(elementType);
 
-    // Pointers to fields inside the new struct
-    auto sliceDataAddr = getArrayDataAddr(*builder, loc, leftMlirType, sliceStructAlloca);
-    auto sliceSizeAddr = getArraySizeAddr(*builder, loc, leftMlirType, sliceStructAlloca);
-    auto sliceIs2DAddr = get2DArrayBoolAddr(*builder, loc, leftMlirType, sliceStructAlloca);
+      auto sliceStructAlloca =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), leftMlirType, constOne());
 
-    // LValue semantics: point into original data (no copy).
-    // compute srcStart = &dataPtr[normLeft]
-    auto srcStartOp = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), elementMLIRType, dataPtr,
-                                                         mlir::ValueRange{normLeft});
-    mlir::Value srcStart = srcStartOp.getResult();
+      auto sliceDataAddr = gepOpVector(leftMlirType, sliceStructAlloca, VectorOffset::Data);
+      auto sliceSizeAddr = gepOpVector(leftMlirType, sliceStructAlloca, VectorOffset::Size);
+      auto sliceCapacityAddr = gepOpVector(leftMlirType, sliceStructAlloca, VectorOffset::Capacity);
+      auto sliceIs2DAddr = gepOpVector(leftMlirType, sliceStructAlloca, VectorOffset::Is2D);
 
-    // store srcStart into slice struct data field
-    builder->create<mlir::LLVM::StoreOp>(loc, srcStart, sliceDataAddr);
-    // store slice size
-    builder->create<mlir::LLVM::StoreOp>(loc, sliceSize, sliceSizeAddr);
+      auto srcStartOp = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), elementMLIRType, dataPtr,
+                                                           mlir::ValueRange{normLeft});
+      mlir::Value srcStart = srcStartOp.getResult();
 
-    // copy is2D flag from original array
-    auto origIs2DAddr = get2DArrayBoolAddr(*builder, loc, leftMlirType,
-                                           ctx->getArrayInstance()->getEvaluatedAddr());
-    mlir::Value origIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), origIs2DAddr);
-    builder->create<mlir::LLVM::StoreOp>(loc, origIs2D, sliceIs2DAddr);
+      builder->create<mlir::LLVM::StoreOp>(loc, srcStart, sliceDataAddr);
+      builder->create<mlir::LLVM::StoreOp>(loc, sliceSize, sliceSizeAddr);
+      builder->create<mlir::LLVM::StoreOp>(loc, sliceSize, sliceCapacityAddr);
 
-    // push the address of this slice struct as the evaluated result
-    ctx->setEvaluatedAddr(sliceStructAlloca);
+      auto origIs2DAddr = gepOpVector(leftMlirType, ctx->getArrayInstance()->getEvaluatedAddr(),
+                                      VectorOffset::Is2D);
+      mlir::Value origIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), origIs2DAddr);
+      builder->create<mlir::LLVM::StoreOp>(loc, origIs2D, sliceIs2DAddr);
+
+      ctx->setEvaluatedAddr(sliceStructAlloca);
+    } else {
+      auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(
+          ctx->getArrayInstance()->getAssignSymbolType());
+      elementType = arrayTypeSym->getType();
+      elementMLIRType = getMLIRType(elementType);
+
+      auto sliceStructAlloca =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), leftMlirType, constOne());
+
+      // Pointers to fields inside the new struct
+      auto sliceDataAddr = getArrayDataAddr(*builder, loc, leftMlirType, sliceStructAlloca);
+      auto sliceSizeAddr = getArraySizeAddr(*builder, loc, leftMlirType, sliceStructAlloca);
+      auto sliceIs2DAddr = get2DArrayBoolAddr(*builder, loc, leftMlirType, sliceStructAlloca);
+
+      // LValue semantics: point into original data (no copy).
+      // compute srcStart = &dataPtr[normLeft]
+      auto srcStartOp = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), elementMLIRType, dataPtr,
+                                                           mlir::ValueRange{normLeft});
+      mlir::Value srcStart = srcStartOp.getResult();
+
+      // store srcStart into slice struct data field
+      builder->create<mlir::LLVM::StoreOp>(loc, srcStart, sliceDataAddr);
+      // store slice size
+      builder->create<mlir::LLVM::StoreOp>(loc, sliceSize, sliceSizeAddr);
+
+      // copy is2D flag from original array
+      auto origIs2DAddr = get2DArrayBoolAddr(*builder, loc, leftMlirType,
+                                             ctx->getArrayInstance()->getEvaluatedAddr());
+      mlir::Value origIs2D = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), origIs2DAddr);
+      builder->create<mlir::LLVM::StoreOp>(loc, origIs2D, sliceIs2DAddr);
+
+      // push the address of this slice struct as the evaluated result
+      ctx->setEvaluatedAddr(sliceStructAlloca);
+    }
   }
 
   return {};

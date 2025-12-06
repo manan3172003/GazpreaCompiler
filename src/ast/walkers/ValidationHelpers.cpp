@@ -92,14 +92,23 @@ void ValidationWalker::validateArrayElementAssignmentTypes(
     std::shared_ptr<symTable::Type> exprTypeSymbol) {
   const auto lValAst = ctx->getArrayInstance();
   const auto lValSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(lValAst->getSymbol());
-
   if (lValSymbol->getQualifier() == Qualifier::Const)
     throw AssignError(ctx->getLineNumber(), "Cannot re-assign a constant value");
 
   const auto arrayType =
       std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lValAst->getAssignSymbolType());
+  const auto vectorType =
+      std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(lValAst->getAssignSymbolType());
+  if (!arrayType && !vectorType)
+    throw TypeError(ctx->getLineNumber(), "Cannot slice or index non array type");
 
-  const auto arraySubType = arrayType->getType();
+  // Allow numeric interop between integer and real for element assignments
+  const bool lhsNumeric = isOfSymbolType(ctx->getAssignSymbolType(), "integer") ||
+                          isOfSymbolType(ctx->getAssignSymbolType(), "real");
+  const bool rhsNumeric =
+      isOfSymbolType(exprTypeSymbol, "integer") || isOfSymbolType(exprTypeSymbol, "real");
+  if (lhsNumeric && rhsNumeric)
+    return;
 
   if (not typesMatch(ctx->getAssignSymbolType(), exprTypeSymbol))
     throw TypeError(ctx->getLineNumber(), "Type mismatch");

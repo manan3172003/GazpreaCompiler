@@ -76,28 +76,77 @@ std::any Backend::visitAssignment(std::shared_ptr<ast::statements::AssignmentAst
     } else if (arrayElementAssign->getElementIndex()->getNodeType() ==
                ast::NodeType::RangedIndexExpr) {
       auto sliceStructPtr = arrayElementAssign->getEvaluatedAddr();
-      auto sliceMlirType =
-          getMLIRType(arrayElementAssign->getArrayInstance()->getAssignSymbolType());
-      auto sliceSizeAddr = getArraySizeAddr(*builder, loc, sliceMlirType, sliceStructPtr);
-      auto sliceDataAddr = getArrayDataAddr(*builder, loc, sliceMlirType, sliceStructPtr);
-
-      mlir::Value sliceSize =
-          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sliceSizeAddr).getResult();
-      mlir::Value sliceDataPtr =
-          builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), sliceDataAddr).getResult();
-
-      auto rhsArrayMlirType = getMLIRType(type);
-      auto newAddr =
-          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), rhsArrayMlirType, constOne());
-      copyValue(type, valueAddr, newAddr);
-
       auto lhsDeclaredType = arrayElementAssign->getArrayInstance()->getAssignSymbolType();
-      auto [finalAddr, needToFree] =
-          castStructIfNeeded(sliceStructPtr, lhsDeclaredType, newAddr, type);
-      auto lhsArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lhsDeclaredType);
-      auto elementType = lhsArrayType->getType();
-      copyArrayElementsToSlice(finalAddr, lhsArrayType, sliceDataPtr, elementType, sliceSize);
-      freeArray(arrayElementAssign->getArrayInstance()->getAssignSymbolType(), finalAddr);
+      auto sliceMlirType = getMLIRType(lhsDeclaredType);
+
+      if (auto lhsVectorType =
+              std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(lhsDeclaredType)) {
+        auto sliceSizeAddr = gepOpVector(sliceMlirType, sliceStructPtr, VectorOffset::Size);
+        auto sliceDataAddr = gepOpVector(sliceMlirType, sliceStructPtr, VectorOffset::Data);
+
+        mlir::Value sliceSize =
+            builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sliceSizeAddr).getResult();
+        mlir::Value sliceDataPtr =
+            builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), sliceDataAddr).getResult();
+
+        auto rhsVectorMlirType = getMLIRType(type);
+        auto newAddr =
+            builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), rhsVectorMlirType, constOne());
+        copyValue(type, valueAddr, newAddr);
+
+        auto rhsSizeAddr = gepOpVector(rhsVectorMlirType, newAddr, VectorOffset::Size);
+        auto rhsSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), rhsSizeAddr);
+        auto sizeMismatch = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne,
+                                                                rhsSize, sliceSize);
+        auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowVectorSizeErrorName);
+        builder->create<mlir::scf::IfOp>(
+            loc, sizeMismatch.getResult(),
+            [&](mlir::OpBuilder &b, mlir::Location l) {
+              b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+              b.create<mlir::scf::YieldOp>(l);
+            },
+            [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
+
+        auto rhsDataAddr = gepOpVector(rhsVectorMlirType, newAddr, VectorOffset::Data);
+        auto rhsDataPtr =
+            builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), rhsDataAddr).getResult();
+
+        auto elementType = lhsVectorType->getType();
+        auto elementMlirType = getMLIRType(elementType);
+
+        builder->create<mlir::scf::ForOp>(
+            loc, constZero(), sliceSize, constOne(), mlir::ValueRange{},
+            [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+              auto srcElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMlirType, rhsDataPtr,
+                                                            mlir::ValueRange{i});
+              auto destElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMlirType,
+                                                             sliceDataPtr, mlir::ValueRange{i});
+              copyValue(elementType, srcElemPtr, destElemPtr);
+              b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+            });
+
+        freeVector(lhsVectorType, newAddr);
+      } else {
+        auto sliceSizeAddr = getArraySizeAddr(*builder, loc, sliceMlirType, sliceStructPtr);
+        auto sliceDataAddr = getArrayDataAddr(*builder, loc, sliceMlirType, sliceStructPtr);
+
+        mlir::Value sliceSize =
+            builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sliceSizeAddr).getResult();
+        mlir::Value sliceDataPtr =
+            builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), sliceDataAddr).getResult();
+
+        auto rhsArrayMlirType = getMLIRType(type);
+        auto newAddr =
+            builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), rhsArrayMlirType, constOne());
+        copyValue(type, valueAddr, newAddr);
+
+        auto [finalAddr, needToFree] =
+            castStructIfNeeded(sliceStructPtr, lhsDeclaredType, newAddr, type);
+        auto lhsArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lhsDeclaredType);
+        auto elementType = lhsArrayType->getType();
+        copyArrayElementsToSlice(finalAddr, lhsArrayType, sliceDataPtr, elementType, sliceSize);
+        freeArray(arrayElementAssign->getArrayInstance()->getAssignSymbolType(), finalAddr);
+      }
     }
   } else if (const auto identifierLeft =
                  std::dynamic_pointer_cast<ast::statements::IdentifierLeftAst>(ctx->getLVal())) {

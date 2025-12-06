@@ -1301,13 +1301,19 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
     freeAllocatedMemory(rightType, rightAddr);
     return newAddr;
   } else { // other primitive types
+    if (leftType->getName() == "real" || rightType->getName() == "real") {
+      auto realType = leftType->getName() == "real" ? leftType : rightType;
+      if (leftType->getName() != "real") {
+        leftAddr = castIfNeeded(ctx, leftAddr, leftType, realType);
+      }
+      if (rightType->getName() != "real") {
+        rightAddr = castIfNeeded(ctx, rightAddr, rightType, realType);
+      }
+      return floatBinaryOperandToValue(op, opType, realType, realType, leftAddr, rightAddr);
+    }
+
     leftAddr = castIfNeeded(ctx, leftAddr, leftType, rightType);
     rightAddr = castIfNeeded(ctx, rightAddr, rightType, leftType);
-
-    bool isFloatType = (leftType->getName() == "real" || rightType->getName() == "real");
-    if (isFloatType) {
-      return floatBinaryOperandToValue(op, opType, leftType, rightType, leftAddr, rightAddr);
-    }
 
     auto newAddr =
         builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(opType), constOne());
@@ -1951,6 +1957,11 @@ mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value val
     auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getI32Type(), valueAddr);
     auto castedValue = builder->create<mlir::LLVM::SIToFPOp>(
         loc, mlir::Float32Type::get(builder->getContext()), value);
+    builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
+  } else if (fromType->getName() == "real" && toType->getName() == "integer") {
+    auto value = builder->create<mlir::LLVM::LoadOp>(
+        loc, mlir::Float32Type::get(builder->getContext()), valueAddr);
+    auto castedValue = builder->create<mlir::LLVM::FPToSIOp>(loc, builder->getI32Type(), value);
     builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
   } else if (isTypeArray(fromType) && isTypeArray(toType)) {
     auto fromArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(fromType);

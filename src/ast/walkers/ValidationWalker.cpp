@@ -1610,17 +1610,35 @@ ValidationWalker::visitArrayElementAssign(std::shared_ptr<statements::ArrayEleme
 
   const auto arraySymbolType =
       std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayInstance->getAssignSymbolType());
-  if (not arraySymbolType)
-    throw TypeError(ctx->getLineNumber(), "Cannot slice or index non array type");
-  const auto arrayDataType =
-      std::dynamic_pointer_cast<types::ArrayTypeAst>(arrayInstance->getAssignDataType());
+  const auto vectorSymbolType =
+      std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(arrayInstance->getAssignSymbolType());
 
-  if (elementIndex->getNodeType() == NodeType::SingularIndexExpr) {
-    ctx->setAssignSymbolType(arraySymbolType->getType());
-    ctx->setAssignDataType(arrayDataType->getType());
-  } else if (elementIndex->getNodeType() == NodeType::RangedIndexExpr) {
-    ctx->setAssignSymbolType(arraySymbolType);
-    ctx->setAssignDataType(arrayDataType);
+  if (!arraySymbolType && !vectorSymbolType)
+    throw TypeError(ctx->getLineNumber(), "Cannot slice or index non array type");
+
+  if (arraySymbolType) {
+    const auto arrayDataType =
+        std::dynamic_pointer_cast<types::ArrayTypeAst>(arrayInstance->getAssignDataType());
+
+    if (elementIndex->getNodeType() == NodeType::SingularIndexExpr) {
+      ctx->setAssignSymbolType(arraySymbolType->getType());
+      ctx->setAssignDataType(arrayDataType->getType());
+    } else if (elementIndex->getNodeType() == NodeType::RangedIndexExpr) {
+      ctx->setAssignSymbolType(arraySymbolType);
+      ctx->setAssignDataType(arrayDataType);
+    }
+  } else {
+    const auto vectorDataType =
+        std::dynamic_pointer_cast<types::VectorTypeAst>(arrayInstance->getAssignDataType());
+
+    if (elementIndex->getNodeType() == NodeType::SingularIndexExpr) {
+      ctx->setAssignSymbolType(vectorSymbolType->getType());
+      if (vectorDataType)
+        ctx->setAssignDataType(vectorDataType->getElementType());
+    } else if (elementIndex->getNodeType() == NodeType::RangedIndexExpr) {
+      ctx->setAssignSymbolType(vectorSymbolType);
+      ctx->setAssignDataType(vectorDataType);
+    }
   }
   return {};
 }

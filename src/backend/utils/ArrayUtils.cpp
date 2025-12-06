@@ -815,6 +815,8 @@ void Backend::arraySizeValidation(std::shared_ptr<ast::Ast> ctx,
   if (variableSymbol && isTypeArray(type)) {
     auto arrayType =
         std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType());
+    if (!arrayType)
+      return;
     if (arrayType->getSizes().empty()) {
       auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
       builder->create<mlir::LLVM::CallOp>(loc, throwFunc, mlir::ValueRange{});
