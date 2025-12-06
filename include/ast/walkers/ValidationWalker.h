@@ -1,5 +1,6 @@
 #pragma once
 #include "AstWalker.h"
+#include "ast/expressions/UnaryAst.h"
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/SymTable.h"
 #include "symTable/TupleTypeSymbol.h"
@@ -128,6 +129,8 @@ public:
                              const std::shared_ptr<expressions::ExpressionAst> &right);
   static bool isArrayNumericType(const std::shared_ptr<symTable::Type> &type);
   static bool isVectorNumericType(const std::shared_ptr<symTable::Type> &type);
+  static bool supportsUnaryOp(const std::shared_ptr<symTable::Type> &type,
+                              expressions::UnaryOpType opType);
   void validateArgs(const std::vector<std::shared_ptr<Ast>> &params,
                     const std::vector<std::shared_ptr<expressions::ArgAst>> &args,
                     symTable::ScopeType scopeType, int lineNumber);

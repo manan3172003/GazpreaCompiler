@@ -27,6 +27,7 @@
 #include "mlir/IR/Verifier.h"
 
 // Dialects
+#include "ast/expressions/UnaryAst.h"
 #include "ast/walkers/AstWalker.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
@@ -168,6 +169,13 @@ protected:
   void makeReverseBuiltin();
   void printChar(char c);
   void printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::Type> arrayType);
+  mlir::Value applyUnaryToScalar(ast::expressions::UnaryOpType op,
+                                 std::shared_ptr<symTable::Type> type, mlir::OpBuilder &b,
+                                 mlir::Location l, mlir::Value value);
+  void applyUnaryToArray(ast::expressions::UnaryOpType op, mlir::Value arrayStruct,
+                         std::shared_ptr<symTable::Type> arrayType);
+  void applyUnaryToVector(ast::expressions::UnaryOpType op, mlir::Value vectorStruct,
+                          std::shared_ptr<symTable::Type> vectorType);
 
   void arraySizeValidationForArrayStructs(mlir::Value lhsArrayStruct,
                                           std::shared_ptr<symTable::Type> lhsType,

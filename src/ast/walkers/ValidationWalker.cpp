@@ -1542,12 +1542,12 @@ std::any ValidationWalker::visitUnary(std::shared_ptr<expressions::UnaryAst> ctx
   auto exprType = ctx->getExpression()->getInferredSymbolType();
   auto opType = ctx->getUnaryOpType();
   if (opType == expressions::UnaryOpType::NOT) {
-    if (!isOfSymbolType(exprType, "boolean")) {
+    if (!supportsUnaryOp(exprType, opType)) {
       throw TypeError(ctx->getLineNumber(), "not operator can only be applied to boolean type");
     }
   } else if (opType == expressions::UnaryOpType::MINUS ||
              opType == expressions::UnaryOpType::PLUS) {
-    if (!isOfSymbolType(exprType, "integer") && !isOfSymbolType(exprType, "real")) {
+    if (!supportsUnaryOp(exprType, opType)) {
       throw TypeError(ctx->getLineNumber(),
                       "Unary +/- can only be applied to numeric types (integer or real)");
     }

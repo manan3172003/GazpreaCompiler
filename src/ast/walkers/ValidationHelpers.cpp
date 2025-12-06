@@ -1,6 +1,7 @@
 #include "CompileTimeExceptions.h"
 #include "ast/expressions/ArrayAccessAst.h"
 #include "ast/expressions/ArrayLiteralAst.h"
+#include "ast/expressions/UnaryAst.h"
 #include "ast/types/AliasTypeAst.h"
 #include "ast/types/ArrayTypeAst.h"
 #include "ast/types/BooleanTypeAst.h"
@@ -477,6 +478,30 @@ bool ValidationWalker::isVectorNumericType(const std::shared_ptr<symTable::Type>
     else
       return isNumericType(elementType);
   }
+  return false;
+}
+
+bool ValidationWalker::supportsUnaryOp(const std::shared_ptr<symTable::Type> &type,
+                                       expressions::UnaryOpType opType) {
+  if (!type)
+    return false;
+
+  if (auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)) {
+    return supportsUnaryOp(arrayType->getType(), opType);
+  }
+
+  if (auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type)) {
+    return supportsUnaryOp(vectorType->getType(), opType);
+  }
+
+  if (opType == expressions::UnaryOpType::NOT) {
+    return isOfSymbolType(type, "boolean");
+  }
+
+  if (opType == expressions::UnaryOpType::MINUS || opType == expressions::UnaryOpType::PLUS) {
+    return isOfSymbolType(type, "integer") || isOfSymbolType(type, "real");
+  }
+
   return false;
 }
 

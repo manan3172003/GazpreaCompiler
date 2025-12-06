@@ -1,4 +1,5 @@
 #include "CompileTimeExceptions.h"
+#include "ast/expressions/UnaryAst.h"
 #include "ast/walkers/DefRefWalker.h"
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/StructTypeSymbol.h"
@@ -33,6 +34,106 @@ void Backend::printArray(mlir::Value arrayStructAddr, std::shared_ptr<symTable::
   auto elementTypeConst = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), elementTypeCode);
   mlir::ValueRange args = {arrayStructAddr, elementTypeConst};
   builder->create<mlir::LLVM::CallOp>(loc, printArrayFunc, args);
+}
+
+mlir::Value Backend::applyUnaryToScalar(ast::expressions::UnaryOpType op,
+                                        std::shared_ptr<symTable::Type> type, mlir::OpBuilder &b,
+                                        mlir::Location l, mlir::Value value) {
+  switch (op) {
+  case ast::expressions::UnaryOpType::MINUS: {
+    if (type->getName() == "real") {
+      return b.create<mlir::LLVM::FNegOp>(l, value);
+    }
+    auto negConst = b.create<mlir::LLVM::ConstantOp>(l, intTy(), -1);
+    return b.create<mlir::LLVM::MulOp>(l, value, negConst);
+  }
+  case ast::expressions::UnaryOpType::NOT:
+    return b.create<mlir::LLVM::XOrOp>(l, value, b.create<mlir::LLVM::ConstantOp>(l, boolTy(), 1));
+  case ast::expressions::UnaryOpType::PLUS:
+    return value;
+  }
+  return value;
+}
+
+void Backend::applyUnaryToArray(ast::expressions::UnaryOpType op, mlir::Value arrayStruct,
+                                std::shared_ptr<symTable::Type> arrayType) {
+  auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayType);
+  if (!arrayTypeSym) {
+    return;
+  }
+
+  auto elementType = arrayTypeSym->getType();
+  auto arrayStructType = getMLIRType(arrayType);
+
+  auto sizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, arrayStruct);
+  mlir::Value size = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), sizeAddr);
+
+  auto dataAddr = getArrayDataAddr(*builder, loc, arrayStructType, arrayStruct);
+  mlir::Value dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), dataAddr);
+
+  auto elementMLIRType = getMLIRType(elementType);
+
+  builder->create<mlir::scf::ForOp>(
+      loc, constZero(), size, constOne(), mlir::ValueRange{},
+      [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+        auto elementPtr =
+            b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, dataPtr, mlir::ValueRange{i});
+        if (std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+          auto savedInsertionPoint = builder->saveInsertionPoint();
+          auto savedLoc = loc;
+          builder->setInsertionPoint(b.getInsertionBlock(), b.getInsertionPoint());
+          loc = l;
+          applyUnaryToArray(op, elementPtr, elementType);
+          loc = savedLoc;
+          builder->restoreInsertionPoint(savedInsertionPoint);
+        } else {
+          auto elementValue = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, elementPtr);
+          auto newValue = applyUnaryToScalar(op, elementType, b, l, elementValue);
+          b.create<mlir::LLVM::StoreOp>(l, newValue, elementPtr);
+        }
+        b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+      });
+}
+
+void Backend::applyUnaryToVector(ast::expressions::UnaryOpType op, mlir::Value vectorStruct,
+                                 std::shared_ptr<symTable::Type> vectorType) {
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(vectorType);
+  if (!vectorTypeSym) {
+    return;
+  }
+
+  auto elementType = vectorTypeSym->getType();
+  auto vectorStructType = getMLIRType(vectorType);
+
+  auto vectorSizeAddr = gepOpVector(vectorStructType, vectorStruct, VectorOffset::Size);
+  mlir::Value vectorSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), vectorSizeAddr);
+
+  auto vectorDataAddr = gepOpVector(vectorStructType, vectorStruct, VectorOffset::Data);
+  mlir::Value dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), vectorDataAddr);
+
+  auto elementMLIRType = getMLIRType(elementType);
+
+  builder->create<mlir::scf::ForOp>(
+      loc, constZero(), vectorSize, constOne(), mlir::ValueRange{},
+      [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+        auto elementPtr =
+            b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, dataPtr, mlir::ValueRange{i});
+
+        if (std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+          auto savedInsertionPoint = builder->saveInsertionPoint();
+          auto savedLoc = loc;
+          builder->setInsertionPoint(b.getInsertionBlock(), b.getInsertionPoint());
+          loc = l;
+          applyUnaryToArray(op, elementPtr, elementType);
+          loc = savedLoc;
+          builder->restoreInsertionPoint(savedInsertionPoint);
+        } else {
+          auto elementValue = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, elementPtr);
+          auto newValue = applyUnaryToScalar(op, elementType, b, l, elementValue);
+          b.create<mlir::LLVM::StoreOp>(l, newValue, elementPtr);
+        }
+        b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+      });
 }
 
 void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
