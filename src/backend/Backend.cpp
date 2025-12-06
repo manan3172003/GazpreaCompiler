@@ -1718,6 +1718,37 @@ mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value val
   }
 
   if (needsScalarToArrayCast) {
+    auto toArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
+    if (toArrayType && !toArrayType->getSizes().empty()) {
+      mlir::Value outerTargetSize =
+          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[0]);
+      mlir::Value zero = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
+      auto isSizeZero = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq,
+                                                            outerTargetSize, zero);
+
+      builder->create<mlir::scf::IfOp>(
+          loc, isSizeZero.getResult(), [&](mlir::OpBuilder &b, mlir::Location l) {
+            auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+                "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+            b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+            b.create<mlir::scf::YieldOp>(l);
+          });
+    }
+    if (toArrayType && (toArrayType->getSizes().size() > 1)) {
+      mlir::Value innerTargetSize =
+          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[1]);
+      mlir::Value zero = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
+      auto isSizeZero = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq,
+                                                            innerTargetSize, zero);
+
+      builder->create<mlir::scf::IfOp>(
+          loc, isSizeZero.getResult(), [&](mlir::OpBuilder &b, mlir::Location l) {
+            auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+                "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+            b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+            b.create<mlir::scf::YieldOp>(l);
+          });
+    }
     // Load the scalar value and create a new array
     auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(fromType), valueAddr);
     return castScalarToArray(ctx, scalarValue, fromType, toType);
