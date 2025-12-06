@@ -968,7 +968,13 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       throwIfNotEqualArrayStructs(leftAddr, rightAddr, combinedType);
     }
     if (op == ast::expressions::BinaryOpType::DPIPE) {
-      auto result = concatArrays(combinedType, leftAddr, rightAddr);
+      // Prefer a resolved array type when one operand is an empty array.
+      auto concatType =
+          isEmptyArray(combinedType)
+              ? (isEmptyArray(leftType) ? rightType
+                                        : leftType) // pick the non-empty operand's type if any
+              : combinedType;
+      auto result = concatArrays(concatType, leftAddr, rightAddr);
       freeAllocatedMemory(leftType, leftAddr);
       freeAllocatedMemory(rightType, rightAddr);
       return result;

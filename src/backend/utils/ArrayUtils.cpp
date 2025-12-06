@@ -1260,6 +1260,10 @@ void Backend::cloneArrayStructure(std::shared_ptr<symTable::Type> type,
 mlir::Value Backend::copyArray(std::shared_ptr<symTable::Type> elementType, mlir::Value srcDataPtr,
                                mlir::Value size) {
   auto elementMLIRType = getMLIRType(elementType);
+  if (!elementMLIRType) {
+    // Element type is unresolved (e.g., empty array); nothing to copy, return null
+    return builder->create<mlir::LLVM::ZeroOp>(loc, ptrTy());
+  }
 
   mlir::Value destDataPtr = mallocArray(elementMLIRType, size);
 
@@ -1317,7 +1321,14 @@ void Backend::copyArrayStruct(std::shared_ptr<symTable::Type> type, mlir::Value 
   auto srcDataFieldPtr = getArrayDataAddr(*builder, loc, arrayStructType, fromArrayStruct);
   mlir::Value srcDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataFieldPtr);
 
-  mlir::Value destDataPtr = copyArray(elementType, srcDataPtr, srcSize);
+  mlir::Value destDataPtr = srcDataPtr;
+  // Empty arrays may not have a resolved element type; in that case just copy the
+  // struct fields without trying to duplicate element storage.
+  if (elementType && getMLIRType(elementType)) {
+    destDataPtr = copyArray(elementType, srcDataPtr, srcSize);
+  } else {
+    destDataPtr = builder->create<mlir::LLVM::ZeroOp>(loc, ptrTy());
+  }
 
   auto destDataFieldPtr = getArrayDataAddr(*builder, loc, arrayStructType, destArrayStruct);
   builder->create<mlir::LLVM::StoreOp>(loc, destDataPtr, destDataFieldPtr);
@@ -1636,6 +1647,8 @@ mlir::Value Backend::concatArrays(std::shared_ptr<symTable::Type> type, mlir::Va
   auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type);
   auto elementType = arrayTypeSym->getType();
   auto elementMLIRType = getMLIRType(elementType);
+  // element type may be unresolved for empty arrays
+  bool elementTypeResolved = elementType && elementMLIRType;
   auto arrayStructType = getMLIRType(type);
 
   // Get sizes
@@ -1655,7 +1668,8 @@ mlir::Value Backend::concatArrays(std::shared_ptr<symTable::Type> type, mlir::Va
       builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructType, constOne());
 
   // Allocate memory for the concatenated data
-  mlir::Value newDataPtr = mallocArray(elementMLIRType, totalSize);
+  mlir::Value newDataPtr = elementTypeResolved ? mallocArray(elementMLIRType, totalSize)
+                                               : builder->create<mlir::LLVM::ZeroOp>(loc, ptrTy());
 
   // Get data pointers from source arrays
   auto leftDataAddr = getArrayDataAddr(*builder, loc, arrayStructType, leftArrayStruct);
@@ -1665,7 +1679,7 @@ mlir::Value Backend::concatArrays(std::shared_ptr<symTable::Type> type, mlir::Va
   mlir::Value rightDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), rightDataAddr);
 
   // Check if elements are arrays (for nested arrays)
-  if (auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+  if (elementTypeResolved && std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
     // For nested arrays, we need to copy each sub-array struct
 
     builder->create<mlir::scf::ForOp>(
@@ -1696,34 +1710,36 @@ mlir::Value Backend::concatArrays(std::shared_ptr<symTable::Type> type, mlir::Va
         });
   } else {
     // For scalar elements, simple load/store
-    builder->create<mlir::scf::ForOp>(
-        loc, constZero(), leftArraySize, constOne(), mlir::ValueRange{},
-        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
-          auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, leftDataPtr,
-                                                    mlir::ValueRange{i});
-          auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
-                                                    mlir::ValueRange{i});
+    if (elementTypeResolved) {
+      builder->create<mlir::scf::ForOp>(
+          loc, constZero(), leftArraySize, constOne(), mlir::ValueRange{},
+          [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+            auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, leftDataPtr,
+                                                      mlir::ValueRange{i});
+            auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                      mlir::ValueRange{i});
 
-          auto value = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcPtr);
-          b.create<mlir::LLVM::StoreOp>(l, value, dstPtr);
+            auto value = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcPtr);
+            b.create<mlir::LLVM::StoreOp>(l, value, dstPtr);
 
-          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
-        });
+            b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+          });
 
-    builder->create<mlir::scf::ForOp>(
-        loc, constZero(), rightArraySize, constOne(), mlir::ValueRange{},
-        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
-          auto offset = b.create<mlir::LLVM::AddOp>(l, leftArraySize, i);
-          auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, rightDataPtr,
-                                                    mlir::ValueRange{i});
-          auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
-                                                    mlir::ValueRange{offset});
+      builder->create<mlir::scf::ForOp>(
+          loc, constZero(), rightArraySize, constOne(), mlir::ValueRange{},
+          [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+            auto offset = b.create<mlir::LLVM::AddOp>(l, leftArraySize, i);
+            auto srcPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, rightDataPtr,
+                                                      mlir::ValueRange{i});
+            auto dstPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                      mlir::ValueRange{offset});
 
-          auto value = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcPtr);
-          b.create<mlir::LLVM::StoreOp>(l, value, dstPtr);
+            auto value = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcPtr);
+            b.create<mlir::LLVM::StoreOp>(l, value, dstPtr);
 
-          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
-        });
+            b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+          });
+    }
   }
 
   // Set the data pointer in the new array struct
