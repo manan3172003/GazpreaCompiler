@@ -445,6 +445,17 @@ mlir::Value Backend::castScalarToArray(std::shared_ptr<ast::Ast> ctx, mlir::Valu
   auto newArrayAddr =
       builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), arrayStructType, constOne());
 
+  // Ensure scalar matches the innermost array element type (e.g., int -> real).
+  auto targetElementType = arrayTypeSym ? arrayTypeSym->getType() : nullptr;
+  while (auto nestedArrayType =
+             std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(targetElementType)) {
+    targetElementType = nestedArrayType->getType();
+  }
+  if (targetElementType && scalarType && targetElementType->getName() != scalarType->getName()) {
+    scalarValue = promoteScalarValue(scalarValue, scalarType, targetElementType);
+    scalarType = targetElementType;
+  }
+
   if (arrayTypeSym->getSizes().empty()) {
     computeArraySizeIfArray(ctx, arrayType, newArrayAddr);
   }
