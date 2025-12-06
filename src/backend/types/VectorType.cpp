@@ -149,6 +149,7 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
     }
 
     auto arrayStructTy = getMLIRType(sourceType);
+    auto sourceArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(sourceType);
 
     // Load size from array struct using the correct array accessor
     auto arraySizeAddr = getArraySizeAddr(*builder, loc, arrayStructTy, sourceAddr);
@@ -175,6 +176,33 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
       auto inferredInnerSize = builder->create<mlir::LLVM::ConstantOp>(
           loc, intTy(), vectorType->inferredElementSize.front());
       ensureVectorElementCapacity(inferredInnerSize);
+    }
+    // Allocate memory for vector data
+    auto elementType = vectorType->getType();
+    auto elementMLIRType = getMLIRType(elementType);
+    auto newDataPtr = mallocArray(elementMLIRType, inferredSize);
+
+    auto srcDataAddr = getArrayDataAddr(*builder, loc, arrayStructTy, sourceAddr);
+    auto srcDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataAddr);
+
+    // Cast/Copy elements
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), inferredSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
+          auto srcElemPtr = b.create<mlir::LLVM::GEPOp>(
+              l, ptrTy(), getMLIRType(sourceArrayType->getType()), srcDataPtr, mlir::ValueRange{i});
+          auto dstElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
+                                                        mlir::ValueRange{i});
+          performExplicitCast(srcElemPtr, sourceArrayType->getType(), dstElemPtr, elementType);
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+
+    // Handle 2D flag
+    mlir::Value is2dValue;
+    if (isTypeArray(elementType)) {
+      is2dValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 1);
+    } else {
+      is2dValue = builder->create<mlir::LLVM::ConstantOp>(loc, boolTy(), 0);
     }
 
     auto clonedDataPtr = builder->create<mlir::LLVM::LoadOp>(
