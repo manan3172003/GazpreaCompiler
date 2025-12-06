@@ -1,6 +1,4 @@
 #include "CompileTimeExceptions.h"
-#include "ast/expressions/IntegerLiteralAst.h"
-#include "ast/expressions/UnaryAst.h"
 #include "ast/types/ArrayTypeAst.h"
 #include "ast/types/BooleanTypeAst.h"
 #include "ast/types/CharacterTypeAst.h"
