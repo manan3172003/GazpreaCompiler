@@ -42,9 +42,9 @@ Backend::Backend(const std::shared_ptr<ast::Ast> &ast)
   createGlobalString("%c\0", "charFormat");
   createGlobalString("%c", "charInputFormat");
   createGlobalString("%d\0", "intFormat");
-  createGlobalString("%d", "intInputFormat");
+  createGlobalString("%512d", "intInputFormat");
   createGlobalString("%g\0", "floatFormat");
-  createGlobalString("%f", "floatInputFormat");
+  createGlobalString("%512f", "floatInputFormat");
   createGlobalString(" %1[TF]", "boolInputFormat");
   createGlobalStreamState();
 }
