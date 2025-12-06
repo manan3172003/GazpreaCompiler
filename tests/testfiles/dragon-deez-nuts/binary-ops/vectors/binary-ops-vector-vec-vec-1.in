@@ -1,0 +1,19 @@
+// Vector + Vector: arithmetic, dot product, concatenation
+procedure main() returns integer {
+    vector<integer> a = [1, 2, 3];
+    vector<integer> b = [4, 5, 6];
+    integer[3] add_arr = a + b;
+    integer[3] sub_arr = b - a;
+    integer[3] mul_arr = a * b;
+    integer dot = a ** b;
+    integer[6] concat_arr = a || b;
+
+    add_arr -> std_output;
+    sub_arr -> std_output;
+    mul_arr -> std_output;
+    dot -> std_output;
+    concat_arr -> std_output;
+
+    return 0;
+}
+//CHECK:[5 7 9][3 3 3][4 10 18]32[1 2 3 4 5 6]

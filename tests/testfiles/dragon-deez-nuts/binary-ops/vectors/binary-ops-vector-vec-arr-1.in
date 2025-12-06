@@ -1,0 +1,17 @@
+// Vector + Array: arithmetic and dot product
+procedure main() returns integer {
+    vector<integer> v = [1, 2, 3, 4];
+    integer[4] a = [10, 20, 30, 40];
+    integer[4] add_arr = v + a;
+    integer[4] sub_arr = a - v;
+    integer[4] mul_arr = v * a;
+    integer dot = v ** a;
+
+    add_arr -> std_output;
+    sub_arr -> std_output;
+    mul_arr -> std_output;
+    dot -> std_output;
+
+    return 0;
+}
+//CHECK:[11 22 33 44][9 18 27 36][10 40 90 160]300

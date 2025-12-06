@@ -1,0 +1,22 @@
+// Vector + Scalar: arithmetic operations both directions
+procedure main() returns integer {
+    vector<integer> v = [1, 2, 3, 4, 5];
+    integer[5] add1 = v + 10;
+    integer[5] add2 = 10 + v;
+    integer[5] sub1 = v - 1;
+    integer[5] mul1 = v * 2;
+    integer[5] mul2 = 3 * v;
+    integer[5] div1 = v / 1;
+    integer[5] pow1 = v ^ 2;
+
+    add1 -> std_output;
+    add2 -> std_output;
+    sub1 -> std_output;
+    mul1 -> std_output;
+    mul2 -> std_output;
+    div1 -> std_output;
+    pow1 -> std_output;
+
+    return 0;
+}
+//CHECK:[11 12 13 14 15][11 12 13 14 15][0 1 2 3 4][2 4 6 8 10][3 6 9 12 15][1 2 3 4 5][1 4 9 16 25]
