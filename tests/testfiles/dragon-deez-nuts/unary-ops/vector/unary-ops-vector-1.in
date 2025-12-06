@@ -1,0 +1,7 @@
+procedure main() returns integer {
+    vector<boolean> v = [false, true, false];
+    vector<boolean> nv = not v;
+
+    return 0;
+}
+//CHECK:
