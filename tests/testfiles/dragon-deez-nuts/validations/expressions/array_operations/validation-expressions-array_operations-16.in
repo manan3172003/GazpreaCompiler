@@ -3,4 +3,4 @@ procedure main() returns integer {
     v -> std_output;
     return 0;
 }
-//CHECK:IndexError on Line 2
+//CHECK:SizeError on Line 2

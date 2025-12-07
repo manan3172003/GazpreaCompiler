@@ -125,6 +125,7 @@ public:
                               std::shared_ptr<types::DataTypeAst> promoteToDataType);
   static int nodeTypeToIndex(const std::string &typeName);
   static bool hasReturnInMethod(const std::shared_ptr<statements::BlockAst> &block);
+  static bool doesTypeInferSize(const std::shared_ptr<symTable::Type> &type);
   static bool isNumericType(const std::shared_ptr<symTable::Type> &type);
   static bool isComparisonOperator(expressions::BinaryOpType opType);
   static bool areBothNumeric(const std::shared_ptr<expressions::ExpressionAst> &left,
@@ -160,9 +161,14 @@ public:
                            const std::vector<std::shared_ptr<expressions::ArgAst>> &args);
   static void validateTupleAccessInferredTypes(std::shared_ptr<expressions::TupleAccessAst> ctx);
   static bool isLiteralExpression(const std::shared_ptr<expressions::ExpressionAst> &expr);
-  static void ensureArrayLiteralType(const std::shared_ptr<expressions::ExpressionAst> &expr,
-                                     const std::shared_ptr<symTable::Type> &targetType);
   static void inferVectorSize(const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
                               const std::shared_ptr<expressions::ExpressionAst> &expr);
+
+  // Helper to build array data type and symbol type with a new base type
+  static std::pair<std::shared_ptr<types::DataTypeAst>, std::shared_ptr<symTable::Type>>
+  buildArrayTypeWithBase(const std::shared_ptr<types::ArrayTypeAst> &originalArrayDataType,
+                         const std::shared_ptr<types::DataTypeAst> &newBaseDataType,
+                         const std::shared_ptr<symTable::Type> &newBaseSymbolType,
+                         antlr4::Token *token);
 };
 } // namespace gazprea::ast::walkers

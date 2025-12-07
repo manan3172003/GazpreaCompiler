@@ -139,82 +139,185 @@ void Backend::applyUnaryToVector(ast::expressions::UnaryOpType op, mlir::Value v
 
 void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
                                       std::shared_ptr<symTable::Type> type,
-                                      mlir::Value arrayStruct) {
+                                      mlir::Value compositeStructAddr) {
+  // We only compute declared sizes for things that have a variable symbol at the top level
+  // (declarations/params). This still holds when recursing into tuple elements.
   auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
-  if (isTypeArray(type) && variableSymbol) {
-    std::shared_ptr<ast::types::ArrayTypeAst> arrayDataType = nullptr;
-    std::shared_ptr<symTable::Type> sourceValueType = nullptr;
+  if (!variableSymbol) {
+    return;
+  }
 
-    if (auto DecAst = std::dynamic_pointer_cast<ast::statements::DeclarationAst>(ctx)) {
-      arrayDataType = std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(DecAst->getType());
-      if (DecAst->getExpr()) {
-        sourceValueType = DecAst->getExpr()->getInferredSymbolType();
-      }
-    }
-    if (auto ProcedureParamAst = std::dynamic_pointer_cast<ast::prototypes::ProcedureParamAst>(ctx))
-      arrayDataType =
-          std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(ProcedureParamAst->getParamType());
-    if (auto FunctionParamAst = std::dynamic_pointer_cast<ast::prototypes::FunctionParamAst>(ctx))
-      arrayDataType =
-          std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(FunctionParamAst->getParamType());
-    auto arrayType =
-        std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType());
+  auto constI32 = [&](int32_t v) -> mlir::Value {
+    return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(),
+                                                   builder->getI32IntegerAttr(v));
+  };
+
+  // -----------------------------
+  // Helper: compute sizes for one array symbol using optional ArrayTypeAst
+  // -----------------------------
+  auto computeForArraySymbol = [&](std::shared_ptr<symTable::ArrayTypeSymbol> arrayTypeSym,
+                                   std::shared_ptr<ast::types::ArrayTypeAst> arrayDataType,
+                                   std::shared_ptr<symTable::Type> sourceValueType,
+                                   mlir::Value arrayStructAddr) {
+    if (!arrayTypeSym)
+      return;
+
     size_t dimIndex = 0;
-    if (arrayType->getSizes().empty()) {
+
+    // If the symbol doesn't yet have sizes recorded, try to get them from the AST.
+    if (arrayTypeSym->getSizes().empty() && arrayDataType) {
       for (auto sizeExpr : arrayDataType->getSizes()) {
         visit(sizeExpr);
         auto [sizeType, sizeAddr] = popElementFromStack(sizeExpr);
+
         if (auto c = std::dynamic_pointer_cast<ast::expressions::CharLiteralAst>(sizeExpr)) {
           if (c->getValue() == '*') {
             if (sourceValueType && isTypeArray(sourceValueType)) {
               if (dimIndex == 0) {
                 auto currentArraySizeAddr =
-                    getArraySizeAddr(*builder, loc, getMLIRType(sourceValueType), arrayStruct);
+                    getArraySizeAddr(*builder, loc, getMLIRType(sourceValueType), arrayStructAddr);
                 auto newSizeAddr =
                     builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
                 auto curSize =
                     builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentArraySizeAddr);
                 builder->create<mlir::LLVM::StoreOp>(loc, curSize, newSizeAddr);
+
                 sizeAddr = newSizeAddr;
-                arrayType->addSize(sizeAddr);
+                arrayTypeSym->addSize(sizeAddr);
               } else if (dimIndex == 1) {
-                mlir::Value maxSubSize = maxSubArraySize(arrayStruct, sourceValueType);
+                mlir::Value maxSubSize = maxSubArraySize(arrayStructAddr, sourceValueType);
                 auto maxSubSizeAddr =
                     builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
                 builder->create<mlir::LLVM::StoreOp>(loc, maxSubSize, maxSubSizeAddr);
+
                 sizeAddr = maxSubSizeAddr;
-                arrayType->addSize(sizeAddr);
+                arrayTypeSym->addSize(sizeAddr);
               }
             }
           } else {
             throw SizeError(ctx->getLineNumber(), "Size needs to be an integer");
           }
         } else {
-          if (sizeType->getName() != "integer") {
+          if (!sizeType || sizeType->getName() != "integer") {
             throw SizeError(ctx->getLineNumber(), "Size needs to be an integer");
           }
-          arrayType->addSize(sizeAddr);
+          arrayTypeSym->addSize(sizeAddr);
         }
+
         dimIndex++;
       }
     }
-    if (arrayDataType->getSizes().empty()) {
-      auto currentArraySizeAddr = getArraySizeAddr(*builder, loc, getMLIRType(type), arrayStruct);
+
+    // If no AST sizes were provided (or we didn't have ArrayTypeAst), infer from runtime value.
+    if (!arrayDataType || arrayDataType->getSizes().empty()) {
+      auto currentArraySizeAddr =
+          getArraySizeAddr(*builder, loc, getMLIRType(arrayTypeSym), arrayStructAddr);
       auto newSizeAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
       auto curSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentArraySizeAddr);
       builder->create<mlir::LLVM::StoreOp>(loc, curSize, newSizeAddr);
-      arrayType->addSize(newSizeAddr);
+      arrayTypeSym->addSize(newSizeAddr);
 
       if (auto elementArrayType =
-              std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayType->getType())) {
-        mlir::Value maxSubSize = maxSubArraySize(arrayStruct, type);
+              std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayTypeSym->getType())) {
+        mlir::Value maxSubSize = maxSubArraySize(arrayStructAddr, arrayTypeSym);
         auto maxSubSizeAddr =
             builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
         builder->create<mlir::LLVM::StoreOp>(loc, maxSubSize, maxSubSizeAddr);
-        arrayType->addSize(maxSubSizeAddr);
+        arrayTypeSym->addSize(maxSubSizeAddr);
       }
     }
+  };
+
+  // -----------------------------
+  // We need to fetch top-level AST type info for declarations/params
+  // -----------------------------
+  std::shared_ptr<symTable::Type> topSourceValueType = nullptr;
+
+  if (auto DecAst = std::dynamic_pointer_cast<ast::statements::DeclarationAst>(ctx)) {
+    if (DecAst->getExpr()) {
+      topSourceValueType = DecAst->getExpr()->getInferredSymbolType();
+    }
   }
+
+  // -----------------------------
+  // Recursive dispatcher for array/tuple
+  // -----------------------------
+  std::function<void(std::shared_ptr<symTable::Type>, std::shared_ptr<ast::types::DataTypeAst>,
+                     std::shared_ptr<symTable::Type>, mlir::Value)>
+      computeComposite;
+
+  computeComposite = [&](std::shared_ptr<symTable::Type> curType,
+                         std::shared_ptr<ast::types::DataTypeAst> curTypeAst, // may be null
+                         std::shared_ptr<symTable::Type> curSourceType, mlir::Value curStructAddr) {
+    if (!curType)
+      return;
+
+    // Array case
+    if (auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(curType)) {
+      auto arrayAst = std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(curTypeAst);
+      computeForArraySymbol(arrayTypeSym, arrayAst, curSourceType, curStructAddr);
+      return;
+    }
+
+    // Tuple case
+    if (auto tupleTypeSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(curType)) {
+      auto tupleAst = std::dynamic_pointer_cast<ast::types::TupleTypeAst>(curTypeAst);
+
+      // Attempt to get element ASTs from tupleAst
+      // NOTE: Adjust this method name to your API.
+      std::vector<std::shared_ptr<ast::types::DataTypeAst>> elementTypeAsts;
+      if (tupleAst) {
+        elementTypeAsts = tupleAst->getTypes(); // <-- adjust if needed
+      }
+
+      auto sourceTupleSym = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(curSourceType);
+
+      auto tupleMlirType = getMLIRType(curType);
+      const auto &elemTypes = tupleTypeSym->getResolvedTypes();
+
+      for (size_t i = 0; i < elemTypes.size(); ++i) {
+        auto elemTypeSym = elemTypes[i];
+
+        std::shared_ptr<ast::types::DataTypeAst> elemAst = nullptr;
+        if (i < elementTypeAsts.size()) {
+          elemAst = elementTypeAsts[i];
+        }
+
+        std::shared_ptr<symTable::Type> elemSourceSym = nullptr;
+        if (sourceTupleSym && i < sourceTupleSym->getResolvedTypes().size()) {
+          elemSourceSym = sourceTupleSym->getResolvedTypes()[i];
+        }
+
+        // Compute address of tuple field i (same pattern as your tuple cast code)
+        auto gepIndices = std::vector<mlir::Value>{constI32(0), constI32((int32_t)i)};
+        auto elemAddr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), tupleMlirType,
+                                                           curStructAddr, gepIndices);
+
+        // Recurse into element
+        computeComposite(elemTypeSym, elemAst, elemSourceSym, elemAddr);
+      }
+    }
+  };
+
+  // -----------------------------
+  // Determine the declared type AST at the top-level ctx
+  // -----------------------------
+  std::shared_ptr<ast::types::DataTypeAst> topTypeAst = nullptr;
+
+  if (auto DecAst = std::dynamic_pointer_cast<ast::statements::DeclarationAst>(ctx)) {
+    topTypeAst = DecAst->getType();
+  } else if (auto ProcedureParamAst =
+                 std::dynamic_pointer_cast<ast::prototypes::ProcedureParamAst>(ctx)) {
+    topTypeAst = ProcedureParamAst->getParamType();
+  } else if (auto FunctionParamAst =
+                 std::dynamic_pointer_cast<ast::prototypes::FunctionParamAst>(ctx)) {
+    topTypeAst = FunctionParamAst->getParamType();
+  }
+
+  // -----------------------------
+  // Kick off composite computation
+  // -----------------------------
+  computeComposite(type, topTypeAst, topSourceValueType, compositeStructAddr);
 }
 
 // Responsibility of caller to free arrayStruct
@@ -812,54 +915,126 @@ void Backend::arraySizeValidation(std::shared_ptr<ast::Ast> ctx,
     }
   }
 
-  if (variableSymbol && isTypeArray(type)) {
-    auto arrayType =
-        std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType());
-    if (!arrayType)
+  if (!variableSymbol) {
+    return;
+  }
+
+  auto declaredTopType = variableSymbol->getType();
+
+  auto constI32 = [&](int32_t v) -> mlir::Value {
+    return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(),
+                                                   builder->getI32IntegerAttr(v));
+  };
+
+  // Recursive validator:
+  // - runtimeType: the inferred/runtime type of the value
+  // - addr: address of the runtime struct for that value
+  // - declaredType: the declared type we should validate against (may be null)
+  std::function<void(std::shared_ptr<symTable::Type>, mlir::Value, std::shared_ptr<symTable::Type>)>
+      validate;
+
+  validate = [&](std::shared_ptr<symTable::Type> runtimeType, mlir::Value addr,
+                 std::shared_ptr<symTable::Type> declaredType) {
+    if (!runtimeType)
       return;
-    if (arrayType->getSizes().empty()) {
-      auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
-      builder->create<mlir::LLVM::CallOp>(loc, throwFunc, mlir::ValueRange{});
-      return;
-    }
-    mlir::Value oneDimensionSizeAddr = arrayType->getSizes()[0];
-    mlir::Value oneDimensionSize =
-        builder->create<mlir::LLVM::LoadOp>(loc, intTy(), oneDimensionSizeAddr);
 
-    auto arrayStructType = getMLIRType(type);
-    auto currentSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, valueAddr);
-    mlir::Value currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentSizeAddr);
+    // -------------------------
+    // Array case
+    // -------------------------
+    if (isTypeArray(runtimeType)) {
+      // Prefer declared override if it's an array; otherwise fall back to runtimeType.
+      auto declaredArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(declaredType);
+      if (!declaredArray) {
+        declaredArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(runtimeType);
+      }
 
-    auto isSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt,
-                                                              oneDimensionSize, currentSize);
+      if (!declaredArray) {
+        // Shouldn't happen if isTypeArray is correct, but keep it safe.
+        return;
+      }
 
-    builder->create<mlir::scf::IfOp>(
-        loc, isSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
-          auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
-          b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
-          b.create<mlir::scf::YieldOp>(l);
-        });
+      if (declaredArray->getSizes().empty()) {
+        auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
+        builder->create<mlir::LLVM::CallOp>(loc, throwFunc, mlir::ValueRange{});
+        return;
+      }
 
-    mlir::Value twoDimentionSize = constZero();
-    if (arrayType->getSizes().size() == 2) {
-      twoDimentionSize =
-          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arrayType->getSizes()[1]);
+      mlir::Value oneDimensionSizeAddr = declaredArray->getSizes()[0];
+      mlir::Value oneDimensionSize =
+          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), oneDimensionSizeAddr);
 
-      mlir::Value maxSubSize = maxSubArraySize(valueAddr, type);
+      auto arrayStructType = getMLIRType(runtimeType);
+      auto currentSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, addr);
+      mlir::Value currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentSizeAddr);
 
-      auto isTwoDimSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(
-          loc, mlir::LLVM::ICmpPredicate::slt, twoDimentionSize, maxSubSize);
+      auto isSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt,
+                                                                oneDimensionSize, currentSize);
 
       builder->create<mlir::scf::IfOp>(
-          loc, isTwoDimSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
+          loc, isSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
             auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
             b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
             b.create<mlir::scf::YieldOp>(l);
           });
+
+      mlir::Value twoDimentionSize = constZero();
+      if (declaredArray->getSizes().size() == 2) {
+        twoDimentionSize =
+            builder->create<mlir::LLVM::LoadOp>(loc, intTy(), declaredArray->getSizes()[1]);
+
+        mlir::Value maxSubSize = maxSubArraySize(addr, runtimeType);
+
+        auto isTwoDimSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::slt, twoDimentionSize, maxSubSize);
+
+        builder->create<mlir::scf::IfOp>(
+            loc, isTwoDimSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
+              auto throwFunc =
+                  module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
+              b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+              b.create<mlir::scf::YieldOp>(l);
+            });
+      }
+
+      // Keep your existing pad behavior
+      padArrayIfNeeded(addr, runtimeType, oneDimensionSize, twoDimentionSize);
+      return;
     }
 
-    padArrayIfNeeded(valueAddr, type, oneDimensionSize, twoDimentionSize);
-  }
+    // -------------------------
+    // Tuple case
+    // -------------------------
+    if (auto runtimeTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(runtimeType)) {
+      auto declaredTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(declaredType);
+
+      const auto &runtimeElems = runtimeTuple->getResolvedTypes();
+      const auto declaredElems = declaredTuple ? declaredTuple->getResolvedTypes()
+                                               : std::vector<std::shared_ptr<symTable::Type>>{};
+
+      auto tupleMlirType = getMLIRType(runtimeType);
+
+      for (size_t i = 0; i < runtimeElems.size(); ++i) {
+        auto elemRuntimeType = runtimeElems[i];
+
+        std::shared_ptr<symTable::Type> elemDeclaredType = elemRuntimeType;
+        if (!declaredElems.empty() && i < declaredElems.size() && declaredElems[i]) {
+          elemDeclaredType = declaredElems[i];
+        }
+
+        auto gepIndices = std::vector<mlir::Value>{constI32(0), constI32((int32_t)i)};
+        auto elemAddr =
+            builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), tupleMlirType, addr, gepIndices);
+
+        validate(elemRuntimeType, elemAddr, elemDeclaredType);
+      }
+      return;
+    }
+
+    // For other composite types (struct/vector/etc.) you can extend similarly later.
+  };
+
+  // Start recursion at the top-level value
+  validate(type, valueAddr, declaredTopType);
 }
 
 mlir::Value Backend::getArraySizeAddr(mlir::OpBuilder &b, mlir::Location l,
@@ -1930,7 +2105,6 @@ mlir::Value Backend::areArraysEqual(mlir::Value leftArrayStruct, mlir::Value rig
 
   // Create local constants using the passed builder and location
   auto localConstOne = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1);
-  auto localConstZero = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
 
   // Get array sizes
   auto leftSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, leftArrayStruct);

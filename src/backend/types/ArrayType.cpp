@@ -13,7 +13,7 @@ std::any Backend::visitArrayType(std::shared_ptr<ast::types::ArrayTypeAst> ctx) 
 
     // Could be * or an integer value
     mlir::Value recordedSizeAddr = valueAddr;
-    if (!type || type->getName() != "integer") {
+    if (type->getName() == "character") {
       int inferredSize = 0;
       if (i < arrayTypSym->inferredElementSize.size()) {
         inferredSize = arrayTypSym->inferredElementSize[i];
@@ -21,6 +21,7 @@ std::any Backend::visitArrayType(std::shared_ptr<ast::types::ArrayTypeAst> ctx) 
       auto ifrValue = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), inferredSize);
       recordedSizeAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
       builder->create<mlir::LLVM::StoreOp>(loc, ifrValue, recordedSizeAddr);
+    } else {
     }
 
     arrayTypSym->declaredElementSize.push_back(recordedSizeAddr);

@@ -404,6 +404,39 @@ bool ValidationWalker::hasReturnInMethod(const std::shared_ptr<statements::Block
   return false;
 }
 
+bool ValidationWalker::doesTypeInferSize(const std::shared_ptr<symTable::Type> &type) {
+  if (const auto tupleType = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(type)) {
+    for (const auto &subType : tupleType->getResolvedTypes()) {
+      if (doesTypeInferSize(subType))
+        return true;
+    }
+    return false;
+  }
+
+  if (const auto structType = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(type)) {
+    for (const auto &subType : structType->getResolvedTypes()) {
+      if (doesTypeInferSize(subType))
+        return true;
+    }
+    return false;
+  }
+
+  if (const auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(type)) {
+    const auto elementType = vectorType->getType();
+    return doesTypeInferSize(elementType);
+  }
+
+  if (const auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(type)) {
+    for (const auto &sizeType : arrayType->elementSizeInferenceFlags) {
+      if (sizeType)
+        return true;
+    }
+    return doesTypeInferSize(arrayType->getType());
+  }
+
+  return false;
+}
+
 std::shared_ptr<symTable::Type>
 ValidationWalker::resolvedInferredType(const std::shared_ptr<types::DataTypeAst> &dataType) {
   auto globalScope = symTab->getGlobalScope();
@@ -794,109 +827,6 @@ bool ValidationWalker::isLiteralExpression(
   return false;
 }
 
-std::shared_ptr<types::DataTypeAst>
-createDataTypeFromSymbol(const std::shared_ptr<symTable::Type> &symbolType, antlr4::Token *token) {
-  if (!symbolType || !token)
-    return nullptr;
-  const auto name = symbolType->getName();
-  if (name == "integer")
-    return std::make_shared<types::IntegerTypeAst>(token);
-  if (name == "real")
-    return std::make_shared<types::RealTypeAst>(token);
-  if (name == "character")
-    return std::make_shared<types::CharacterTypeAst>(token);
-  if (name == "boolean")
-    return std::make_shared<types::BooleanTypeAst>(token);
-  if (name.substr(0, 5) == "array") {
-    const auto arrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(symbolType);
-    if (!arrayType)
-      return nullptr;
-    auto dataType = std::make_shared<types::ArrayTypeAst>(token);
-    dataType->setType(createDataTypeFromSymbol(arrayType->getType(), token));
-    return dataType;
-  }
-  if (name.substr(0, 6) == "vector") {
-    const auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(symbolType);
-    if (!vectorType)
-      return nullptr;
-    auto dataType = std::make_shared<types::VectorTypeAst>(token);
-    dataType->setElementType(createDataTypeFromSymbol(vectorType->getType(), token));
-    return dataType;
-  }
-  return nullptr;
-}
-
-void ensureLiteralDataType(const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
-                           const std::shared_ptr<symTable::Type> &targetType) {
-  if (!literal || !targetType)
-    return;
-  auto literalDataType =
-      std::dynamic_pointer_cast<types::ArrayTypeAst>(literal->getInferredDataType());
-  if (!literalDataType) {
-    literalDataType = std::make_shared<types::ArrayTypeAst>(literal->token);
-    literal->setInferredDataType(literalDataType);
-  }
-  if (literalDataType->getType())
-    return;
-
-  if (const auto targetArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(targetType)) {
-    literalDataType->setType(createDataTypeFromSymbol(targetArray->getType(), literal->token));
-  } else if (const auto targetVector =
-                 std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(targetType)) {
-    literalDataType->setType(createDataTypeFromSymbol(targetVector->getType(), literal->token));
-  }
-}
-
-void ValidationWalker::ensureArrayLiteralType(
-    const std::shared_ptr<expressions::ExpressionAst> &expr,
-    const std::shared_ptr<symTable::Type> &targetType) {
-  if (!expr || !targetType)
-    return;
-
-  if (expr->getNodeType() == NodeType::ArrayAccess) {
-    const auto arrayAccess = std::dynamic_pointer_cast<expressions::ArrayAccessAst>(expr);
-    if (!arrayAccess)
-      return;
-    const auto indexExpr = arrayAccess->getElementIndex();
-    std::shared_ptr<symTable::Type> arrayInstanceTarget = nullptr;
-    if (indexExpr && indexExpr->getNodeType() == NodeType::SingularIndexExpr) {
-      auto inferredArrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
-      inferredArrayType->setType(targetType);
-      arrayInstanceTarget = inferredArrayType;
-    } else if (indexExpr && indexExpr->getNodeType() == NodeType::RangedIndexExpr) {
-      arrayInstanceTarget = targetType;
-    }
-    ensureArrayLiteralType(arrayAccess->getArrayInstance(), arrayInstanceTarget);
-    return;
-  }
-
-  if (expr->getNodeType() != NodeType::ArrayLiteral)
-    return;
-
-  const auto literal = std::dynamic_pointer_cast<expressions::ArrayLiteralAst>(expr);
-  auto currentType = expr->getInferredSymbolType();
-  const bool alreadyResolved =
-      currentType && !std::dynamic_pointer_cast<symTable::EmptyArrayTypeSymbol>(currentType);
-  if (alreadyResolved)
-    return;
-
-  if (isOfSymbolType(targetType, "array")) {
-    expr->setInferredSymbolType(targetType);
-    ensureLiteralDataType(literal, targetType);
-    return;
-  }
-
-  if (isOfSymbolType(targetType, "vector")) {
-    const auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(targetType);
-    if (!vectorType)
-      return;
-    const auto literalArrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
-    literalArrayType->setType(vectorType->getType());
-    expr->setInferredSymbolType(literalArrayType);
-    ensureLiteralDataType(literal, literalArrayType);
-  }
-}
-
 static void
 recordVectorFirstElementSizes(const std::shared_ptr<expressions::ArrayLiteralAst> &literal,
                               size_t depth, std::vector<int> &recordedSizes) {
@@ -980,6 +910,40 @@ void ValidationWalker::inferVectorSize(
     vectorType->isScalar = true;
     vectorType->isElement2D = false;
   }
+}
+
+std::pair<std::shared_ptr<types::DataTypeAst>, std::shared_ptr<symTable::Type>>
+ValidationWalker::buildArrayTypeWithBase(
+    const std::shared_ptr<types::ArrayTypeAst> &originalArrayDataType,
+    const std::shared_ptr<types::DataTypeAst> &newBaseDataType,
+    const std::shared_ptr<symTable::Type> &newBaseSymbolType, antlr4::Token *token) {
+
+  // Collect array nesting levels
+  std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
+  auto currentType = originalArrayDataType;
+  while (currentType) {
+    arrayLevels.push_back(currentType);
+    currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
+  }
+
+  // Build types from innermost to outermost
+  std::shared_ptr<types::DataTypeAst> resultDataType = newBaseDataType;
+  std::shared_ptr<symTable::Type> resultSymbolType = newBaseSymbolType;
+
+  for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
+    auto newArrayDataType = std::make_shared<types::ArrayTypeAst>(token);
+    newArrayDataType->setType(resultDataType);
+    for (const auto &size : (*it)->getSizes()) {
+      newArrayDataType->pushSize(size);
+    }
+    resultDataType = newArrayDataType;
+
+    auto newArraySymbolType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+    newArraySymbolType->setType(resultSymbolType);
+    resultSymbolType = newArraySymbolType;
+  }
+
+  return {resultDataType, resultSymbolType};
 }
 
 } // namespace gazprea::ast::walkers

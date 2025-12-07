@@ -377,5 +377,39 @@ private:
                                std::shared_ptr<symTable::Type> instanceType,
                                mlir::Value instanceAddr, mlir::Value size, mlir::Value dataPtr,
                                mlir::Type structType);
+  enum class CastPolicy { AllowReallocate, InPlaceOnly };
+  //
+  // bool isArrayTypeName(const std::shared_ptr<symTable::Type> &t) const;
+  // bool isScalarTypeName(const std::shared_ptr<symTable::Type> &t) const;
+  // bool isEmptyArrayType(const std::shared_ptr<symTable::Type> &t) const;
+
+  mlir::Value tryScalarToArrayCast(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                   std::shared_ptr<symTable::Type> fromType,
+                                   std::shared_ptr<symTable::Type> toType, CastPolicy policy);
+
+  mlir::Value tryEmptyArrayToArrayInit(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                       std::shared_ptr<symTable::Type> fromType,
+                                       std::shared_ptr<symTable::Type> toType, CastPolicy policy);
+
+  mlir::Value tryArrayReturnPaddingCast(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                        std::shared_ptr<symTable::Type> fromType,
+                                        std::shared_ptr<symTable::Type> toType, CastPolicy policy);
+
+  void runInPlaceArrayPrepAndValidation(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                        std::shared_ptr<symTable::Type> fromType,
+                                        std::shared_ptr<symTable::Type> toType);
+
+  void castTupleElementsInPlace(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                std::shared_ptr<symTable::Type> fromType,
+                                std::shared_ptr<symTable::Type> toType);
+
+  void castIntegerToRealInPlace(mlir::Value valueAddr);
+
+  void castArrayToArrayInPlace(std::shared_ptr<symTable::Type> fromType,
+                               std::shared_ptr<symTable::Type> toType, mlir::Value valueAddr);
+
+  mlir::Value castIfNeededImpl(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                               std::shared_ptr<symTable::Type> fromType,
+                               std::shared_ptr<symTable::Type> toType, CastPolicy policy);
 };
 } // namespace gazprea::backend

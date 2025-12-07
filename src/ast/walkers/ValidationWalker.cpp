@@ -30,16 +30,9 @@ std::any ValidationWalker::visitRoot(std::shared_ptr<RootAst> ctx) {
 }
 std::any ValidationWalker::visitAssignment(std::shared_ptr<statements::AssignmentAst> ctx) {
   visit(ctx->getLVal());
-  ensureArrayLiteralType(ctx->getExpr(), ctx->getLVal()->getAssignSymbolType());
   inAssignment = true;
   visit(ctx->getExpr());
   inAssignment = false;
-  if (!ctx->getExpr()->getInferredSymbolType()) {
-    ensureArrayLiteralType(ctx->getExpr(), ctx->getLVal()->getAssignSymbolType());
-    inAssignment = true;
-    visit(ctx->getExpr());
-    inAssignment = false;
-  }
 
   const auto exprTypeSymbol = ctx->getExpr()->getInferredSymbolType();
   if (ctx->getLVal()->getNodeType() == NodeType::IdentifierLeft) {
@@ -69,8 +62,6 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
   std::shared_ptr<symTable::Type> declarationType = nullptr;
   if (ctx->getType()) {
     visit(ctx->getType());
-    declarationType = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
-    ensureArrayLiteralType(ctx->getExpr(), declarationType);
   }
   const auto variableSymbol = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getSymbol());
 
@@ -89,13 +80,6 @@ std::any ValidationWalker::visitDeclaration(std::shared_ptr<statements::Declarat
     declarationType = std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol());
   }
   // type check
-  ensureArrayLiteralType(ctx->getExpr(), declarationType);
-  if (!ctx->getExpr()->getInferredSymbolType()) {
-    ensureArrayLiteralType(ctx->getExpr(), declarationType);
-    inAssignment = true;
-    visit(ctx->getExpr());
-    inAssignment = false;
-  }
   const auto expressionType = ctx->getExpr()->getInferredSymbolType();
   if (not typesMatch(declarationType, expressionType))
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
@@ -230,31 +214,13 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
     // Promote to real if either operand is real type
     if (isArrayRealType(leftType) || isArrayRealType(rightType)) {
       auto arrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(leftDataType);
-
-      // Collect array nesting levels
-      std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
-      auto currentType = arrayDataType;
-      while (currentType) {
-        arrayLevels.push_back(currentType);
-        currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
-      }
-
-      // Build array type with real as base, preserving nesting structure and sizes
       auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
-      std::shared_ptr<types::DataTypeAst> resultType = realDataType;
-
-      // Wrap in array types from innermost to outermost, preserving sizes
-      for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
-        auto newArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-        newArrayType->setType(resultType);
-        for (const auto &size : (*it)->getSizes()) {
-          newArrayType->pushSize(size);
-        }
-        resultType = newArrayType;
-      }
-
-      ctx->setInferredDataType(resultType);
-      ctx->setInferredSymbolType(resolvedInferredType(resultType));
+      auto realSymbolType =
+          std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType("real"));
+      auto [resultDataType, resultSymbolType] =
+          buildArrayTypeWithBase(arrayDataType, realDataType, realSymbolType, ctx->token);
+      ctx->setInferredDataType(resultDataType);
+      ctx->setInferredSymbolType(resultSymbolType);
     } else {
       ctx->setInferredDataType(leftDataType);
       ctx->setInferredSymbolType(leftType);
@@ -264,31 +230,13 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
     // Promote to real if either operand is real type
     if (isArrayRealType(leftType) || isArrayRealType(rightType)) {
       auto arrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(rightDataType);
-
-      // Collect array nesting levels
-      std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
-      auto currentType = arrayDataType;
-      while (currentType) {
-        arrayLevels.push_back(currentType);
-        currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
-      }
-
-      // Build array type with real as base, preserving nesting structure and sizes
       auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
-      std::shared_ptr<types::DataTypeAst> resultType = realDataType;
-
-      // Wrap in array types from innermost to outermost, preserving sizes
-      for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
-        auto newArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-        newArrayType->setType(resultType);
-        for (const auto &size : (*it)->getSizes()) {
-          newArrayType->pushSize(size);
-        }
-        resultType = newArrayType;
-      }
-
-      ctx->setInferredDataType(resultType);
-      ctx->setInferredSymbolType(resolvedInferredType(resultType));
+      auto realSymbolType =
+          std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType("real"));
+      auto [resultDataType, resultSymbolType] =
+          buildArrayTypeWithBase(arrayDataType, realDataType, realSymbolType, ctx->token);
+      ctx->setInferredDataType(resultDataType);
+      ctx->setInferredSymbolType(resultSymbolType);
     } else {
       ctx->setInferredDataType(rightDataType);
       ctx->setInferredSymbolType(rightType);
@@ -550,21 +498,17 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
 
     // Handle both vectors and arrays
     std::shared_ptr<types::DataTypeAst> elementType;
-    bool isVector = false;
-    bool isMultiDimensional = false;
 
     if (std::dynamic_pointer_cast<types::VectorTypeAst>(leftDataType) ||
         std::dynamic_pointer_cast<types::VectorTypeAst>(rightDataType)) {
       auto originalVectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(
           std::dynamic_pointer_cast<types::VectorTypeAst>(leftDataType) ? leftDataType
                                                                         : rightDataType);
-      isVector = true;
       // Get the element type of the vector
       elementType = originalVectorDataType->getElementType();
 
       // Check if element is an array (making this a multi-dimensional vector)
       if (auto innerArray = std::dynamic_pointer_cast<types::ArrayTypeAst>(elementType)) {
-        isMultiDimensional = true;
 
         // Find the innermost scalar type for potential real promotion
         auto scalarType = innerArray->getType();
@@ -612,9 +556,13 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
         elementType = innerArray->getType();
       }
 
-      // Promote to real if either operand is real type
+      // Determine the scalar type name for symbol resolution
+      std::string scalarTypeName = "integer";
       if (isArrayRealType(leftType) || isArrayRealType(rightType)) {
         elementType = std::make_shared<types::RealTypeAst>(ctx->token);
+        scalarTypeName = "real";
+      } else if (elementType->getNodeType() == NodeType::RealType) {
+        scalarTypeName = "real";
       }
 
       if (std::dynamic_pointer_cast<types::ArrayTypeAst>(originalDataType->getType())) {
@@ -626,12 +574,18 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
             arrayDataType->pushSize(originalDataType->getSizes()[i]);
           }
         }
+        auto elementSymbolType =
+            std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType(scalarTypeName));
+        auto arraySymbolType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+        arraySymbolType->setType(elementSymbolType);
         ctx->setInferredDataType(arrayDataType);
-        ctx->setInferredSymbolType(resolvedInferredType(arrayDataType));
+        ctx->setInferredSymbolType(arraySymbolType);
       } else {
         // 1D array: result is scalar (element type)
+        auto scalarSymbolType =
+            std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType(scalarTypeName));
         ctx->setInferredDataType(elementType);
-        ctx->setInferredSymbolType(resolvedInferredType(elementType));
+        ctx->setInferredSymbolType(scalarSymbolType);
       }
     }
   }
@@ -710,31 +664,13 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
         auto arrayDataType = leftIsEmpty
                                  ? std::dynamic_pointer_cast<types::ArrayTypeAst>(rightDataType)
                                  : std::dynamic_pointer_cast<types::ArrayTypeAst>(leftDataType);
-
-        // Collect array nesting levels
-        std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
-        auto currentType = arrayDataType;
-        while (currentType) {
-          arrayLevels.push_back(currentType);
-          currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
-        }
-
-        // Build array type with real as base, preserving nesting structure and sizes
         auto realDataType = std::make_shared<types::RealTypeAst>(ctx->token);
-        std::shared_ptr<types::DataTypeAst> resultType = realDataType;
-
-        // Wrap in array types from innermost to outermost, preserving sizes
-        for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
-          auto newArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-          newArrayType->setType(resultType);
-          for (const auto &size : (*it)->getSizes()) {
-            newArrayType->pushSize(size);
-          }
-          resultType = newArrayType;
-        }
-
-        ctx->setInferredDataType(resultType);
-        ctx->setInferredSymbolType(resolvedInferredType(resultType));
+        auto realSymbolType =
+            std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType("real"));
+        auto [resultDataType, resultSymbolType] =
+            buildArrayTypeWithBase(arrayDataType, realDataType, realSymbolType, ctx->token);
+        ctx->setInferredDataType(resultDataType);
+        ctx->setInferredSymbolType(resultSymbolType);
       } else {
         // Both same type (integer): use left's type
         ctx->setInferredSymbolType(leftType);
@@ -747,93 +683,59 @@ std::any ValidationWalker::visitBinary(std::shared_ptr<expressions::BinaryAst> c
   if (isComparisonOperator(ctx->getBinaryOpType()) && areBothNumeric(leftExpr, rightExpr)) {
     if (std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(leftType) ||
         std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(rightType)) {
-      auto arraySymbolType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(
-          std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(leftType) ? leftType : rightType);
-      // Get the array data type
+      // Get the array data type (prefer left, fall back to right)
       auto arrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(leftDataType);
-
-      // Collect array nesting levels
-      std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
-      auto currentType = arrayDataType;
-
-      while (currentType) {
-        arrayLevels.push_back(currentType);
-        currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
+      if (!arrayDataType) {
+        arrayDataType = std::dynamic_pointer_cast<types::ArrayTypeAst>(rightDataType);
       }
 
-      // Build array type with boolean as base, preserving nesting structure and sizes
       auto booleanDataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
-      std::shared_ptr<types::DataTypeAst> resultType = booleanDataType;
-
-      // Wrap in array types from innermost to outermost, preserving sizes
-      for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
-        auto newArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-        newArrayType->setType(resultType);
-        // Copy sizes from the original array level
-        for (const auto &size : (*it)->getSizes()) {
-          newArrayType->pushSize(size);
-        }
-        resultType = newArrayType;
-      }
-
-      auto resultTypeSymbol = resolvedInferredType(resultType);
-      ctx->setInferredSymbolType(resultTypeSymbol);
-      ctx->setInferredDataType(resultType);
+      auto booleanSymbolType =
+          std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType("boolean"));
+      auto [resultDataType, resultSymbolType] =
+          buildArrayTypeWithBase(arrayDataType, booleanDataType, booleanSymbolType, ctx->token);
+      ctx->setInferredDataType(resultDataType);
+      ctx->setInferredSymbolType(resultSymbolType);
     } else if (std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType) ||
                std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)) {
-      auto vectorSymbolType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(
-          std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType) ? leftType : rightType);
       // Get the vector data type
       auto vectorDataType = std::dynamic_pointer_cast<types::VectorTypeAst>(
           std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType) ? leftDataType
                                                                           : rightDataType);
 
-      // Build the result element type
       auto booleanDataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
-      std::shared_ptr<types::DataTypeAst> resultElementType = booleanDataType;
+      auto booleanSymbolType =
+          std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType("boolean"));
+      std::shared_ptr<types::DataTypeAst> resultElementDataType = booleanDataType;
+      std::shared_ptr<symTable::Type> resultElementSymbolType = booleanSymbolType;
 
       // Check if the element type is an array (vector of arrays)
       if (vectorDataType && vectorDataType->getElementType()) {
         if (auto arrayElementType =
                 std::dynamic_pointer_cast<types::ArrayTypeAst>(vectorDataType->getElementType())) {
-          // Collect array nesting levels
-          std::vector<std::shared_ptr<types::ArrayTypeAst>> arrayLevels;
-          auto currentType = arrayElementType;
-          while (currentType) {
-            arrayLevels.push_back(currentType);
-            currentType = std::dynamic_pointer_cast<types::ArrayTypeAst>(currentType->getType());
-          }
-
-          // Build array type with boolean as base, preserving nesting structure and sizes
-          std::shared_ptr<types::DataTypeAst> resultType = booleanDataType;
-          // Wrap in array types from innermost to outermost, preserving sizes
-          for (auto it = arrayLevels.rbegin(); it != arrayLevels.rend(); ++it) {
-            auto newArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-            newArrayType->setType(resultType);
-            for (const auto &size : (*it)->getSizes()) {
-              newArrayType->pushSize(size);
-            }
-            resultType = newArrayType;
-          }
-          resultElementType = resultType;
+          auto [arrayDataType, arraySymbolType] = buildArrayTypeWithBase(
+              arrayElementType, booleanDataType, booleanSymbolType, ctx->token);
+          resultElementDataType = arrayDataType;
+          resultElementSymbolType = arraySymbolType;
         }
       }
 
       // Wrap in vector type
-      auto resultVectorType = std::make_shared<types::VectorTypeAst>(ctx->token);
-      resultVectorType->setElementType(resultElementType);
+      auto resultVectorDataType = std::make_shared<types::VectorTypeAst>(ctx->token);
+      resultVectorDataType->setElementType(resultElementDataType);
 
-      auto resultTypeSymbol = resolvedInferredType(resultVectorType);
-      ctx->setInferredSymbolType(resultTypeSymbol);
-      ctx->setInferredDataType(resultVectorType);
-    }
+      auto resultVectorSymbolType = std::make_shared<symTable::VectorTypeSymbol>("vector");
+      resultVectorSymbolType->setType(resultElementSymbolType);
 
-    else {
+      ctx->setInferredDataType(resultVectorDataType);
+      ctx->setInferredSymbolType(resultVectorSymbolType);
+    } else {
       // Non-array case: just set to boolean
       auto booleanDataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
-      auto booleanTypeSymbol = resolvedInferredType(booleanDataType);
-      ctx->setInferredSymbolType(booleanTypeSymbol);
+      auto booleanSymbolType =
+          std::dynamic_pointer_cast<symTable::Type>(ctx->getScope()->resolveType("boolean"));
       ctx->setInferredDataType(booleanDataType);
+      ctx->setInferredSymbolType(booleanSymbolType);
     }
   }
 
@@ -916,6 +818,9 @@ std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureA
     if (blockAst && !hasReturnInMethod(blockAst)) {
       throw ReturnError(ctx->getLineNumber(), "Function must have a return statement");
     }
+    if (doesTypeInferSize(std::dynamic_pointer_cast<symTable::Type>(
+            ctx->getProto()->getReturnType()->getSymbol())))
+      throw TypeError(ctx->getLineNumber(), "Cannot infer size here");
   }
   if (not ctx->getBody()) {
     const auto methodSymbol = symTab->getGlobalScope()->getSymbol(ctx->getProto()->getName());
@@ -932,6 +837,9 @@ std::any ValidationWalker::visitProcedure(std::shared_ptr<prototypes::ProcedureA
 std::any
 ValidationWalker::visitProcedureParams(std::shared_ptr<prototypes::ProcedureParamAst> ctx) {
   visit(ctx->getParamType());
+  if (doesTypeInferSize(
+          std::dynamic_pointer_cast<symTable::Type>(ctx->getParamType()->getSymbol())))
+    throw TypeError(ctx->getLineNumber(), "Cannot infer size here");
   return {};
 }
 std::any ValidationWalker::visitProcedureCall(std::shared_ptr<statements::ProcedureCallAst> ctx) {
@@ -1044,6 +952,10 @@ std::any ValidationWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAc
     dataType = std::make_shared<types::CharacterTypeAst>(ctx->token);
   else if (typeName == "boolean")
     dataType = std::make_shared<types::BooleanTypeAst>(ctx->token);
+  else if (typeName.substr(0, 5) == "array")
+    dataType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+  else if (typeName.substr(0, 6) == "vector")
+    dataType = std::make_shared<types::VectorTypeAst>(ctx->token);
   // TODO: introduce part 2 types
   else
     throw TypeError(ctx->getLineNumber(), "Type mismatch");
@@ -1055,11 +967,14 @@ std::any ValidationWalker::visitTupleAccess(std::shared_ptr<expressions::TupleAc
 }
 std::any ValidationWalker::visitTuple(std::shared_ptr<expressions::TupleLiteralAst> ctx) {
   auto tupleType = std::make_shared<types::TupleTypeAst>(ctx->token);
+  auto tupleSymbolType = std::make_shared<symTable::TupleTypeSymbol>("");
   for (const auto &element : ctx->getElements()) {
     visit(element);
     tupleType->addType(element->getInferredDataType());
+    tupleSymbolType->addUnresolvedType(element->getInferredDataType());
+    tupleSymbolType->addResolvedType(element->getInferredSymbolType());
   }
-  ctx->setInferredSymbolType(resolvedInferredType(tupleType));
+  ctx->setInferredSymbolType(tupleSymbolType);
   ctx->setInferredDataType(tupleType);
   return {};
 }
@@ -1175,6 +1090,11 @@ std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst
   if (!ctx->getProto()->getReturnType()) {
     throw ReturnError(ctx->getLineNumber(), "Function must have a return type");
   }
+
+  if (doesTypeInferSize(
+          std::dynamic_pointer_cast<symTable::Type>(ctx->getProto()->getReturnType()->getSymbol())))
+    throw TypeError(ctx->getLineNumber(), "Cannot infer size here");
+
   const auto blockAst = std::dynamic_pointer_cast<statements::BlockAst>(ctx->getBody());
   if (blockAst && !hasReturnInMethod(blockAst)) {
     throw ReturnError(ctx->getLineNumber(), "Function must have a return statement");
@@ -1195,6 +1115,9 @@ std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst
 }
 std::any ValidationWalker::visitFunctionParam(std::shared_ptr<prototypes::FunctionParamAst> ctx) {
   visit(ctx->getParamType());
+  if (doesTypeInferSize(
+          std::dynamic_pointer_cast<symTable::Type>(ctx->getParamType()->getSymbol())))
+    throw TypeError(ctx->getLineNumber(), "Cannot infer size here");
   return {};
 }
 std::any ValidationWalker::visitPrototype(std::shared_ptr<prototypes::PrototypeAst> ctx) {
@@ -1466,11 +1389,12 @@ std::any ValidationWalker::visitReal(std::shared_ptr<expressions::RealLiteralAst
   return {};
 }
 std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralAst> ctx) {
-  auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+  auto arrayDataType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+  auto arraySymbolType = std::make_shared<symTable::ArrayTypeSymbol>("array");
   const auto elements = ctx->getElements();
 
   if (elements.empty()) {
-    ctx->setInferredDataType(arrayType);
+    ctx->setInferredDataType(arrayDataType);
     if (!ctx->getInferredSymbolType()) {
       ctx->setInferredSymbolType(std::make_shared<symTable::EmptyArrayTypeSymbol>("empty_array"));
     }
@@ -1489,9 +1413,10 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
   // third pass: infer type by explicitly checking subtypes
   std::shared_ptr<symTable::Type> expectedSubtype = nullptr;
   std::shared_ptr<types::DataTypeAst> inferredElementType = nullptr;
+  std::shared_ptr<symTable::Type> inferredSymbolType = nullptr;
 
   for (size_t i = 0; i < elements.size(); i++) {
-    auto element = elements[i];
+    const auto &element = elements[i];
 
     if (i > 0) {
       visit(element);
@@ -1526,11 +1451,20 @@ std::any ValidationWalker::visitArray(std::shared_ptr<expressions::ArrayLiteralA
     }
     expectedSubtype = currentSubtype;
     inferredElementType = element->getInferredDataType();
+    inferredSymbolType = element->getInferredSymbolType();
   }
 
-  arrayType->setType(inferredElementType);
-  ctx->setInferredDataType(arrayType);
-  ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+  auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->token);
+  visit(charAst);
+  charAst->setScope(ctx->getScope());
+  charAst->setValue('*');
+  arrayDataType->pushSize(charAst);
+  if (is2DArray)
+    arrayDataType->pushSize(charAst);
+  arrayDataType->setType(inferredElementType);
+  arraySymbolType->setType(inferredSymbolType);
+  ctx->setInferredDataType(arrayDataType);
+  ctx->setInferredSymbolType(arraySymbolType);
   return {};
 }
 std::any ValidationWalker::visitArrayAccess(std::shared_ptr<expressions::ArrayAccessAst> ctx) {
@@ -1541,11 +1475,16 @@ std::any ValidationWalker::visitArrayAccess(std::shared_ptr<expressions::ArrayAc
 
   const auto arraySymbolType =
       std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(arrayInstance->getInferredSymbolType());
+  const auto emptyArraySymbolType = std::dynamic_pointer_cast<symTable::EmptyArrayTypeSymbol>(
+      arrayInstance->getInferredSymbolType());
   const auto vectorSymbolType =
       std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(arrayInstance->getInferredSymbolType());
 
   if (!arraySymbolType && !vectorSymbolType)
     throw TypeError(ctx->getLineNumber(), "Cannot slice or index non array type");
+
+  if (emptyArraySymbolType)
+    throw SizeError(ctx->getLineNumber(), "Cannot access an empty array");
 
   if (arraySymbolType) {
     const auto arrayDataType =
@@ -1689,6 +1628,12 @@ std::any ValidationWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> c
   for (const auto &sizeExpr : ctx->getSizes()) {
     if (sizeExpr) {
       visit(sizeExpr);
+      if (not isOfSymbolType(sizeExpr->getInferredSymbolType(), "integer")) {
+        auto starCharacter =
+            std::dynamic_pointer_cast<expressions::CharLiteralAst>(sizeExpr)->getValue();
+        if (starCharacter != '*')
+          throw TypeError(ctx->getLineNumber(), "Non integer index provided");
+      }
     }
   }
 
@@ -1868,11 +1813,20 @@ std::any ValidationWalker::visitRange(std::shared_ptr<expressions::RangeAst> ctx
   }
 
   auto intType = std::make_shared<types::IntegerTypeAst>(ctx->token);
-  auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-  arrayType->setType(intType);
+  auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->token);
+  charAst->setValue('*');
+  visit(charAst);
+  charAst->setScope(ctx->getScope());
 
-  ctx->setInferredDataType(arrayType);
-  ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+  auto arrayDataType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+  arrayDataType->pushSize(charAst);
+  arrayDataType->setType(intType);
+
+  auto arraySymbolType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+  arraySymbolType->setType(resolvedInferredType(intType));
+
+  ctx->setInferredDataType(arrayDataType);
+  ctx->setInferredSymbolType(arraySymbolType);
   return {};
 }
 
@@ -1936,18 +1890,32 @@ std::any ValidationWalker::visitGenerator(std::shared_ptr<expressions::Generator
 
   size_t dimensions = ctx->getDimensionCount();
 
+  auto charAst = std::make_shared<expressions::CharLiteralAst>(ctx->token);
+  visit(charAst);
+  charAst->setScope(ctx->getScope());
+  charAst->setValue('*');
   if (dimensions == 1) {
-    auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-    arrayType->setType(generatorExprDataType);
-    ctx->setInferredDataType(arrayType);
-    ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+    auto arrayDataType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+    arrayDataType->pushSize(charAst);
+    arrayDataType->setType(generatorExprDataType);
+    auto arraySymbolType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+    arraySymbolType->setType(generatorExprType);
+    ctx->setInferredDataType(arrayDataType);
+    ctx->setInferredSymbolType(arraySymbolType);
   } else if (dimensions == 2) {
-    auto innerArrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-    innerArrayType->setType(generatorExprDataType);
-    auto arrayType = std::make_shared<types::ArrayTypeAst>(ctx->token);
-    arrayType->setType(innerArrayType);
-    ctx->setInferredDataType(arrayType);
-    ctx->setInferredSymbolType(resolvedInferredType(arrayType));
+    auto innerArrayDataType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+    innerArrayDataType->pushSize(charAst);
+    innerArrayDataType->setType(generatorExprDataType);
+    auto arrayDataType = std::make_shared<types::ArrayTypeAst>(ctx->token);
+    arrayDataType->pushSize(charAst);
+    arrayDataType->pushSize(charAst);
+    arrayDataType->setType(innerArrayDataType);
+    auto innerArraySymbolType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+    innerArraySymbolType->setType(generatorExprType);
+    auto arraySymbolType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+    arraySymbolType->setType(innerArraySymbolType);
+    ctx->setInferredDataType(arrayDataType);
+    ctx->setInferredSymbolType(arraySymbolType);
   } else {
     throw TypeError(ctx->getLineNumber(),
                     "Generator supports only 1D or 2D, got " + std::to_string(dimensions) + "D");

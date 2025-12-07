@@ -77,6 +77,11 @@ bool DefRefWalker::exactTypeMatch(const std::shared_ptr<symTable::Type> &destina
     const auto sourceVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(source);
     return exactTypeMatch(destVector->getType(), sourceVector->getType());
   }
+  if (destination->getName().substr(0, 5) == "array" && source->getName().substr(0, 5) == "array") {
+    const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
+    const auto sourceArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(source);
+    return exactTypeMatch(destArray->getType(), sourceArray->getType());
+  }
   return false;
 }
 
@@ -618,6 +623,11 @@ std::any DefRefWalker::visitArrayType(std::shared_ptr<types::ArrayTypeAst> ctx) 
 
   for (const auto &sizeExpr : ctx->getSizes()) {
     visit(sizeExpr);
+    if (const auto starChar = std::dynamic_pointer_cast<expressions::CharLiteralAst>(sizeExpr)) {
+      if (starChar->getValue() == '*') {
+        arrayTypeSymbol->elementSizeInferenceFlags.push_back(true);
+      }
+    }
   }
 
   ctx->setSymbol(arrayTypeSymbol);

@@ -685,7 +685,6 @@ void Backend::fillVectorWithScalar(mlir::Value vectorStruct,
           if (innerArrayType) {
             // 3D case: vector of arrays of arrays
             auto innerInnerElementType = innerArrayType->getType();
-            auto innerInnerElementMLIRType = getMLIRType(innerInnerElementType);
             auto innerSubArrayStructType = getMLIRType(innerElementType);
 
             // Allocate middle array data
@@ -1145,7 +1144,6 @@ mlir::Value Backend::areVectorsEqual(mlir::OpBuilder &builder, mlir::Location lo
 
   // Create local constants using the passed builder and location
   auto localConstOne = builder.create<mlir::LLVM::ConstantOp>(loc, intTy(), 1);
-  auto localConstZero = builder.create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
 
   auto makeIndexConst = [&](int idx) {
     return builder.create<mlir::LLVM::ConstantOp>(loc, builder.getI32Type(), idx);

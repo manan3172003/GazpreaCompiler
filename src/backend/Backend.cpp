@@ -360,7 +360,6 @@ mlir::Type Backend::getMLIRType(const std::shared_ptr<symTable::Type> &returnTyp
     memberTypes.push_back(boolTy()); // is 2D?
     return structTy(memberTypes);
   }
-  // TODO: Support other return types
   return {};
 }
 
@@ -697,7 +696,6 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
         auto rightChildTy =
             std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
         auto is2D = false;
-        [[maybe_unused]] auto is3D = false;
 
         auto elementTy = vectorType->getType();
         auto leftElementTy =
@@ -736,7 +734,6 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
           if (auto subSubArrayType =
                   std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementTy)) {
             elementTy = subSubArrayType->getType();
-            is3D = true;
           }
         }
 
@@ -902,7 +899,6 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
         auto rightChildTy =
             std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
         auto is2D = false;
-        [[maybe_unused]] auto is3D = false;
 
         auto elementTy = vectorType->getType();
         auto leftElementTy =
@@ -938,13 +934,12 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
           rightElementTy =
               std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(rightElementTy)->getType();
 
-          // Check if we have nested arrays (3D case)
-          if (auto subSubArrayType =
-                  std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementTy)) {
-            elementTy = subSubArrayType->getType();
-            is3D = true;
-          }
+        // Check if we have nested arrays (3D case)
+        if (auto subSubArrayType =
+                std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementTy)) {
+          elementTy = subSubArrayType->getType();
         }
+      }
 
         newAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), vectorStructTy, constOne());
         fillVectorWithScalar(newAddr, vectorType, getDefaultValue(elementTy), elementTy,
@@ -1185,15 +1180,11 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
               auto leftElementPtr = b.create<mlir::LLVM::GEPOp>(
                   l, ptrTy(), getMLIRType(leftChildTy), leftDataPtr, mlir::ValueRange{i});
               // Load left element value
-              [[maybe_unused]] auto leftValue =
-                  b.create<mlir::LLVM::LoadOp>(l, getMLIRType(leftChildTy), leftElementPtr);
 
               // Get pointer to right element
               auto rightElementPtr = b.create<mlir::LLVM::GEPOp>(
                   l, ptrTy(), getMLIRType(rightChildTy), rightDataPtr, mlir::ValueRange{i});
               // Load right element value
-              [[maybe_unused]] auto rightValue =
-                  b.create<mlir::LLVM::LoadOp>(l, getMLIRType(rightChildTy), rightElementPtr);
 
               auto productValueAddr =
                   binaryOperandToValue(ctx, ast::expressions::BinaryOpType::MULTIPLY, opType,
@@ -1476,54 +1467,6 @@ mlir::Value Backend::floatBinaryOperandToValue(ast::expressions::BinaryOpType op
 
   builder->create<mlir::LLVM::StoreOp>(loc, result, newAddr);
   return newAddr;
-}
-
-bool Backend::typesEquivalent(const std::shared_ptr<symTable::Type> &lhs,
-                              const std::shared_ptr<symTable::Type> &rhs) {
-  if (!lhs || !rhs) {
-    return false;
-  }
-  if (lhs == rhs) {
-    return true;
-  }
-  if (lhs->getName() != rhs->getName()) {
-    return false;
-  }
-  if (lhs->getName() == "tuple") {
-    const auto lhsTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(lhs);
-    const auto rhsTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(rhs);
-    if (!lhsTuple || !rhsTuple) {
-      return false;
-    }
-
-    const auto &lhsMembers = lhsTuple->getResolvedTypes();
-    const auto &rhsMembers = rhsTuple->getResolvedTypes();
-    if (lhsMembers.size() != rhsMembers.size()) {
-      return false;
-    }
-    for (size_t i = 0; i < lhsMembers.size(); ++i) {
-      if (!typesEquivalent(lhsMembers[i], rhsMembers[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  const auto lhsName = lhs->getName();
-  const auto rhsName = rhs->getName();
-
-  const bool lhsIsArray = lhsName.substr(0, 5) == "array";
-  const bool rhsIsArray = rhsName.substr(0, 5) == "array";
-
-  if (lhsIsArray && rhsIsArray) {
-    auto lhsArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lhs);
-    auto rhsArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(rhs);
-    if (!lhsArray || !rhsArray) {
-      return false;
-    }
-    return typesEquivalent(lhsArray->getType(), rhsArray->getType());
-  }
-  return true;
 }
 
 mlir::Value Backend::promoteScalarValue(mlir::Value value,
@@ -1820,9 +1763,211 @@ void Backend::performExplicitCast(mlir::Value srcPtr, std::shared_ptr<symTable::
   builder->create<mlir::LLVM::StoreOp>(loc, castedValue, dstPtr);
 }
 
+mlir::Value Backend::tryScalarToArrayCast(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                          std::shared_ptr<symTable::Type> fromType,
+                                          std::shared_ptr<symTable::Type> toType,
+                                          CastPolicy policy) {
+  if (policy == CastPolicy::InPlaceOnly)
+    return mlir::Value{};
+
+  if (!isTypeArray(toType) || !isScalarType(fromType))
+    return mlir::Value{};
+
+  auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(fromType), valueAddr);
+  return castScalarToArray(ctx, scalarValue, fromType, toType);
+}
+
+mlir::Value Backend::tryEmptyArrayToArrayInit(std::shared_ptr<ast::Ast> ctx,
+                                              mlir::Value /*valueAddr*/,
+                                              std::shared_ptr<symTable::Type> fromType,
+                                              std::shared_ptr<symTable::Type> toType,
+                                              CastPolicy policy) {
+  if (policy == CastPolicy::InPlaceOnly)
+    return mlir::Value{};
+
+  if (!isEmptyArray(fromType) || !isTypeArray(toType))
+    return mlir::Value{};
+
+  auto toArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
+  if (!toArrayType)
+    return mlir::Value{};
+
+  // Preserve your "pull declaredElementSize into sizes if empty" behavior
+  if (toArrayType->getSizes().empty()) {
+    if (!toArrayType->declaredElementSize.empty()) {
+      for (auto size : toArrayType->declaredElementSize) {
+        toArrayType->addSize(size);
+      }
+    }
+  }
+
+  auto newArrayAddr =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(toType), constOne())
+          .getResult();
+
+  // Find innermost element type
+  auto elementType = toArrayType->getType();
+  while (auto nestedArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
+    elementType = nestedArrayType->getType();
+  }
+
+  auto defaultValue = getDefaultValue(elementType);
+  fillArrayFromScalar(newArrayAddr, toArrayType, defaultValue);
+  return newArrayAddr;
+}
+
+mlir::Value Backend::tryArrayReturnPaddingCast(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                               std::shared_ptr<symTable::Type> fromType,
+                                               std::shared_ptr<symTable::Type> toType,
+                                               CastPolicy policy) {
+  if (policy == CastPolicy::InPlaceOnly)
+    return mlir::Value{};
+
+  if (!isTypeArray(fromType) || !isTypeArray(toType))
+    return mlir::Value{};
+
+  auto fromArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(fromType);
+  auto toArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
+  if (!toArrayType)
+    return mlir::Value{};
+
+  // Your original guard:
+  // Only create a new array if the target type has explicit sizes
+  // AND they're different type objects.
+  if (toArrayType->getSizes().empty() || fromType.get() == toType.get()) {
+    return mlir::Value{};
+  }
+
+  auto newArrayAddr =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(toType), constOne())
+          .getResult();
+
+  copyValue(fromType, valueAddr, newArrayAddr);
+
+  mlir::Value targetOuterSize =
+      builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[0]);
+  mlir::Value targetInnerSize = constZero();
+  if (toArrayType->getSizes().size() > 1) {
+    targetInnerSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[1]);
+  }
+
+  auto currentStructType = getMLIRType(fromType);
+  auto currentSizeAddr = getArraySizeAddr(*builder, loc, currentStructType, newArrayAddr);
+  mlir::Value currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentSizeAddr);
+
+  auto isSizeTooBig = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sgt,
+                                                          currentSize, targetOuterSize);
+
+  builder->create<mlir::scf::IfOp>(loc, isSizeTooBig, [&](mlir::OpBuilder &b, mlir::Location l) {
+    auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+        "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+    b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+    b.create<mlir::scf::YieldOp>(l);
+  });
+
+  if (toArrayType->getSizes().size() > 1) {
+    mlir::Value maxSubSize = maxSubArraySize(newArrayAddr, fromType);
+    auto isInnerSizeTooBig = builder->create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::sgt, maxSubSize, targetInnerSize);
+
+    builder->create<mlir::scf::IfOp>(
+        loc, isInnerSizeTooBig, [&](mlir::OpBuilder &b, mlir::Location l) {
+          auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+              "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+          b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+          b.create<mlir::scf::YieldOp>(l);
+        });
+  }
+
+  padArrayIfNeeded(newArrayAddr, toType, targetOuterSize, targetInnerSize);
+  return newArrayAddr;
+}
+
+void Backend::runInPlaceArrayPrepAndValidation(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                               std::shared_ptr<symTable::Type> fromType,
+                                               std::shared_ptr<symTable::Type> toType) {
+  computeArraySizeIfArray(ctx, toType, valueAddr);
+  castScalarToArrayIfNeeded(toType, valueAddr, fromType);
+  arraySizeValidation(ctx, toType, valueAddr);
+}
+
+void Backend::castTupleElementsInPlace(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                       std::shared_ptr<symTable::Type> fromType,
+                                       std::shared_ptr<symTable::Type> toType) {
+  auto fromTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType);
+  auto toTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(toType);
+  if (!fromTuple || !toTuple)
+    return;
+
+  auto sTy = getMLIRType(fromType);
+
+  for (size_t i = 0; i < fromTuple->getResolvedTypes().size(); i++) {
+    auto fromSub = fromTuple->getResolvedTypes()[i];
+    auto toSub = toTuple->getResolvedTypes()[i];
+
+    auto gepIndices = std::vector<mlir::Value>{
+        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
+        builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
+
+    auto elementPtr = builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, valueAddr, gepIndices);
+
+    // Force in-place semantics for tuple elements.
+    castIfNeededImpl(ctx, elementPtr, fromSub, toSub, CastPolicy::InPlaceOnly);
+  }
+}
+
+void Backend::castIntegerToRealInPlace(mlir::Value valueAddr) {
+  auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getI32Type(), valueAddr);
+  auto castedValue = builder->create<mlir::LLVM::SIToFPOp>(
+      loc, mlir::Float32Type::get(builder->getContext()), value);
+  builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
+}
+
+void Backend::castArrayToArrayInPlace(std::shared_ptr<symTable::Type> fromType,
+                                      std::shared_ptr<symTable::Type> toType,
+                                      mlir::Value valueAddr) {
+  auto fromArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(fromType);
+  auto toArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
+  if (!fromArray || !toArray)
+    return;
+
+  auto dstStructType = getMLIRType(toType);
+  auto tmpDst =
+      builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), dstStructType, constOne()).getResult();
+
+  const auto fromSizes = fromArray->getSizes();
+  const auto toSizes = toArray->getSizes();
+
+  performArrayCast(valueAddr, fromArray, tmpDst, toArray, fromSizes, toSizes, 0);
+
+  freeArray(fromType, valueAddr);
+
+  auto srcSizeAddr = getArraySizeAddr(*builder, loc, dstStructType, tmpDst);
+  auto srcDataAddr = getArrayDataAddr(*builder, loc, dstStructType, tmpDst);
+  auto srcIs2dAddr = get2DArrayBoolAddr(*builder, loc, dstStructType, tmpDst);
+
+  auto dstSizeAddr = getArraySizeAddr(*builder, loc, dstStructType, valueAddr);
+  auto dstDataAddr = getArrayDataAddr(*builder, loc, dstStructType, valueAddr);
+  auto dstIs2dAddr = get2DArrayBoolAddr(*builder, loc, dstStructType, valueAddr);
+
+  auto sizeVal = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcSizeAddr);
+  auto dataVal = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataAddr);
+  auto is2dVal = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), srcIs2dAddr);
+
+  builder->create<mlir::LLVM::StoreOp>(loc, sizeVal, dstSizeAddr);
+  builder->create<mlir::LLVM::StoreOp>(loc, dataVal, dstDataAddr);
+  builder->create<mlir::LLVM::StoreOp>(loc, is2dVal, dstIs2dAddr);
+}
+
 mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
                                   std::shared_ptr<symTable::Type> fromType,
                                   std::shared_ptr<symTable::Type> toType) {
+  return castIfNeededImpl(ctx, valueAddr, fromType, toType, CastPolicy::AllowReallocate);
+}
+
+mlir::Value Backend::castIfNeededImpl(std::shared_ptr<ast::Ast> ctx, mlir::Value valueAddr,
+                                      std::shared_ptr<symTable::Type> fromType,
+                                      std::shared_ptr<symTable::Type> toType, CastPolicy policy) {
   if (isTypeVector(fromType) && isTypeArray(toType)) {
     auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(fromType);
     auto [arrayAddr, arrayType] = convertVectorToArrayStruct(valueAddr, vectorType);
@@ -1833,165 +1978,46 @@ mlir::Value Backend::castIfNeeded(std::shared_ptr<ast::Ast> ctx, mlir::Value val
     }
   }
 
-  // Check if we need scalar-to-array conversion
-  bool needsScalarToArrayCast = false;
-  if (toType->getName().substr(0, 5) == "array" &&
-      (fromType->getName() == "integer" || fromType->getName() == "real" ||
-       fromType->getName() == "character" || fromType->getName() == "boolean")) {
-    needsScalarToArrayCast = true;
-  }
-
-  if (needsScalarToArrayCast) {
-    // Load the scalar value and create a new array
-    auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(fromType), valueAddr);
-    return castScalarToArray(ctx, scalarValue, fromType, toType);
-  }
-
-  if (fromType->getName() == "empty_array" && toType->getName().substr(0, 5) == "array") {
-    auto toArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
-    if (toArrayType) {
-      if (toArrayType->getSizes().empty()) {
-        if (!toArrayType->declaredElementSize.empty()) {
-          for (auto size : toArrayType->declaredElementSize) {
-            toArrayType->addSize(size);
-          }
-        }
+  // Check if we need to cast to a vector type
+  if (toType->getName().substr(0, 6) == "vector") {
+    auto toVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(toType);
+    if (toVectorType) {
+      // Handle array-to-vector or vector-to-vector conversion
+      if (fromType->getName().substr(0, 5) == "array" ||
+          fromType->getName().substr(0, 6) == "vector") {
+        return createVectorValue(toVectorType, fromType, valueAddr);
       }
-
-      auto newArrayAddr =
-          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(toType), constOne());
-
-      // Get the innermost element type to determine the default value
-      auto elementType = toArrayType->getType();
-      while (auto nestedArrayType =
-                 std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType)) {
-        elementType = nestedArrayType->getType();
-      }
-
-      auto defaultValue = getDefaultValue(elementType);
-      fillArrayFromScalar(newArrayAddr, toArrayType, defaultValue);
-      return newArrayAddr;
     }
   }
+  // 1) Allocation-style early exits
+  if (auto v = tryScalarToArrayCast(ctx, valueAddr, fromType, toType, policy); v)
+    return v;
 
-  // Check if we need array-to-array padding (different sizes)
-  if (fromType->getName().substr(0, 5) == "array" && toType->getName().substr(0, 5) == "array") {
-    auto fromArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(fromType);
-    auto toArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
+  if (auto v = tryEmptyArrayToArrayInit(ctx, valueAddr, fromType, toType, policy); v)
+    return v;
 
-    // Only create a new array if the target type has explicit sizes (like for function returns)
-    // AND they're different type objects (prevents affecting normal declarations)
-    if (toArrayType && !toArrayType->getSizes().empty() && fromType.get() != toType.get()) {
-      // Allocate new array with target type
-      auto newArrayAddr =
-          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), getMLIRType(toType), constOne());
+  if (auto v = tryArrayReturnPaddingCast(ctx, valueAddr, fromType, toType, policy); v)
+    return v;
 
-      // Copy source array to new array
-      copyValue(fromType, valueAddr, newArrayAddr);
+  // 2) In-place array prep/validation
+  runInPlaceArrayPrepAndValidation(ctx, valueAddr, fromType, toType);
 
-      // Get target sizes for validation and padding
-      mlir::Value targetOuterSize =
-          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[0]);
-      mlir::Value targetInnerSize = constZero();
-      if (toArrayType->getSizes().size() > 1) {
-        targetInnerSize =
-            builder->create<mlir::LLVM::LoadOp>(loc, intTy(), toArrayType->getSizes()[1]);
-      }
-
-      // Get current size from the copied array
-      auto currentStructType = getMLIRType(fromType);
-      auto currentSizeAddr = getArraySizeAddr(*builder, loc, currentStructType, newArrayAddr);
-      mlir::Value currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentSizeAddr);
-
-      // Validation: check if current size is larger than target size
-      auto isSizeTooBig = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::sgt,
-                                                              currentSize, targetOuterSize);
-      builder->create<mlir::scf::IfOp>(
-          loc, isSizeTooBig, [&](mlir::OpBuilder &b, mlir::Location l) {
-            auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-                "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
-            b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
-            b.create<mlir::scf::YieldOp>(l);
-          });
-
-      // 2D validation
-      if (toArrayType->getSizes().size() > 1) {
-        mlir::Value maxSubSize = maxSubArraySize(newArrayAddr, fromType);
-        auto isInnerSizeTooBig = builder->create<mlir::LLVM::ICmpOp>(
-            loc, mlir::LLVM::ICmpPredicate::sgt, maxSubSize, targetInnerSize);
-        builder->create<mlir::scf::IfOp>(
-            loc, isInnerSizeTooBig, [&](mlir::OpBuilder &b, mlir::Location l) {
-              auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-                  "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
-              b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
-              b.create<mlir::scf::YieldOp>(l);
-            });
-      }
-
-      // Pad the new array to target size
-      padArrayIfNeeded(newArrayAddr, toType, targetOuterSize, targetInnerSize);
-
-      return newArrayAddr;
-    }
+  // 3) Tuple recursive cast (in place only)
+  if (std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType)) {
+    castTupleElementsInPlace(ctx, valueAddr, fromType, toType);
+    return valueAddr;
   }
 
-  // Normal casting - operates in place
-  computeArraySizeIfArray(ctx, toType, valueAddr);
-  castScalarToArrayIfNeeded(toType, valueAddr, fromType);
-  arraySizeValidation(ctx, toType, valueAddr);
-  if (auto fromTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(fromType)) {
-    auto toTupleTypeSymbol = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(toType);
-    auto sTy = getMLIRType(fromType);
-    for (size_t i = 0; i < fromTupleTypeSymbol->getResolvedTypes().size(); i++) {
-      auto fromSubType = fromTupleTypeSymbol->getResolvedTypes()[i];
-      auto toSubType = toTupleTypeSymbol->getResolvedTypes()[i];
-      auto gepIndices = std::vector<mlir::Value>{
-          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), 0),
-          builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(), i)};
-      auto elementPtr =
-          builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), sTy, valueAddr, gepIndices);
-      // Note: For tuple elements, in-place casting is expected (no scalar-to-array in tuples)
-      castIfNeeded(ctx, elementPtr, fromSubType, toSubType);
-    }
-  } else if (fromType->getName() == "integer" && toType->getName() == "real") {
-    auto value = builder->create<mlir::LLVM::LoadOp>(loc, builder->getI32Type(), valueAddr);
-    auto castedValue = builder->create<mlir::LLVM::SIToFPOp>(
-        loc, mlir::Float32Type::get(builder->getContext()), value);
-    builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
-  } else if (fromType->getName() == "real" && toType->getName() == "integer") {
-    auto value = builder->create<mlir::LLVM::LoadOp>(
-        loc, mlir::Float32Type::get(builder->getContext()), valueAddr);
-    auto castedValue = builder->create<mlir::LLVM::FPToSIOp>(loc, builder->getI32Type(), value);
-    builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
-  } else if (isTypeArray(fromType) && isTypeArray(toType)) {
-    auto fromArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(fromType);
-    auto toArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(toType);
-    if (!fromArray || !toArray) {
-      return mlir::Value{};
-    }
-    auto dstStructType = getMLIRType(toType);
-    auto tmpDst =
-        builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), dstStructType, constOne()).getResult();
+  // 4) Simple scalar cast
+  if (fromType->getName() == "integer" && toType->getName() == "real") {
+    castIntegerToRealInPlace(valueAddr);
+    return valueAddr;
+  }
 
-    const auto fromSizes = fromArray->getSizes();
-    const auto toSizes = toArray->getSizes();
-    performArrayCast(valueAddr, fromArray, tmpDst, toArray, fromSizes, toSizes, 0);
-    freeArray(fromType, valueAddr);
-    auto srcSizeAddr = getArraySizeAddr(*builder, loc, dstStructType, tmpDst);
-    auto srcDataAddr = getArrayDataAddr(*builder, loc, dstStructType, tmpDst);
-    auto srcIs2dAddr = get2DArrayBoolAddr(*builder, loc, dstStructType, tmpDst);
-
-    auto dstSizeAddr = getArraySizeAddr(*builder, loc, dstStructType, valueAddr);
-    auto dstDataAddr = getArrayDataAddr(*builder, loc, dstStructType, valueAddr);
-    auto dstIs2dAddr = get2DArrayBoolAddr(*builder, loc, dstStructType, valueAddr);
-
-    auto sizeVal = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), srcSizeAddr);
-    auto dataVal = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataAddr);
-    auto is2dVal = builder->create<mlir::LLVM::LoadOp>(loc, boolTy(), srcIs2dAddr);
-
-    builder->create<mlir::LLVM::StoreOp>(loc, sizeVal, dstSizeAddr);
-    builder->create<mlir::LLVM::StoreOp>(loc, dataVal, dstDataAddr);
-    builder->create<mlir::LLVM::StoreOp>(loc, is2dVal, dstIs2dAddr);
+  // 5) Array-to-array deep cast
+  if (isTypeArray(fromType) && isTypeArray(toType)) {
+    castArrayToArrayInPlace(fromType, toType, valueAddr);
+    return valueAddr;
   }
 
   return valueAddr;
