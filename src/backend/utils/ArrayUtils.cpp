@@ -306,16 +306,14 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
   std::shared_ptr<ast::types::DataTypeAst> topTypeAst = nullptr;
 
   if (auto DecAst = std::dynamic_pointer_cast<ast::statements::DeclarationAst>(ctx)) {
-    if (!arrayDataType) {
-      if (auto aliasType =
-              std::dynamic_pointer_cast<ast::types::AliasTypeAst>(DecAst->getType())) {
-        if (auto sym =
-                std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(aliasType->getSymbol())) {
-          arrayDataType = std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(sym->getDef());
-                }
-              }
-    }
     topTypeAst = DecAst->getType();
+    if (auto aliasType = std::dynamic_pointer_cast<ast::types::AliasTypeAst>(topTypeAst)) {
+      if (auto sym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(aliasType->getSymbol())) {
+        if (auto def = sym->getDef()) {
+          topTypeAst = std::dynamic_pointer_cast<ast::types::DataTypeAst>(def);
+        }
+      }
+    }
   } else if (auto ProcedureParamAst =
                  std::dynamic_pointer_cast<ast::prototypes::ProcedureParamAst>(ctx)) {
     topTypeAst = ProcedureParamAst->getParamType();

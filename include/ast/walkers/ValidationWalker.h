@@ -163,6 +163,8 @@ public:
   static bool isLiteralExpression(const std::shared_ptr<expressions::ExpressionAst> &expr);
   static void inferVectorSize(const std::shared_ptr<symTable::VectorTypeSymbol> &vectorType,
                               const std::shared_ptr<expressions::ExpressionAst> &expr);
+  void ensureArrayLiteralType(const std::shared_ptr<expressions::ExpressionAst> &expr,
+                              const std::shared_ptr<symTable::Type> &targetType);
 
   // Helper to build array data type and symbol type with a new base type
   static std::pair<std::shared_ptr<types::DataTypeAst>, std::shared_ptr<symTable::Type>>
