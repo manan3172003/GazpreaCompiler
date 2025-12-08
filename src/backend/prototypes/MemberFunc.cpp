@@ -353,6 +353,31 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
   return {};
 }
 std::any Backend::visitConcatMemberFunc(std::shared_ptr<ast::statements::ConcatMemberFuncAst> ctx) {
+  visit(ctx->getLeft());
+
+  auto [vectorType, vectorAddr] = popElementFromStack(ctx);
+  if (auto varSym =
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLeft()->getSymbol())) {
+    vectorType = varSym->getType();
+    vectorAddr = varSym->value;
+  }
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(vectorType);
+  if (!vectorTypeSym) {
+    return {};
+  }
+
+  for (const auto &arg : ctx->getArgs()) {
+    visit(arg);
+    auto [argType, argAddr] = popElementFromStack(arg);
+    if (!argType || !argAddr) {
+      continue;
+    }
+
+    auto resultAddr = concatVectors(vectorType, vectorAddr, argAddr);
+    copyValue(vectorType, resultAddr, vectorAddr);
+    freeAllocatedMemory(argType, argAddr);
+  }
+
   return {};
 }
 } // namespace gazprea::backend

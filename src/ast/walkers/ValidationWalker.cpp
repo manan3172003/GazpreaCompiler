@@ -1716,9 +1716,42 @@ std::any ValidationWalker::visitPushMemberFunc(std::shared_ptr<statements::PushM
 std::any
 ValidationWalker::visitConcatMemberFunc(std::shared_ptr<statements::ConcatMemberFuncAst> ctx) {
   visit(ctx->getLeft());
+  auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(
+      ctx->getLeft()->getInferredSymbolType());
+
+  if (!vectorTypeSym || !vectorTypeSym->getType() ||
+      vectorTypeSym->getType()->getName() != "character") {
+    throw TypeError(ctx->getLineNumber(), "concat can only be used on strings (vector<character>)");
+  }
+
+  if (auto varSymbol =
+          std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLeft()->getSymbol())) {
+    if (varSymbol->getQualifier() == Qualifier::Const) {
+      throw TypeError(ctx->getLineNumber(), "cannot concat to const vector");
+    }
+  }
+
   for (const auto &arg : ctx->getArgs()) {
     visit(arg);
+    auto argType =
+        arg->getExpr() ? arg->getExpr()->getInferredSymbolType() : arg->getInferredSymbolType();
+
+    if (!isCollection(argType)) {
+      throw TypeError(arg->getLineNumber(), "concat argument must be a string");
+    }
+
+    auto argVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(argType);
+    auto argArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(argType);
+
+    auto elementType = argVectorType  ? argVectorType->getType()
+                       : argArrayType ? argArrayType->getType()
+                                      : nullptr;
+
+    if (!elementType || elementType->getName() != "character") {
+      throw TypeError(arg->getLineNumber(), "concat argument must be a string");
+    }
   }
+
   ctx->setInferredSymbolType(ctx->getLeft()->getInferredSymbolType());
   ctx->setInferredDataType(ctx->getLeft()->getInferredDataType());
   return {};
