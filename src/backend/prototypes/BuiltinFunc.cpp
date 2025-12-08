@@ -54,10 +54,12 @@ std::any
 Backend::visitLengthBuiltinFunc(std::shared_ptr<ast::expressions::LengthBuiltinFuncAst> ctx) {
   visit(ctx->arg);
 
-  auto [argType, argAddr] = popElementFromStack(ctx);
-  if (auto varSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->arg->getSymbol())) {
-    argType = varSym->getType();
-    argAddr = varSym->value;
+  auto [argType, argAddr] = popElementFromStack(ctx->arg);
+  if (!argType || !argAddr) {
+    if (auto varSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->arg->getSymbol())) {
+      argType = varSym->getType();
+      argAddr = varSym->value;
+    }
   }
 
   if (!argType || !argAddr) {
@@ -211,10 +213,12 @@ std::any
 Backend::visitShapeBuiltinFunc(std::shared_ptr<ast::expressions::ShapeBuiltinFuncAst> ctx) {
   visit(ctx->arg);
 
-  auto [argType, argAddr] = popElementFromStack(ctx);
-  if (auto varSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->arg->getSymbol())) {
-    argType = varSym->getType();
-    argAddr = varSym->value;
+  auto [argType, argAddr] = popElementFromStack(ctx->arg);
+  if (!argType || !argAddr) {
+    if (auto varSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->arg->getSymbol())) {
+      argType = varSym->getType();
+      argAddr = varSym->value;
+    }
   }
 
   if (!argType || !argAddr) {
@@ -354,10 +358,12 @@ std::any
 Backend::visitReverseBuiltinFunc(std::shared_ptr<ast::expressions::ReverseBuiltinFuncAst> ctx) {
   visit(ctx->arg);
 
-  auto [argType, argAddr] = popElementFromStack(ctx);
-  if (auto varSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->arg->getSymbol())) {
-    argType = varSym->getType();
-    argAddr = varSym->value;
+  auto [argType, argAddr] = popElementFromStack(ctx->arg);
+  if (!argType || !argAddr) {
+    if (auto varSym = std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->arg->getSymbol())) {
+      argType = varSym->getType();
+      argAddr = varSym->value;
+    }
   }
 
   if (!argType || !argAddr) {

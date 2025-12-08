@@ -6,11 +6,13 @@ namespace gazprea::backend {
 std::any Backend::visitLenMemberFunc(std::shared_ptr<ast::statements::LenMemberFuncAst> ctx) {
   visit(ctx->getLeft());
 
-  auto [vectorType, vectorAddr] = popElementFromStack(ctx);
-  if (auto varSym =
-          std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLeft()->getSymbol())) {
-    vectorType = varSym->getType();
-    vectorAddr = varSym->value;
+  auto [vectorType, vectorAddr] = popElementFromStack(ctx->getLeft());
+  if (!vectorType || !vectorAddr) {
+    if (auto varSym =
+            std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLeft()->getSymbol())) {
+      vectorType = varSym->getType();
+      vectorAddr = varSym->value;
+    }
   }
   auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(vectorType);
   if (!vectorTypeSym) {
@@ -210,11 +212,13 @@ std::any Backend::visitAppendMemberFunc(std::shared_ptr<ast::statements::AppendM
 std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMemberFuncAst> ctx) {
   visit(ctx->getLeft());
 
-  auto [vectorType, vectorAddr] = popElementFromStack(ctx);
-  if (auto varSym =
-          std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLeft()->getSymbol())) {
-    vectorType = varSym->getType();
-    vectorAddr = varSym->value;
+  auto [vectorType, vectorAddr] = popElementFromStack(ctx->getLeft());
+  if (!vectorType || !vectorAddr) {
+    if (auto varSym =
+            std::dynamic_pointer_cast<symTable::VariableSymbol>(ctx->getLeft()->getSymbol())) {
+      vectorType = varSym->getType();
+      vectorAddr = varSym->value;
+    }
   }
   auto vectorTypeSym = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(vectorType);
   if (!vectorTypeSym) {
