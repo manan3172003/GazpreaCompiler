@@ -8,12 +8,8 @@ std::any Backend::visitIteratorLoop(std::shared_ptr<ast::statements::IteratorLoo
   auto domainExpr = ctx->getDomain();
 
   visit(domainExpr);
-  auto [domainType, domainArrayAddr] = popElementFromStack(domainExpr);
-
-  // when we use the below code for popping it stops printing garbage values
-  // auto [domainType, domainArrayAddr] =
-  // domainExpr->getDomainExpression()->getScope()->getTopElementInStack();
-  // domainExpr->getDomainExpression()->getScope()->popElementFromScopeStack();
+  auto [domainType, domainArrayAddr] = domainExpr->getScope()->getTopElementInStack();
+  domainExpr->getScope()->popElementFromScopeStack();
 
   auto domainArrayType = getMLIRType(domainType);
 
