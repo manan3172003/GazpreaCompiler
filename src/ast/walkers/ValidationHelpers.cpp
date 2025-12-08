@@ -209,6 +209,54 @@ bool ValidationWalker::typesMatch(const std::shared_ptr<symTable::Type> &destina
   return false;
 }
 
+bool ValidationWalker::typesStrictlyMatch(const std::shared_ptr<symTable::Type> &destination,
+                                          const std::shared_ptr<symTable::Type> &source) {
+  if (isOfSymbolType(destination, "integer") && isOfSymbolType(source, "integer"))
+    return true;
+  if (isOfSymbolType(destination, "real") && isOfSymbolType(source, "real"))
+    return true;
+  if (isOfSymbolType(destination, "character") && isOfSymbolType(source, "character"))
+    return true;
+  if (isOfSymbolType(destination, "boolean") && isOfSymbolType(source, "boolean"))
+    return true;
+
+  if (isOfSymbolType(destination, "tuple") && isOfSymbolType(source, "tuple")) {
+    const auto destTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(destination);
+    const auto sourceTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(source);
+    const auto destSubTypes = destTuple->getResolvedTypes();
+    const auto sourceSubTypes = sourceTuple->getResolvedTypes();
+    if (destSubTypes.size() != sourceSubTypes.size())
+      return false;
+    for (size_t i = 0; i < destSubTypes.size(); i++) {
+      if (not typesStrictlyMatch(destSubTypes[i], sourceSubTypes[i]))
+        return false;
+    }
+    return true;
+  }
+
+  if (isOfSymbolType(destination, "struct") && isOfSymbolType(source, "struct")) {
+    const auto destStruct = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(destination);
+    const auto sourceStruct = std::dynamic_pointer_cast<symTable::StructTypeSymbol>(source);
+    return destStruct->getStructName() == sourceStruct->getStructName();
+  }
+
+  if (isOfSymbolType(destination, "array") && isOfSymbolType(source, "array")) {
+    const auto destArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(destination);
+    const auto sourceArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(source);
+    if (destArray->getSizes().size() != sourceArray->getSizes().size())
+      return false;
+    return typesStrictlyMatch(destArray->getType(), sourceArray->getType());
+  }
+
+  if (isOfSymbolType(destination, "vector") && isOfSymbolType(source, "vector")) {
+    const auto destVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(destination);
+    const auto sourceVector = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(source);
+    return typesStrictlyMatch(destVector->getType(), sourceVector->getType());
+  }
+
+  return false;
+}
+
 bool ValidationWalker::isTupleTypeMatch(
     const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
     const std::shared_ptr<symTable::TupleTypeSymbol> &source) {
@@ -557,8 +605,15 @@ void ValidationWalker::validateArgs(const std::vector<std::shared_ptr<Ast>> &par
       if (paramVarSymbol->getQualifier() == Qualifier::Var && not arg->isLValue())
         throw TypeError(arg->getLineNumber(), "l-value must be given to var procedure param");
 
-      if (not typesMatch(paramVarSymbol->getType(), arg->getInferredSymbolType()))
-        throw TypeError(arg->getLineNumber(), "Argument type mismatch");
+      // For var parameters, use strict type checking (no casting, array dimensions must match)
+      if (paramVarSymbol->getQualifier() == Qualifier::Var) {
+        if (not typesStrictlyMatch(paramVarSymbol->getType(), arg->getInferredSymbolType()))
+          throw TypeError(arg->getLineNumber(), "Argument type mismatch");
+      } else {
+        // For non-var parameters, allow normal type matching with casting
+        if (not typesMatch(paramVarSymbol->getType(), arg->getInferredSymbolType()))
+          throw TypeError(arg->getLineNumber(), "Argument type mismatch");
+      }
     }
   }
 

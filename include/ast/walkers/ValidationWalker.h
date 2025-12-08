@@ -108,6 +108,8 @@ public:
                                      std::shared_ptr<symTable::Type> exprTypeSymbol);
   static bool typesMatch(const std::shared_ptr<symTable::Type> &destination,
                          const std::shared_ptr<symTable::Type> &source, bool exactMatch = false);
+  static bool typesStrictlyMatch(const std::shared_ptr<symTable::Type> &destination,
+                                 const std::shared_ptr<symTable::Type> &source);
   static bool isTupleTypeMatch(const std::shared_ptr<symTable::TupleTypeSymbol> &destination,
                                const std::shared_ptr<symTable::TupleTypeSymbol> &source);
   static bool isOfSymbolType(const std::shared_ptr<symTable::Type> &symbolType,
