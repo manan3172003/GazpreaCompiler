@@ -934,12 +934,12 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
           rightElementTy =
               std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(rightElementTy)->getType();
 
-        // Check if we have nested arrays (3D case)
-        if (auto subSubArrayType =
-                std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementTy)) {
-          elementTy = subSubArrayType->getType();
+          // Check if we have nested arrays (3D case)
+          if (auto subSubArrayType =
+                  std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementTy)) {
+            elementTy = subSubArrayType->getType();
+          }
         }
-      }
 
         newAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), vectorStructTy, constOne());
         fillVectorWithScalar(newAddr, vectorType, getDefaultValue(elementTy), elementTy,
@@ -1923,6 +1923,61 @@ void Backend::castIntegerToRealInPlace(mlir::Value valueAddr) {
   builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
 }
 
+void Backend::castRealToIntegerInPlace(mlir::Value valueAddr) {
+  auto value = builder->create<mlir::LLVM::LoadOp>(
+      loc, mlir::Float32Type::get(builder->getContext()), valueAddr);
+  auto castedValue = builder->create<mlir::LLVM::FPToSIOp>(loc, builder->getI32Type(), value);
+  builder->create<mlir::LLVM::StoreOp>(loc, castedValue, valueAddr);
+}
+
+bool Backend::typesEquivalent(const std::shared_ptr<symTable::Type> &lhs,
+                              const std::shared_ptr<symTable::Type> &rhs) {
+  if (!lhs || !rhs) {
+    return false;
+  }
+  if (lhs == rhs) {
+    return true;
+  }
+  if (lhs->getName() != rhs->getName()) {
+    return false;
+  }
+  if (lhs->getName() == "tuple") {
+    const auto lhsTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(lhs);
+    const auto rhsTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(rhs);
+    if (!lhsTuple || !rhsTuple) {
+      return false;
+    }
+
+    const auto &lhsMembers = lhsTuple->getResolvedTypes();
+    const auto &rhsMembers = rhsTuple->getResolvedTypes();
+    if (lhsMembers.size() != rhsMembers.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < lhsMembers.size(); ++i) {
+      if (!typesEquivalent(lhsMembers[i], rhsMembers[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  const auto lhsName = lhs->getName();
+  const auto rhsName = rhs->getName();
+
+  const bool lhsIsArray = lhsName.substr(0, 5) == "array";
+  const bool rhsIsArray = rhsName.substr(0, 5) == "array";
+
+  if (lhsIsArray && rhsIsArray) {
+    auto lhsArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(lhs);
+    auto rhsArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(rhs);
+    if (!lhsArray || !rhsArray) {
+      return false;
+    }
+    return typesEquivalent(lhsArray->getType(), rhsArray->getType());
+  }
+  return true;
+}
+
 void Backend::castArrayToArrayInPlace(std::shared_ptr<symTable::Type> fromType,
                                       std::shared_ptr<symTable::Type> toType,
                                       mlir::Value valueAddr) {
@@ -2011,6 +2066,10 @@ mlir::Value Backend::castIfNeededImpl(std::shared_ptr<ast::Ast> ctx, mlir::Value
   // 4) Simple scalar cast
   if (fromType->getName() == "integer" && toType->getName() == "real") {
     castIntegerToRealInPlace(valueAddr);
+    return valueAddr;
+  }
+  if (fromType->getName() == "real" && toType->getName() == "integer") {
+    castRealToIntegerInPlace(valueAddr);
     return valueAddr;
   }
 

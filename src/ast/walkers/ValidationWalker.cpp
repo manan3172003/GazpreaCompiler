@@ -1083,6 +1083,8 @@ std::any ValidationWalker::visitTupleType(std::shared_ptr<types::TupleTypeAst> c
 }
 std::any ValidationWalker::visitTypealias(std::shared_ptr<statements::TypealiasAst> ctx) {
   visit(ctx->getType());
+  if (doesTypeInferSize(std::dynamic_pointer_cast<symTable::Type>(ctx->getType()->getSymbol())))
+    throw TypeError(ctx->getLineNumber(), "Cannot infer size here");
   return {};
 }
 std::any ValidationWalker::visitFunction(std::shared_ptr<prototypes::FunctionAst> ctx) {

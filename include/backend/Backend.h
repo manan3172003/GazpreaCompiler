@@ -404,6 +404,7 @@ private:
                                 std::shared_ptr<symTable::Type> toType);
 
   void castIntegerToRealInPlace(mlir::Value valueAddr);
+  void castRealToIntegerInPlace(mlir::Value valueAddr);
 
   void castArrayToArrayInPlace(std::shared_ptr<symTable::Type> fromType,
                                std::shared_ptr<symTable::Type> toType, mlir::Value valueAddr);
