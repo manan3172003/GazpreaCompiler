@@ -622,7 +622,10 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
             b.create<mlir::scf::YieldOp>(l);
           },
           [&](mlir::OpBuilder &b, mlir::Location l) { b.create<mlir::scf::YieldOp>(l); });
-      auto res = strideVectorByScalar(opType, leftAddr, skipByIndex);
+      // Convert vector to array, then stride the array to return an array result
+      auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType);
+      auto [arrayAddr, arrayType] = convertVectorToArrayStruct(leftAddr, vectorType);
+      auto res = strideArrayByScalar(arrayType, arrayAddr, skipByIndex);
       freeAllocatedMemory(leftType, leftAddr);
       freeAllocatedMemory(rightType, rightAddr);
       return res;
@@ -893,12 +896,13 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
         convertVectorOperand(rightAddr, rightType);
         // Fall through to the array handling section below
       } else {
-      auto childType = vectorType->getType();
-      auto leftChildTy = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType)->getType();
-      auto rightChildTy =
-          std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
-      auto is2D = false;
-      [[maybe_unused]] auto is3D = false;
+        auto childType = vectorType->getType();
+        auto leftChildTy =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType)->getType();
+        auto rightChildTy =
+            std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(rightType)->getType();
+        auto is2D = false;
+        [[maybe_unused]] auto is3D = false;
 
         auto elementTy = vectorType->getType();
         auto leftElementTy =
