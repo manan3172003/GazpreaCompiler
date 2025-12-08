@@ -9,9 +9,9 @@ const int z1 = 5;
 const f32 z2 = .7;
 const char z3 = 'e';
 const bool z4 = false;
-const tuple(int, real, char, bool) z5 = (1, .2, 't', true);
 
 procedure main() returns integer {
+    const tuple(int, real, char, bool) z5 = (1, .2, 't', true);
     z1 -> std_output;
     z2 -> std_output;
     z3 -> std_output;

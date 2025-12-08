@@ -1,10 +1,10 @@
 /*
 Test tuple declaration.
 */
-const tuple(integer, integer) z1 = (1, 5);
-const tuple(real, real) z2 = (1, 5); // implicit cast on global dec
 
 procedure main() returns integer {
+    const tuple(integer, integer) z1 = (1, 5);
+    const tuple(real, real) z2 = (1, 5); // implicit cast on global dec
     tuple(integer, integer) a = (3, 6);
     const b = (98, 'c'); // inferred as tuple
     tuple(real, real) c = (98, 1); // implicit cast int to real
