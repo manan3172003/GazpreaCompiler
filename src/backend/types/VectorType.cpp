@@ -182,9 +182,19 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
     auto clonedIs2dValue = builder->create<mlir::LLVM::LoadOp>(
         loc, boolTy(), get2DArrayBoolAddr(*builder, loc, arrayStructTy, clonedArrayStruct));
 
+    // Cast elements if source contains integers and target contains reals
+    mlir::Value finalDataPtr = clonedDataPtr;
+    if (typeContainsInteger(sourceType) && !typeContainsInteger(vectorType)) {
+      // Use castIntegerArrayToReal to handle the conversion (works for nested arrays too)
+      auto castedArray = castIntegerArrayToReal(clonedArrayStruct, sourceType, true);
+      auto destArrayStructType = structTy({intTy(), ptrTy(), boolTy()});
+      finalDataPtr = builder->create<mlir::LLVM::LoadOp>(
+          loc, ptrTy(), getArrayDataAddr(*builder, loc, destArrayStructType, castedArray));
+    }
+
     storeVectorField(VectorOffset::Size, inferredSize);
     storeVectorField(VectorOffset::Capacity, inferredSize);
-    storeVectorField(VectorOffset::Data, clonedDataPtr);
+    storeVectorField(VectorOffset::Data, finalDataPtr);
     storeVectorField(VectorOffset::Is2D, clonedIs2dValue);
     return vectorStructAddr;
   }
@@ -212,9 +222,14 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
     auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
 
     if (elementArrayType) {
-      auto pseudoArrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
-      pseudoArrayType->setType(elementType);
-      auto pseudoArrayStructTy = getMLIRType(pseudoArrayType);
+      // Get the source vector's element type for proper copying and casting
+      auto sourceVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(sourceType);
+      auto sourceElementType = sourceVectorType ? sourceVectorType->getType() : elementType;
+
+      // Create pseudo array type based on SOURCE element type for copying
+      auto sourcePseudoArrayType = std::make_shared<symTable::ArrayTypeSymbol>("array");
+      sourcePseudoArrayType->setType(sourceElementType);
+      auto pseudoArrayStructTy = getMLIRType(sourcePseudoArrayType);
 
       auto sourceArrayStruct =
           builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), pseudoArrayStructTy, constOne());
@@ -228,11 +243,11 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
       auto is2dAddr = get2DArrayBoolAddr(*builder, loc, pseudoArrayStructTy, sourceArrayStruct);
       builder->create<mlir::LLVM::StoreOp>(loc, srcIs2DValue, is2dAddr);
 
-      copyArrayStruct(pseudoArrayType, sourceArrayStruct, clonedArrayStruct);
-      enforceInferredVectorLimit(clonedArrayStruct, pseudoArrayType);
+      copyArrayStruct(sourcePseudoArrayType, sourceArrayStruct, clonedArrayStruct);
+      enforceInferredVectorLimit(clonedArrayStruct, sourcePseudoArrayType);
 
       if (!declaredSizes.empty()) {
-        padArrayIfNeeded(clonedArrayStruct, pseudoArrayType, srcSize, declaredSizes.front());
+        padArrayIfNeeded(clonedArrayStruct, sourcePseudoArrayType, srcSize, declaredSizes.front());
       }
 
       auto clonedSize = builder->create<mlir::LLVM::LoadOp>(
@@ -242,9 +257,19 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
       auto clonedIs2D = builder->create<mlir::LLVM::LoadOp>(
           loc, boolTy(), get2DArrayBoolAddr(*builder, loc, pseudoArrayStructTy, clonedArrayStruct));
 
+      // Cast elements if source vector contains integers and target contains reals
+      mlir::Value finalDataPtr = clonedDataPtr;
+      if (typeContainsInteger(sourceType) && !typeContainsInteger(vectorType)) {
+        // Use SOURCE type for casting so it knows the data is integers
+        auto castedArray = castIntegerArrayToReal(clonedArrayStruct, sourcePseudoArrayType, true);
+        auto destArrayStructType = structTy({intTy(), ptrTy(), boolTy()});
+        finalDataPtr = builder->create<mlir::LLVM::LoadOp>(
+            loc, ptrTy(), getArrayDataAddr(*builder, loc, destArrayStructType, castedArray));
+      }
+
       storeVectorField(VectorOffset::Size, clonedSize);
       storeVectorField(VectorOffset::Capacity, srcCapacity);
-      storeVectorField(VectorOffset::Data, clonedDataPtr);
+      storeVectorField(VectorOffset::Data, finalDataPtr);
       storeVectorField(VectorOffset::Is2D, clonedIs2D);
       return vectorStructAddr;
     }
@@ -252,15 +277,29 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
     auto elementMLIRType = getMLIRType(elementType);
     auto newDataPtr = mallocArray(elementMLIRType, srcSize);
 
+    // Check if we need to cast from integer to real
+    bool needsCast = typeContainsInteger(sourceType) && !typeContainsInteger(vectorType);
+    auto sourceVectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(sourceType);
+    auto srcElementType = sourceVectorType ? sourceVectorType->getType() : nullptr;
+    auto srcElementMLIRType = srcElementType ? getMLIRType(srcElementType) : elementMLIRType;
+
     builder->create<mlir::scf::ForOp>(
         loc, constZero(), srcSize, constOne(), mlir::ValueRange{},
         [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
-          auto srcElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, srcDataPtr,
-                                                           mlir::ValueRange{i});
+          auto srcElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), srcElementMLIRType,
+                                                           srcDataPtr, mlir::ValueRange{i});
           auto destElementPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
                                                             mlir::ValueRange{i});
-          auto elementValue = b.create<mlir::LLVM::LoadOp>(l, elementMLIRType, srcElementPtr);
-          b.create<mlir::LLVM::StoreOp>(l, elementValue, destElementPtr);
+          auto elementValue = b.create<mlir::LLVM::LoadOp>(l, srcElementMLIRType, srcElementPtr);
+
+          // Cast integer to real if needed
+          mlir::Value finalValue = elementValue;
+          if (needsCast && srcElementType && srcElementType->getName() == "integer" &&
+              elementType->getName() == "real") {
+            finalValue = b.create<mlir::LLVM::SIToFPOp>(l, elementMLIRType, elementValue);
+          }
+
+          b.create<mlir::LLVM::StoreOp>(l, finalValue, destElementPtr);
           b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
         });
 
