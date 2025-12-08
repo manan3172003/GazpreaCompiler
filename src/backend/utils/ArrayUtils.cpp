@@ -585,6 +585,27 @@ mlir::Value Backend::castScalarToArray(std::shared_ptr<ast::Ast> ctx, mlir::Valu
     return newArrayAddr;
   }
 
+  // Reject zero-sized targets early
+  if (auto firstSizeAddr = arrayTypeSym->getSizes().front()) {
+    auto firstSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), firstSizeAddr);
+    auto isZeroSize = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::eq,
+                                                          firstSize, constZero());
+    builder->create<mlir::scf::IfOp>(
+        loc, isZeroSize.getResult(),
+        [&](mlir::OpBuilder &b, mlir::Location l) {
+          auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
+              "throwArraySizeError_019addc8_cc3a_71c7_b15f_8745c510199c");
+          b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+          b.create<mlir::scf::YieldOp>(l);
+        },
+        [&](mlir::OpBuilder &b, mlir::Location l) {
+          fillArrayFromScalar(newArrayAddr, arrayTypeSym, scalarValue);
+          arraySizeValidation(ctx, arrayType, newArrayAddr);
+          b.create<mlir::scf::YieldOp>(l);
+        });
+    return newArrayAddr;
+  }
+
   fillArrayFromScalar(newArrayAddr, arrayTypeSym, scalarValue);
   arraySizeValidation(ctx, arrayType, newArrayAddr);
   return newArrayAddr;
