@@ -1,5 +1,5 @@
 procedure main() returns integer {
-    vector<integer> x = [1, 2, 3];
+    var vector<integer> x = [1, 2, 3];
     x.push(4);
     x.len() -> std_output;
     x[4] -> std_output;
