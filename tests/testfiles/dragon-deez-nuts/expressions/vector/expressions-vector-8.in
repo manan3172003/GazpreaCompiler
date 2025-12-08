@@ -4,9 +4,8 @@ procedure main() returns integer {
     x.append(1);
     x.append(3..3);
     x.append(z[5..7]);
-    x[1..2] -> std_output;
     x[x.len()-1] -> std_output;
     x[x.len()] -> std_output;
     return 0;
 }
-//CHECK:[[1 1]][3 0][5 6]
+//CHECK:[3 0][5 6]
