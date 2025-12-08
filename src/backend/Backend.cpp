@@ -2470,4 +2470,23 @@ void Backend::createGlobalDeclaration(const std::string &typeName,
     builder->setInsertionPointToEnd(module.getBody());
   }
 }
+
+std::any Backend::visitAliasType(std::shared_ptr<ast::types::AliasTypeAst> ctx) {
+  // If the aliased type is an array, we need to regenerate its size code
+  // because it might have been used in a different context (or uninitialized if global)
+  if (auto arrayTypeSym = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(ctx->getSymbol())) {
+    arrayTypeSym->declaredElementSize.clear();
+
+    // Iterate through inferred sizes (which are constants) and generate code for them
+    for (size_t i = 0; i < arrayTypeSym->inferredElementSize.size(); ++i) {
+      int inferredSize = arrayTypeSym->inferredElementSize[i];
+      auto ifrValue = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), inferredSize);
+      auto recordedSizeAddr =
+          builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
+      builder->create<mlir::LLVM::StoreOp>(loc, ifrValue, recordedSizeAddr);
+      arrayTypeSym->declaredElementSize.push_back(recordedSizeAddr);
+    }
+  }
+  return {};
+}
 } // namespace gazprea::backend

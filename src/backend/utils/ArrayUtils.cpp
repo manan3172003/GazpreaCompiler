@@ -1,5 +1,6 @@
 #include "CompileTimeExceptions.h"
 #include "ast/expressions/UnaryAst.h"
+#include "ast/types/AliasTypeAst.h"
 #include "ast/walkers/DefRefWalker.h"
 #include "symTable/ArrayTypeSymbol.h"
 #include "symTable/BuiltInTypeSymbol.h"
@@ -305,6 +306,15 @@ void Backend::computeArraySizeIfArray(std::shared_ptr<ast::Ast> ctx,
   std::shared_ptr<ast::types::DataTypeAst> topTypeAst = nullptr;
 
   if (auto DecAst = std::dynamic_pointer_cast<ast::statements::DeclarationAst>(ctx)) {
+    if (!arrayDataType) {
+      if (auto aliasType =
+              std::dynamic_pointer_cast<ast::types::AliasTypeAst>(DecAst->getType())) {
+        if (auto sym =
+                std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(aliasType->getSymbol())) {
+          arrayDataType = std::dynamic_pointer_cast<ast::types::ArrayTypeAst>(sym->getDef());
+                }
+              }
+    }
     topTypeAst = DecAst->getType();
   } else if (auto ProcedureParamAst =
                  std::dynamic_pointer_cast<ast::prototypes::ProcedureParamAst>(ctx)) {
@@ -915,126 +925,54 @@ void Backend::arraySizeValidation(std::shared_ptr<ast::Ast> ctx,
     }
   }
 
-  if (!variableSymbol) {
-    return;
-  }
-
-  auto declaredTopType = variableSymbol->getType();
-
-  auto constI32 = [&](int32_t v) -> mlir::Value {
-    return builder->create<mlir::LLVM::ConstantOp>(loc, builder->getI32Type(),
-                                                   builder->getI32IntegerAttr(v));
-  };
-
-  // Recursive validator:
-  // - runtimeType: the inferred/runtime type of the value
-  // - addr: address of the runtime struct for that value
-  // - declaredType: the declared type we should validate against (may be null)
-  std::function<void(std::shared_ptr<symTable::Type>, mlir::Value, std::shared_ptr<symTable::Type>)>
-      validate;
-
-  validate = [&](std::shared_ptr<symTable::Type> runtimeType, mlir::Value addr,
-                 std::shared_ptr<symTable::Type> declaredType) {
-    if (!runtimeType)
+  if (variableSymbol && isTypeArray(type)) {
+    auto arrayType =
+        std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(variableSymbol->getType());
+    if (!arrayType)
       return;
+    if (arrayType->getSizes().empty()) {
+      auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
+      builder->create<mlir::LLVM::CallOp>(loc, throwFunc, mlir::ValueRange{});
+      return;
+    }
+    mlir::Value oneDimensionSizeAddr = arrayType->getSizes()[0];
+    mlir::Value oneDimensionSize =
+        builder->create<mlir::LLVM::LoadOp>(loc, intTy(), oneDimensionSizeAddr);
 
-    // -------------------------
-    // Array case
-    // -------------------------
-    if (isTypeArray(runtimeType)) {
-      // Prefer declared override if it's an array; otherwise fall back to runtimeType.
-      auto declaredArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(declaredType);
-      if (!declaredArray) {
-        declaredArray = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(runtimeType);
-      }
+    auto arrayStructType = getMLIRType(type);
+    auto currentSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, valueAddr);
+    mlir::Value currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentSizeAddr);
 
-      if (!declaredArray) {
-        // Shouldn't happen if isTypeArray is correct, but keep it safe.
-        return;
-      }
+    auto isSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt,
+                                                              oneDimensionSize, currentSize);
 
-      if (declaredArray->getSizes().empty()) {
-        auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
-        builder->create<mlir::LLVM::CallOp>(loc, throwFunc, mlir::ValueRange{});
-        return;
-      }
+    builder->create<mlir::scf::IfOp>(
+        loc, isSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
+          auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
+          b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
+          b.create<mlir::scf::YieldOp>(l);
+        });
 
-      mlir::Value oneDimensionSizeAddr = declaredArray->getSizes()[0];
-      mlir::Value oneDimensionSize =
-          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), oneDimensionSizeAddr);
+    mlir::Value twoDimentionSize = constZero();
+    if (arrayType->getSizes().size() == 2) {
+      twoDimentionSize =
+          builder->create<mlir::LLVM::LoadOp>(loc, intTy(), arrayType->getSizes()[1]);
 
-      auto arrayStructType = getMLIRType(runtimeType);
-      auto currentSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, addr);
-      mlir::Value currentSize = builder->create<mlir::LLVM::LoadOp>(loc, intTy(), currentSizeAddr);
+      mlir::Value maxSubSize = maxSubArraySize(valueAddr, type);
 
-      auto isSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::slt,
-                                                                oneDimensionSize, currentSize);
+      auto isTwoDimSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(
+          loc, mlir::LLVM::ICmpPredicate::slt, twoDimentionSize, maxSubSize);
 
       builder->create<mlir::scf::IfOp>(
-          loc, isSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
+          loc, isTwoDimSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
             auto throwFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
             b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
             b.create<mlir::scf::YieldOp>(l);
           });
-
-      mlir::Value twoDimentionSize = constZero();
-      if (declaredArray->getSizes().size() == 2) {
-        twoDimentionSize =
-            builder->create<mlir::LLVM::LoadOp>(loc, intTy(), declaredArray->getSizes()[1]);
-
-        mlir::Value maxSubSize = maxSubArraySize(addr, runtimeType);
-
-        auto isTwoDimSizeTooSmall = builder->create<mlir::LLVM::ICmpOp>(
-            loc, mlir::LLVM::ICmpPredicate::slt, twoDimentionSize, maxSubSize);
-
-        builder->create<mlir::scf::IfOp>(
-            loc, isTwoDimSizeTooSmall, [&](mlir::OpBuilder &b, mlir::Location l) {
-              auto throwFunc =
-                  module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kThrowArraySizeErrorName);
-              b.create<mlir::LLVM::CallOp>(l, throwFunc, mlir::ValueRange{});
-              b.create<mlir::scf::YieldOp>(l);
-            });
-      }
-
-      // Keep your existing pad behavior
-      padArrayIfNeeded(addr, runtimeType, oneDimensionSize, twoDimentionSize);
-      return;
     }
 
-    // -------------------------
-    // Tuple case
-    // -------------------------
-    if (auto runtimeTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(runtimeType)) {
-      auto declaredTuple = std::dynamic_pointer_cast<symTable::TupleTypeSymbol>(declaredType);
-
-      const auto &runtimeElems = runtimeTuple->getResolvedTypes();
-      const auto declaredElems = declaredTuple ? declaredTuple->getResolvedTypes()
-                                               : std::vector<std::shared_ptr<symTable::Type>>{};
-
-      auto tupleMlirType = getMLIRType(runtimeType);
-
-      for (size_t i = 0; i < runtimeElems.size(); ++i) {
-        auto elemRuntimeType = runtimeElems[i];
-
-        std::shared_ptr<symTable::Type> elemDeclaredType = elemRuntimeType;
-        if (!declaredElems.empty() && i < declaredElems.size() && declaredElems[i]) {
-          elemDeclaredType = declaredElems[i];
-        }
-
-        auto gepIndices = std::vector<mlir::Value>{constI32(0), constI32((int32_t)i)};
-        auto elemAddr =
-            builder->create<mlir::LLVM::GEPOp>(loc, ptrTy(), tupleMlirType, addr, gepIndices);
-
-        validate(elemRuntimeType, elemAddr, elemDeclaredType);
-      }
-      return;
-    }
-
-    // For other composite types (struct/vector/etc.) you can extend similarly later.
-  };
-
-  // Start recursion at the top-level value
-  validate(type, valueAddr, declaredTopType);
+    padArrayIfNeeded(valueAddr, type, oneDimensionSize, twoDimentionSize);
+  }
 }
 
 mlir::Value Backend::getArraySizeAddr(mlir::OpBuilder &b, mlir::Location l,
@@ -2105,6 +2043,7 @@ mlir::Value Backend::areArraysEqual(mlir::Value leftArrayStruct, mlir::Value rig
 
   // Create local constants using the passed builder and location
   auto localConstOne = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 1);
+  auto localConstZero = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
 
   // Get array sizes
   auto leftSizeAddr = getArraySizeAddr(*builder, loc, arrayStructType, leftArrayStruct);

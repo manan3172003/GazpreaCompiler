@@ -28,6 +28,7 @@
 
 // Dialects
 #include "ast/expressions/UnaryAst.h"
+#include "ast/types/AliasTypeAst.h"
 #include "ast/walkers/AstWalker.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
@@ -82,6 +83,7 @@ public:
   std::any visitTupleAccess(std::shared_ptr<ast::expressions::TupleAccessAst> ctx) override;
   std::any visitTuple(std::shared_ptr<ast::expressions::TupleLiteralAst> ctx) override;
   std::any visitTupleType(std::shared_ptr<ast::types::TupleTypeAst> ctx) override;
+  std::any visitAliasType(std::shared_ptr<ast::types::AliasTypeAst> ctx) override;
   std::any visitTypealias(std::shared_ptr<ast::statements::TypealiasAst> ctx) override;
   std::any visitFunction(std::shared_ptr<ast::prototypes::FunctionAst> ctx) override;
   std::any visitFunctionParam(std::shared_ptr<ast::prototypes::FunctionParamAst> ctx) override;
