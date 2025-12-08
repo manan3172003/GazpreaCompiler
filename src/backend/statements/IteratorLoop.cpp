@@ -116,6 +116,7 @@ std::any Backend::visitIteratorLoop(std::shared_ptr<ast::statements::IteratorLoo
   }
 
   builder->setInsertionPointToStart(exitBlock);
+  freeAllocatedMemory(domainType, domainArrayAddr);
 
   return {};
 }

@@ -634,15 +634,21 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
     auto rightVectorNeedToBeCasted = isTypeInteger(rightType) && isTypeReal(leftType);
 
     if (isTypeVector(leftType)) {
+      auto oldLeftAddr = leftAddr;
       leftAddr = castIntegerVectorToReal(leftAddr, leftType, leftVectorNeedToBeCasted);
-      if (leftVectorNeedToBeCasted)
+      if (leftVectorNeedToBeCasted) {
+        freeVector(leftType, oldLeftAddr);
         leftType = convertIntegerTypeToRealType(leftType);
+      }
     }
 
     if (isTypeVector(rightType)) {
+      auto oldRightAddr = rightAddr;
       rightAddr = castIntegerVectorToReal(rightAddr, rightType, rightVectorNeedToBeCasted);
-      if (rightVectorNeedToBeCasted)
+      if (rightVectorNeedToBeCasted) {
+        freeVector(rightType, oldRightAddr);
         rightType = convertIntegerTypeToRealType(rightType);
+      }
     }
     if (not isTypeVector(leftType)) {
       // should be a scalar
@@ -1022,14 +1028,20 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
     auto leftCastNeeded = isTypeInteger(leftType) && isTypeReal(opType);
     auto rightCastNeeded = isTypeInteger(rightType) && isTypeReal(opType);
     if (isTypeArray(leftType)) {
+      auto oldLeftAddr = leftAddr;
       leftAddr = castIntegerArrayToReal(leftAddr, leftType, leftCastNeeded);
-      if (leftCastNeeded)
+      if (leftCastNeeded) {
+        freeArray(leftType, oldLeftAddr);
         leftType = convertIntegerTypeToRealType(leftType);
+      }
     }
     if (isTypeArray(rightType)) {
+      auto oldRightAddr = rightAddr;
       rightAddr = castIntegerArrayToReal(rightAddr, rightType, rightCastNeeded);
-      if (rightCastNeeded)
+      if (rightCastNeeded) {
+        freeArray(rightType, oldRightAddr);
         rightType = convertIntegerTypeToRealType(rightType);
+      }
     }
     if (!isTypeArray(leftType) && !isEmptyArray(leftType)) {
       auto scalarValue = builder->create<mlir::LLVM::LoadOp>(loc, getMLIRType(leftType), leftAddr);
