@@ -54,6 +54,30 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
   if (!vectorType || !sourceType)
     return {};
 
+  auto elementType = vectorType->getType();
+  auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
+  auto elementMLIRType = getMLIRType(elementType);
+
+  auto syncElementArraySizes = [&](const std::shared_ptr<symTable::ArrayTypeSymbol> &arrayType) {
+    if (!arrayType || !arrayType->getSizes().empty())
+      return;
+    if (!vectorType)
+      return;
+    if (!vectorType->declaredElementSize.empty()) {
+      for (auto sizeAddr : vectorType->declaredElementSize) {
+        arrayType->addSize(sizeAddr);
+      }
+    } else if (!vectorType->inferredElementSize.empty()) {
+      for (auto inferred : vectorType->inferredElementSize) {
+        auto constSize = builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), inferred);
+        auto sizeAddr = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), intTy(), constOne());
+        builder->create<mlir::LLVM::StoreOp>(loc, constSize, sizeAddr);
+        arrayType->addSize(sizeAddr);
+      }
+    }
+  };
+  syncElementArraySizes(elementArrayType);
+
   auto loadSizesFromVector = [&](const std::shared_ptr<symTable::VectorTypeSymbol> &type) {
     std::vector<mlir::Value> sizes;
     if (!type)
@@ -142,6 +166,31 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
     builder->create<mlir::LLVM::StoreOp>(loc, value, destPtr);
   };
 
+  auto padElementArraysToDeclaredSize = [&](mlir::Value dataPtr, mlir::Value outerSize) {
+    if (!elementArrayType || declaredSizes.empty())
+      return;
+    auto targetOuterSize = declaredSizes.front();
+    auto targetInnerSize = declaredSizes.size() > 1
+                               ? declaredSizes[1]
+                               : builder->create<mlir::LLVM::ConstantOp>(loc, intTy(), 0);
+    auto subArrayStructType = getMLIRType(elementArrayType);
+    builder->create<mlir::scf::ForOp>(
+        loc, constZero(), outerSize, constOne(), mlir::ValueRange{},
+        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange) {
+          auto elemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), subArrayStructType, dataPtr,
+                                                     mlir::ValueRange{i});
+
+          mlir::OpBuilder::InsertionGuard guard(*builder);
+          auto savedLoc = loc;
+          builder->setInsertionPoint(b.getInsertionBlock(), b.getInsertionPoint());
+          loc = l;
+          padArrayIfNeeded(elemPtr, elementArrayType, targetOuterSize, targetInnerSize);
+          loc = savedLoc;
+
+          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
+        });
+  };
+
   const auto sourceName = sourceType->getName();
   if (sourceName.substr(0, 5) == "array") {
     if (!declaredSizes.empty()) {
@@ -171,15 +220,13 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
     };
 
     if (!declaredSizes.empty()) {
-      ensureVectorElementCapacity(declaredSizes.front());
+      ensureVectorElementCapacity(declaredSizes.back());
     } else if (!vectorType->inferredElementSize.empty()) {
       auto inferredInnerSize = builder->create<mlir::LLVM::ConstantOp>(
           loc, intTy(), vectorType->inferredElementSize.front());
       ensureVectorElementCapacity(inferredInnerSize);
     }
     // Allocate memory for vector data
-    auto elementType = vectorType->getType();
-    auto elementMLIRType = getMLIRType(elementType);
     auto newDataPtr = mallocArray(elementMLIRType, inferredSize);
 
     auto srcDataAddr = getArrayDataAddr(*builder, loc, arrayStructTy, sourceAddr);
@@ -224,6 +271,7 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
     storeVectorField(VectorOffset::Capacity, inferredSize);
     storeVectorField(VectorOffset::Data, finalDataPtr);
     storeVectorField(VectorOffset::Is2D, clonedIs2dValue);
+    padElementArraysToDeclaredSize(finalDataPtr, inferredSize);
     return vectorStructAddr;
   }
 
@@ -245,9 +293,6 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
     auto srcCapacity = loadVectorField(VectorOffset::Capacity, intTy());
     auto srcDataPtr = loadVectorField(VectorOffset::Data, ptrTy());
     auto srcIs2DValue = loadVectorField(VectorOffset::Is2D, boolTy());
-
-    auto elementType = vectorType->getType();
-    auto elementArrayType = std::dynamic_pointer_cast<symTable::ArrayTypeSymbol>(elementType);
 
     if (elementArrayType) {
       // Get the source vector's element type for proper copying and casting
@@ -275,7 +320,7 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
       enforceInferredVectorLimit(clonedArrayStruct, sourcePseudoArrayType);
 
       if (!declaredSizes.empty()) {
-        padArrayIfNeeded(clonedArrayStruct, sourcePseudoArrayType, srcSize, declaredSizes.front());
+        padArrayIfNeeded(clonedArrayStruct, sourcePseudoArrayType, srcSize, declaredSizes.back());
       }
 
       auto clonedSize = builder->create<mlir::LLVM::LoadOp>(
@@ -299,10 +344,10 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
       storeVectorField(VectorOffset::Capacity, srcCapacity);
       storeVectorField(VectorOffset::Data, finalDataPtr);
       storeVectorField(VectorOffset::Is2D, clonedIs2D);
+      padElementArraysToDeclaredSize(finalDataPtr, clonedSize);
       return vectorStructAddr;
     }
 
-    auto elementMLIRType = getMLIRType(elementType);
     auto newDataPtr = mallocArray(elementMLIRType, srcSize);
 
     // Check if we need to cast from integer to real
