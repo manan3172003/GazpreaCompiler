@@ -226,23 +226,6 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
           loc, intTy(), vectorType->inferredElementSize.front());
       ensureVectorElementCapacity(inferredInnerSize);
     }
-    // Allocate memory for vector data
-    auto newDataPtr = mallocArray(elementMLIRType, inferredSize);
-
-    auto srcDataAddr = getArrayDataAddr(*builder, loc, arrayStructTy, sourceAddr);
-    auto srcDataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), srcDataAddr);
-
-    // Cast/Copy elements
-    builder->create<mlir::scf::ForOp>(
-        loc, constZero(), inferredSize, constOne(), mlir::ValueRange{},
-        [&](mlir::OpBuilder &b, mlir::Location l, mlir::Value i, mlir::ValueRange iterArgs) {
-          auto srcElemPtr = b.create<mlir::LLVM::GEPOp>(
-              l, ptrTy(), getMLIRType(sourceArrayType->getType()), srcDataPtr, mlir::ValueRange{i});
-          auto dstElemPtr = b.create<mlir::LLVM::GEPOp>(l, ptrTy(), elementMLIRType, newDataPtr,
-                                                        mlir::ValueRange{i});
-          performExplicitCast(srcElemPtr, sourceArrayType->getType(), dstElemPtr, elementType);
-          b.create<mlir::scf::YieldOp>(l, mlir::ValueRange{});
-        });
 
     // Handle 2D flag
     mlir::Value is2dValue;
@@ -265,6 +248,7 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
       auto destArrayStructType = structTy({intTy(), ptrTy(), boolTy()});
       finalDataPtr = builder->create<mlir::LLVM::LoadOp>(
           loc, ptrTy(), getArrayDataAddr(*builder, loc, destArrayStructType, castedArray));
+      freeArray(sourceType, clonedArrayStruct);
     }
 
     storeVectorField(VectorOffset::Size, inferredSize);
@@ -338,6 +322,7 @@ Backend::createVectorValue(const std::shared_ptr<symTable::VectorTypeSymbol> &ve
         auto destArrayStructType = structTy({intTy(), ptrTy(), boolTy()});
         finalDataPtr = builder->create<mlir::LLVM::LoadOp>(
             loc, ptrTy(), getArrayDataAddr(*builder, loc, destArrayStructType, castedArray));
+        freeArray(sourcePseudoArrayType, clonedArrayStruct);
       }
 
       storeVectorField(VectorOffset::Size, clonedSize);

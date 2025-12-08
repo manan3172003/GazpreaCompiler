@@ -625,6 +625,7 @@ mlir::Value Backend::binaryOperandToValue(std::shared_ptr<ast::Ast> ctx,
       auto vectorType = std::dynamic_pointer_cast<symTable::VectorTypeSymbol>(leftType);
       auto [arrayAddr, arrayType] = convertVectorToArrayStruct(leftAddr, vectorType);
       auto res = strideArrayByScalar(arrayType, arrayAddr, skipByIndex);
+      freeArray(arrayType, arrayAddr);
       freeAllocatedMemory(leftType, leftAddr);
       freeAllocatedMemory(rightType, rightAddr);
       return res;

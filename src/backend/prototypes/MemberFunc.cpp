@@ -171,6 +171,7 @@ std::any Backend::visitAppendMemberFunc(std::shared_ptr<ast::statements::AppendM
         !typesEquivalent(argType, elementType)) {
       auto tmp = builder->create<mlir::LLVM::AllocaOp>(loc, ptrTy(), elementMLIRType, constOne());
       performExplicitCast(argAddr, argType, tmp, elementType);
+      freeAllocatedMemory(argType, argAddr);
       argAddr = tmp;
       argType = elementType;
     }
