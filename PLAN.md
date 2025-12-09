@@ -69,3 +69,4 @@ Purpose of this document is to outline the software engineering guidelines and p
 ## 8. Plan Maintenance
 
 This document will be updated as needed throughout the project. Any changes to this plan must be discussed and agreed upon by all team members. Major changes should be documented in the version history section below.
+
