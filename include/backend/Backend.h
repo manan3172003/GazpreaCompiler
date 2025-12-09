@@ -54,6 +54,9 @@ constexpr char kThrowVectorSizeErrorName[] =
     "throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029";
 constexpr char kPrintArrayName[] = "printArray_019addab_1674_72d4_aa4a_ac782e511e7a";
 constexpr char kThrowStrideErrorName[] = "throwStrideError_a2beb751_ff3b_4d60_aefb_60f92ff9f4be";
+constexpr char kMallocName[] = "malloc_019b1cf2_3c2e_4f9f_a8d1_b2c5e7f0c123";
+constexpr char kFreeName[] = "free_019b1cf2_3c2e_4f9f_a8d1_b2c5e7f0c124";
+constexpr char kSnprintfName[] = "snprintf_019b1cf2_3c2e_4f9f_a8d1_b2c5e7f0c125";
 enum class VectorOffset { Size = 0, Capacity = 1, Data = 2, Is2D = 3 };
 class Backend final : public ast::walkers::AstWalker {
 public:

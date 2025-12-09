@@ -81,14 +81,14 @@ std::any Backend::visitAppendMemberFunc(std::shared_ptr<ast::statements::AppendM
     builder->create<mlir::LLVM::StoreOp>(loc, boolTrue, is2DAddr);
   }
 
-  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kFreeName);
   if (!freeFunc) {
     auto savedInsertionPoint = builder->saveInsertionPoint();
     builder->setInsertionPointToStart(module.getBody());
 
     auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
     auto freeFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy()}, false);
-    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "free", freeFnType);
+    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kFreeName, freeFnType);
 
     builder->restoreInsertionPoint(savedInsertionPoint);
   }
@@ -231,14 +231,14 @@ std::any Backend::visitPushMemberFunc(std::shared_ptr<ast::statements::PushMembe
     return {};
   }
 
-  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kFreeName);
   if (!freeFunc) {
     auto savedInsertionPoint = builder->saveInsertionPoint();
     builder->setInsertionPointToStart(module.getBody());
 
     auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
     auto freeFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy()}, false);
-    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "free", freeFnType);
+    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kFreeName, freeFnType);
 
     builder->restoreInsertionPoint(savedInsertionPoint);
   }

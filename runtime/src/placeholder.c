@@ -1,5 +1,5 @@
-#include <stdarg.h>
 #include "run_time_errors.h"
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@ int32_t ipow_019addc8_6352_7de5_8629_b0688522175f(int32_t base, int32_t exp) {
   return result;
 }
 
-int printf_019ae38d_3df3_74a3_b276_d9a9f7a8008b(const char * format, ...) {
+int printf_019ae38d_3df3_74a3_b276_d9a9f7a8008b(const char *format, ...) {
   va_list args;
   va_start(args, format);
   int result = vprintf(format, args);
@@ -20,10 +20,22 @@ int printf_019ae38d_3df3_74a3_b276_d9a9f7a8008b(const char * format, ...) {
   return result;
 }
 
-int scanf_019ae392_2fe0_72fc_ad1e_94bb9c5662c0(const char * format, ...) {
+int scanf_019ae392_2fe0_72fc_ad1e_94bb9c5662c0(const char *format, ...) {
   va_list args;
   va_start(args, format);
   int result = vscanf(format, args);
+  va_end(args);
+  return result;
+}
+
+void *malloc_019b1cf2_3c2e_4f9f_a8d1_b2c5e7f0c123(size_t size) { return malloc(size); }
+
+void free_019b1cf2_3c2e_4f9f_a8d1_b2c5e7f0c124(void *ptr) { free(ptr); }
+
+int snprintf_019b1cf2_3c2e_4f9f_a8d1_b2c5e7f0c125(char *str, size_t size, const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  int result = vsnprintf(str, size, format, args);
   va_end(args);
   return result;
 }
@@ -41,9 +53,7 @@ void throwVectorSizeError_019addc9_1a57_7674_b3dd_79d0624d2029() {
 void throwArrayIndexError_019ae3a1_54f9_7452_b095_6faaebe8aa2e() {
   IndexError("Array index out of range");
 }
-void throwStrideError_a2beb751_ff3b_4d60_aefb_60f92ff9f4be() {
-  StrideError("Array stride error");
-}
+void throwStrideError_a2beb751_ff3b_4d60_aefb_60f92ff9f4be() { StrideError("Array stride error"); }
 
 enum ElementType { ELEM_INT = 0, ELEM_REAL = 1, ELEM_CHAR = 2, ELEM_BOOL = 3, ELEM_ARRAY = 4 };
 
@@ -53,8 +63,8 @@ typedef struct {
   int8_t is2D; // boolean
 } ArrayStruct;
 
-void printString_d526a5bb_a01a_4579_9d33_c725c674e1c5(ArrayStruct* vectorStruct) {
-  int8_t* charData = (int8_t*)vectorStruct->data;
+void printString_d526a5bb_a01a_4579_9d33_c725c674e1c5(ArrayStruct *vectorStruct) {
+  int8_t *charData = (int8_t *)vectorStruct->data;
   for (int32_t i = 0; i < vectorStruct->size; i++) {
     if (charData[i] == '\0') {
       break; // Stop at null terminator for strings
@@ -103,4 +113,3 @@ void printArray_019addab_1674_72d4_aa4a_ac782e511e7a(ArrayStruct *arrayStruct,
 
   printf("]");
 }
-

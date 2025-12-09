@@ -1048,6 +1048,15 @@ mlir::Value Backend::maxSubArraySize(mlir::Value arrayStruct,
   mlir::Value dataPtr = builder->create<mlir::LLVM::LoadOp>(loc, ptrTy(), arrayDataAddr);
 
   auto subArrayStructType = getMLIRType(elementArrayType);
+  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kFreeName);
+  if (!freeFunc) {
+    auto savedIp = builder->saveInsertionPoint();
+    builder->setInsertionPointToStart(module.getBody());
+    auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
+    auto freeType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy()}, false);
+    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kFreeName, freeType);
+    builder->restoreInsertionPoint(savedIp);
+  }
 
   auto forOp = builder->create<mlir::scf::ForOp>(
       loc, constZero(), arraySize, constOne(), mlir::ValueRange{maxSize},
@@ -1074,7 +1083,7 @@ mlir::Value Backend::maxSubArraySize(mlir::Value arrayStruct,
 }
 
 mlir::LLVM::LLVMFuncOp Backend::getOrCreateMallocFunc() {
-  auto mallocFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("malloc");
+  auto mallocFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kMallocName);
   if (mallocFunc) {
     return mallocFunc;
   }
@@ -1082,7 +1091,7 @@ mlir::LLVM::LLVMFuncOp Backend::getOrCreateMallocFunc() {
   builder->setInsertionPointToStart(module.getBody());
   auto i64Type = builder->getI64Type();
   auto mallocFnType = mlir::LLVM::LLVMFunctionType::get(ptrTy(), {i64Type}, /*isVarArg=*/false);
-  mallocFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "malloc", mallocFnType);
+  mallocFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kMallocName, mallocFnType);
   builder->restoreInsertionPoint(savedInsertionPoint);
   return mallocFunc;
 }
@@ -1306,6 +1315,15 @@ void Backend::padArrayIfNeeded(mlir::Value arrayStruct, std::shared_ptr<symTable
   builder->create<mlir::scf::IfOp>(
       loc, needsMoreSubArrays, [&](mlir::OpBuilder &b, mlir::Location l) {
         mlir::Value newDataPtr = mallocArray(subArrayStructType, targetOuterSize);
+        auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kFreeName);
+        if (!freeFunc) {
+          auto savedIp = builder->saveInsertionPoint();
+          builder->setInsertionPointToStart(module.getBody());
+          auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
+          auto freeType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy()}, false);
+          freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kFreeName, freeType);
+          builder->restoreInsertionPoint(savedIp);
+        }
 
         b.create<mlir::scf::ForOp>(
             l, constZero(), arraySize, constOne(), mlir::ValueRange{},
@@ -1343,13 +1361,11 @@ void Backend::padArrayIfNeeded(mlir::Value arrayStruct, std::shared_ptr<symTable
               mlir::Value oldSubDataPtr =
                   b2.create<mlir::LLVM::LoadOp>(l2, ptrTy(), oldSubArrayDataAddr);
 
-              auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
               b2.create<mlir::LLVM::CallOp>(l2, freeFunc, mlir::ValueRange{oldSubDataPtr});
 
               b2.create<mlir::scf::YieldOp>(l2, mlir::ValueRange{});
             });
 
-        auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
         b.create<mlir::LLVM::CallOp>(l, freeFunc, mlir::ValueRange{dataPtr});
 
         b.create<mlir::LLVM::StoreOp>(l, newDataPtr, arrayDataAddr);
@@ -1579,7 +1595,7 @@ void Backend::freeArray(std::shared_ptr<symTable::Type> type, mlir::Value arrayS
         });
   }
 
-  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kFreeName);
   if (!freeFunc) {
     auto savedInsertionPoint = builder->saveInsertionPoint();
 
@@ -1588,7 +1604,7 @@ void Backend::freeArray(std::shared_ptr<symTable::Type> type, mlir::Value arrayS
     auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
     auto freeFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy()},
                                                         /*isVarArg=*/false);
-    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "free", freeFnType);
+    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kFreeName, freeFnType);
 
     builder->restoreInsertionPoint(savedInsertionPoint);
   }
@@ -1630,7 +1646,7 @@ void Backend::freeVector(std::shared_ptr<symTable::Type> type, mlir::Value vecto
         });
   }
 
-  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+  auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kFreeName);
   if (!freeFunc) {
     auto savedInsertionPoint = builder->saveInsertionPoint();
 
@@ -1638,7 +1654,7 @@ void Backend::freeVector(std::shared_ptr<symTable::Type> type, mlir::Value vecto
 
     auto voidType = mlir::LLVM::LLVMVoidType::get(builder->getContext());
     auto freeFnType = mlir::LLVM::LLVMFunctionType::get(voidType, {ptrTy()}, /*isVarArg=*/false);
-    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "free", freeFnType);
+    freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kFreeName, freeFnType);
 
     builder->restoreInsertionPoint(savedInsertionPoint);
   }

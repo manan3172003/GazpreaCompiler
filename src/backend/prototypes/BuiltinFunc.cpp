@@ -558,13 +558,13 @@ Backend::visitFormatBuiltinFunc(std::shared_ptr<ast::expressions::FormatBuiltinF
     builder->create<mlir::LLVM::StoreOp>(loc, falseVal, is2dPtr);
   } else if (typeName == "integer") {
 
-    auto snprintfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("snprintf");
+    auto snprintfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kSnprintfName);
     if (!snprintfFunc) {
       auto savedIp = builder->saveInsertionPoint();
       builder->setInsertionPointToStart(module.getBody());
       auto snprintfType = mlir::LLVM::LLVMFunctionType::get(intTy(), {ptrTy(), intTy(), ptrTy()},
                                                             /*isVarArg=*/true);
-      snprintfFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "snprintf", snprintfType);
+      snprintfFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kSnprintfName, snprintfType);
       builder->restoreInsertionPoint(savedIp);
     }
 
@@ -594,13 +594,13 @@ Backend::visitFormatBuiltinFunc(std::shared_ptr<ast::expressions::FormatBuiltinF
           b.create<mlir::scf::YieldOp>(l);
         });
 
-    auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+    auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kFreeName);
     if (!freeFunc) {
       auto savedIp = builder->saveInsertionPoint();
       builder->setInsertionPointToStart(module.getBody());
       auto freeType = mlir::LLVM::LLVMFunctionType::get(
           mlir::LLVM::LLVMVoidType::get(builder->getContext()), {ptrTy()}, false);
-      freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "free", freeType);
+      freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kFreeName, freeType);
       builder->restoreInsertionPoint(savedIp);
     }
     builder->create<mlir::LLVM::CallOp>(loc, freeFunc, mlir::ValueRange{buffer});
@@ -617,13 +617,13 @@ Backend::visitFormatBuiltinFunc(std::shared_ptr<ast::expressions::FormatBuiltinF
     auto is2dPtr = gepOpVector(vectorStructTy, resultAlloca, VectorOffset::Is2D);
     builder->create<mlir::LLVM::StoreOp>(loc, falseVal, is2dPtr);
   } else if (typeName == "real") {
-    auto snprintfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("snprintf");
+    auto snprintfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kSnprintfName);
     if (!snprintfFunc) {
       auto savedIp = builder->saveInsertionPoint();
       builder->setInsertionPointToStart(module.getBody());
       auto snprintfType = mlir::LLVM::LLVMFunctionType::get(intTy(), {ptrTy(), intTy(), ptrTy()},
                                                             /*isVarArg=*/true);
-      snprintfFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "snprintf", snprintfType);
+      snprintfFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kSnprintfName, snprintfType);
       builder->restoreInsertionPoint(savedIp);
     }
 
@@ -656,13 +656,13 @@ Backend::visitFormatBuiltinFunc(std::shared_ptr<ast::expressions::FormatBuiltinF
           b.create<mlir::scf::YieldOp>(l);
         });
 
-    auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free");
+    auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(kFreeName);
     if (!freeFunc) {
       auto savedIp = builder->saveInsertionPoint();
       builder->setInsertionPointToStart(module.getBody());
       auto freeType = mlir::LLVM::LLVMFunctionType::get(
           mlir::LLVM::LLVMVoidType::get(builder->getContext()), {ptrTy()}, false);
-      freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, "free", freeType);
+      freeFunc = builder->create<mlir::LLVM::LLVMFuncOp>(loc, kFreeName, freeType);
       builder->restoreInsertionPoint(savedIp);
     }
     builder->create<mlir::LLVM::CallOp>(loc, freeFunc, mlir::ValueRange{buffer});
