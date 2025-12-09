@@ -32,7 +32,7 @@ std::any Backend::visitArrayType(std::shared_ptr<ast::types::ArrayTypeAst> ctx) 
       auto [type, valueAddr] = popElementFromStack(sizeExpr[i]);
 
       // Could be * or an integer value
-      mlir::Value recordedSizeAddr = valueAddr;
+      recordedSizeAddr = valueAddr;
       if (type->getName() == "character") {
         int inferredSize = 0;
         if (i < arrayTypSym->inferredElementSize.size()) {
