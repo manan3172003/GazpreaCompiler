@@ -12,6 +12,7 @@ Updated by: Quinn Pham (qpham@ualberta.ca)
 - Manan Jain (mjain2@ualberta.ca)
 - Mansoor Anis (manis@ualberta.ca)
 - Kunal Rao (ksrao@ualberta.ca)
+- Chislev (chislev@ualberta.ca)
 
 # Usage
 ## Installing MLIR
